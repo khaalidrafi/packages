@@ -87,9 +87,12 @@
                           wayland-protocols
                           openssl
                           libseat)
-                    ;; All 287 crates from bcon's Cargo.lock, looked up in (bcon-crates)
+                    ;; All 287 crates from bcon's Cargo.lock, looked up in the
+                    ;; (sane-packages bcon-crates) module.  #:module must name
+                    ;; the module exactly as its define-module declares it, or
+                    ;; resolve-interface fails with "no code for module".
                     (cargo-inputs 'bcon
-                                  #:module '(bcon-crates))))))
+                                  #:module '(sane-packages bcon-crates))))))
 
 ;; Rootless bcon shepherd service.
 ;; Runs via shepherd-root-service-type (system shepherd, owns DRM/input nodes),
