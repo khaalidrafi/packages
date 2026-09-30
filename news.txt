@@ -1,0 +1,13 @@
+;; This file is read by `guix pull' (see .guix-channel's (news-file "news.txt")).
+;; Each entry is keyed to a commit or tag and is shown to a user once, the first
+;; time they pull past it.  Because a commit cannot name its own hash, add the
+;; entry in a FOLLOWING commit that cites the change's hash -- the convention
+;; nonguix follows.  Bodies use Texinfo markup, not Markdown.
+;;
+;; Until a real entry is added, keep the entry list empty but well-formed, so a
+;; missing file never breaks the pull.  The first genuine entry will cite the
+;; hash of the commit that added cline-baseline, in the follow-up commit, per the
+;; convention above.
+
+(channel-news
+ (version 0))

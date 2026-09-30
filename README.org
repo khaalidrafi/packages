@@ -1,0 +1,369 @@
+#+title: sane-packages --- a personal GNU Guix channel
+#+author: Khalid Rafi
+#+options: toc:2 num:1
+
+A small GNU Guix channel holding packages that upstream Guix cannot carry
+(non-free, vendor-binary, or simply missing) and that I want versioned and
+built by CI instead of by hand on a 4 GB laptop.
+
+* Contents
+| Package          | Module                       | Kind                              |
+|------------------+------------------------------+-----------------------------------|
+| zcode            | =(sane-packages zcode)=      | terminal agent, built from source |
+| zcode-bin        | =(sane-packages zcode)=      | vendor Electron .deb              |
+| cline-baseline   | =(sane-packages cline)=      | Bun CLI, built for non-AVX2 CPUs  |
+| ods              | =(sane-packages ods)=        | self-hosted AI server (Docker)    |
+| dsh, qoder-*, …  | =(sane-packages custom)=     | everything predating this layout  |
+
+** Module and package naming
+
+One module per upstream project under =sane-packages/=, named after that
+project (=zcode.scm=).  A project whose dependency closure is generated gets a
+second file with the =-modules= suffix (=zcode-modules.scm=,
+=dsh-modules.scm=): tables of names, versions and hashes, marked =do not edit=,
+with the generator that writes them under =scripts/=.
+
+=sane-packages/custom.scm= is the original single-file catch-all and still holds
+most packages; move a package out of it into its own module when you touch it.
+
+The CI derives its build list from the =define-public= forms themselves, so
+adding a package means adding a definition --- no list to keep in sync.
+A package named =*-bin= is a repackaged vendor binary, and CI skips it (see
+CI below); it is still checked statically.
+
+* Using the channel
+** Add it, then pull
+
+=guix pull= reads =.guix-channel= at the repo root, and that file declares
+nonguix as a dependency of this channel --- so one entry is enough here, unlike
+most channel instructions:
+
+#+begin_example
+(cons (channel
+        (name 'sane-packages)
+        (url "https://github.com/khaalidrafi/sane-packages")
+        (branch "main"))
+      %default-channels)
+#+end_example
+
+#+begin_example
+guix pull
+guix install zcode
+#+end_example
+
+The dependency's own =channel-introduction= (nonguix's first authenticated
+commit and signing key) lives in =.guix-channel=, so users get nonguix's
+authentication without copying it around.  See the Guix manual node /Declaring
+Channel Dependencies/; brix declares the same dependency this way.
+
+** Authentication, and why there is no =.guix-authorizations= yet
+
+Khalid's GnuPG key =B8E6 AB25 3C7B D049 F5DD  E18F 9BE2 DF28 6999 F740= exists
+and signs =brix= commits, but =git commit -S= needs pinentry, so commits made by
+an agent are unsigned.  Adding =.guix-authorizations= now would make *every*
+later unsigned commit unpullable --- the file is a promise about all commits
+after the introduction, not just the new ones.  Until it exists, Guix treats
+the commit you pull as its own introduction: pulls work, and the manual's
+=--disable-authentication= is only needed for channels that ship an
+=.guix-authorizations= you have not anchored yet.
+
+To turn authentication on deliberately, in this order:
+
+1. Sign one commit and confirm it: =git -S commit=, then
+   =git log --show-signature=.
+2. Add =.guix-authorizations= listing the key, in a signed commit.  That commit
+   becomes the channel introduction; advertise it as commit + fingerprint.
+3. Export the key onto an orphan =keyring= branch (=.guix-channel= would need no
+   =(keyring-reference ...)=, since =keyring= is the default):
+   #+begin_example
+   git switch --orphan keyring
+   gpg --export --armor B8E6AB253C7BD049F5DDE18F9BE2DF286999F740 > khalid.key
+   git add khalid.key && git commit -S -m "Add OpenPGP key for channel authentication."
+   git switch main && git push origin keyring
+   #+end_example
+4. From then on =guix git authenticate <introduction-commit> <fingerprint>=
+   before every push.
+
+** Channel contract
+
+=.guix-channel= declares no =(directory ...)= field, which makes the repository
+root Guile's module load path.  =guix pull= then compiles *every* =.scm= file it
+finds under the root (=standard-module-derivation= in =(guix channels)= does
+=find-files source "\\.scm$"]=), so a Scheme file that is not a module --- a
+manifest, a script fragment, an example =channels.scm= --- breaks every user's
+pull, wherever in the tree it sits.  =tests/check-static.sh= enforces that, and
+it is why this README keeps the snippet above inline instead of in a
+=channel.scm= file, and why the news file is =news.txt= rather than
+=news.scm= (the manual says the same in /Writing Channel News/).
+
+A channel whose modules sit beside non-module Scheme files avoids this with
+=(directory "subdir")=; that would mean moving =sane-packages/= under such a
+sub-directory, which is not worth it here.
+
+** News entries
+
+=news.txt= is the file =(news-file "news.txt")= points at.  Entries are keyed to
+a commit or a tag, and a user sees an entry once, when they first pull past it.
+Since a commit cannot name its own hash, add the entry in a *following* commit
+that cites the change's hash --- the convention nonguix follows:
+
+#+begin_example
+(channel-news
+ (version 0)
+ (entry (commit "0123456789abcdef0123456789abcdef01234567")
+        (title (en "zcode-bin moved to the 3.15 .deb"))
+        (body (en "Upstream dropped support for the 3.14 artifact; @code{guix pull} and reinstall."))))
+#+end_example
+
+Write the body in Texinfo markup (@pxref{Overview,,, texinfo, GNU Texinfo}), not
+Markdown.  Users read it with =guix pull --news=.
+
+** Build without installing the channel
+
+=--load-path= (= -L =) points Guix at this working tree:
+
+#+begin_example
+guix build -L . zcode
+guix environment -L . zcode
+#+end_example
+
+* zcode and zcode-bin
+
+ZCode (https://zcode.z.ai) is Z.ai's AI coding workspace: a terminal agent, a
+desktop app and a browser UI, all from one pnpm/TypeScript monorepo
+(https://github.com/zai-org/ZCode, Apache-2.0).  Upstream's two distribution
+channels have nothing in common, so there are two packages.
+
+** =zcode= --- the terminal agent, built from source
+
+Upstream builds the CLI by running =tsc= over 17 workspace packages and then
+esbuild over the result into one bundle, =dist/zcode.cjs=.  This package runs
+those same scripts; what it replaces is dependency installation, which Guix
+cannot do with =pnpm install=:
+
+- Each of the 349 npm tarballs in the linux-x64 closure of =pnpm-lock.yaml= is
+  a hash-verified build input, so the build never touches the network.
+- =(sane-packages zcode-modules)=, generated by
+  =scripts/gen-zcode-node-tree.py= from that lockfile, describes where each
+  tarball goes and which symlinks connect them --- pnpm's isolated layout,
+  plus the flat =node_modules/= view Node's resolution algorithm needs.
+- =%zcode-build-manifest= turns those tables into tab-separated instructions
+  (unpack, patch, sym, bin, script) and the =#:builder= is a small interpreter
+  for them.  A file rather than a spliced list: a couple of thousand strings in
+  a gexp make the =.drv= unreadable and every dependency bump a diff in the
+  wrong place.
+- The tree is built directly in =/lib/zcode= inside the output, because Node
+  resolves dependencies relative to the bundle, so the =node_modules= tree has
+  to ship next to it.  =$out/bin/zcode= is a two-line launcher that runs
+  =node …/dist/zcode.cjs=.
+
+Only =x86_64-linux= is =supported-systems=: the dependency table was filtered
+for that platform (esbuild, turbo and the TUI's native addons have no other
+tarball in it).  An aarch64 build means re-running the generator with =TARGET=
+set there, on an aarch64 machine.
+
+** =zcode-bin= --- the desktop app, repackaged from the vendor .deb
+
+The desktop app would need Electron (upstream fetches a prebuilt binary in a
+postinstall hook), roughly 1300 more lockfile entries, and
+=prepare:remote-assets=, which downloads prebuilt runtime assets from Z.ai's
+CDN with no fixed-output derivation behind it.  So this is a repackage, the way
+nonguix ships =signal-desktop= or =bitwarden-desktop= --- but with
+=copy-build-system= and explicit phases rather than nonguix's
+=chromium-binary-build-system=, because that build system's =wrapper-plan= and
+runpath handling are hard to audit from here and this app's layout
+(=$ORIGIN=-relative helpers, an =.desktop= that names =/opt=) needs two
+customizations anyway.
+
+** License
+
+=zcode= and =zcode-bin= are both =asl2.0=.  The source is unambiguous: the
+upstream repository (https://github.com/zai-org/ZCode) ships an Apache-2.0
+LICENSE, and its NOTICE says first-party code is Apache-2.0.  The vendor .deb is
+a compiled form of that same licensed work, so describing the repackage as
+=asl2.0= is the honest reading even though the =control= file itself says
+=License: unknown= and the only texts inside the deb are Electron's and
+Chromium's notices.  (This corrects an earlier =nonguix= =nonfree= label, chosen
+before the repository's own license had been read.)
+
+** Where the =zcode-bin= .deb comes from
+
+The Linux .deb is published only on Z.ai's CDN
+(=https://cdn-zcode.z.ai/zcode/electron/releases/...=), which is what
+=%zcode-bin-builds= fetches.  GitHub releases are /not/ an option for Linux:
+the repository's only release carries a macOS =.dmg= and a Windows =.exe=, no
+Linux artifact.  So =zcode-bin= stays on the CDN.  The CDN occasionally drops
+the ~160 MB download mid-flight on a slow link (a transient =gnutls-error= pull
+failure), which is a network flake, not a package defect --- retry the build.
+
+** Sandbox caveat (=zcode-bin= only)
+
+=chrome-sandbox= cannot be setuid inside the store, so the app relies on
+unprivileged user namespaces (enabled on recent Guix System kernels).  If your
+kernel or AppArmor blocks them, the app refuses to start; =--no-sandbox= is the
+blunt workaround, =kernel.apparmor_restrict_unprivileged_userns= the real
+setting to check.
+
+** Updating
+
+#+begin_example
+./scripts/latest-version.sh                         # what upstream now serves
+git ls-remote --tags https://github.com/zai-org/ZCode   # matching source tag
+#+end_example
+
+1. Set =%version= and =%zcode-commit= in =sane-packages/zcode.scm=; refresh the
+   =%zcode-source= hash with =guix hash= on a checkout of that commit.
+2. Download the .deb for the new version and update its hash in
+   =%zcode-bin-builds= (one entry per architecture):
+   #+begin_example
+   curl -LO https://cdn-zcode.z.ai/zcode/electron/releases/VERSION/linux-x64/ZCode-VERSION-linux-x64.deb
+   guix hash ZCode-VERSION-linux-x64.deb
+   #+end_example
+   =guix hash=' default output (nix-base32) is what the =base32= reader expects;
+   =-f base32= prints RFC 4648 and Guix rejects it as invalid characters.
+3. Regenerate the dependency table (it caches tarballs in =$ZCODE_DEP_CACHE=,
+   default =/tmp/zdep/dl=, so a re-run after a bump only fetches what changed):
+   #+begin_example
+   git clone --branch vVERSION https://github.com/zai-org/ZCode /tmp/ZCode
+   ./scripts/gen-zcode-node-tree.py /tmp/ZCode VERSION \
+       > sane-packages/zcode-modules.scm
+   #+end_example
+4. =./tests/check-static.sh=, then build.
+
+=.github/workflows/upstream.yml= runs nightly and fails when the packaged
+version falls behind, which is the reminder to do this.
+
+* cline-baseline
+
+Cline (https://cline.bot, =https://github.com/cline/cline=) ships its CLI as a
+Bun single-file executable: =bun build --compile= embeds the Bun runtime in the
+binary.  Bun's default x86_64 runtime uses AVX2, so =@cline/cli-linux-x64=
+raises =SIGILL= on any CPU older than Intel Haswell (upstream issue #11539).
+That includes this machine's Celeron.  The channel's own =cline-bin= (in
+=custom.scm=, the repackaged vendor binary) therefore refuses to run when
+=/proc/cpuinfo= has no =avx2= --- correct for a blob we cannot rebuild, useless
+for actually running Cline here.
+
+** Why a source build, and why baseline
+
+Upstream publishes no baseline (non-AVX2) Linux binary, so =cline-baseline=
+makes one: it compiles Cline from the =cli-v<version>= tag with Bun's baseline
+target =bun-linux-x64-baseline=, which embeds the non-AVX2 runtime and runs on
+SSE4.2-and-up x86_64.  That target is exactly how sst/opencode produces its own
+=-baseline= artifacts (=packages/opencode/script/build.ts=); Cline's
+=apps/cli/script/build.ts= has the same shape but omits the baseline target
+(unmerged upstream PR #11412 adds it).  So the whole change is to make
+=build.ts= hand that one string to =Bun.build='s =compile.target=, done with a
+=substitute*=, and build with =--single= (host target only).
+
+This is a real build, not =opencode-bin= in disguise: it fetches the source and
+compiles, unlike the =*-bin= packages that only rewrap a vendor binary.
+
+** Why a fixed-output derivation
+
+A from-source Bun build needs the network: =bun install= resolves the workspace
+(~468 packages, plus per-CPU =@opentui/core= native addons) and the baseline
+compile downloads Bun's baseline runtime artifact.  Guix only permits network in
+a fixed-output derivation, so the clone, install and compile run inside ONE
+FoD --- an origin =method= (=cline-baseline-build=) that calls =gexp->derivation=
+with =#:hash= --- whose single output is the compiled ELF, pinned by content
+hash.  Unlike =zcode= (a pnpm lockfile that reduces to a hash-verified tarball
+table), a bun-workspace install does not, so the FoD is the honest, reviewed unit
+here.  TLS stays on: the builder concatenates =nss-certs=' per-root =.pem= files
+into one =SSL_CERT_FILE= bundle (the fork ships no =ca-certificates= package).
+
+The compiled binary is Bun-standalone, and patchelf corrupts Bun's large embedded
+payload, so =cline-baseline= =exec=s it through the store glibc loader with a
+pinned =--library-path= (gcc's libdir + zlib), the same trick =bun-bin= and
+=opencode= use.  =supported-systems= is =x86_64-linux= only; license is =asl2.0=
+(Cline is Apache-2.0).
+
+** Filling in the hash, and the local-machine caveat
+
+The FoD output hash cannot be known until the network build has actually run, so
+=%cline-baseline-source= carries a placeholder of all zeros.  Build it once on a
+network-capable host (CI, or any machine that is not this 4 GB potato) with:
+
+#+begin_example
+guix build -L . cline-baseline        # fails on the hash, but prints the real one
+#+end_example
+
+Guix reports the computed output hash on that mismatch; paste it into
+=%cline-baseline-source= (a following commit, so the hash is genuine), then the
+package is reproducible.  Never run that build on this laptop --- =bun install=
+of ~468 deps plus a baseline compile will freeze it.  Here, only
+=guix build -L . --dry-run cline-baseline= (evaluation) is run;
+=tests/smoke/cline-baseline.sh= then drives the real binary once a build exists.
+
+* CI
+** =build.yml= --- one job, four steps
+
+1. Install Guix (=PromyLOPh/guix-install-action@v1=) with the =nonguix= channel
+   pulled in; the =~/.cache/guix= download cache is restored between runs, the
+   store deliberately is not (a restored =/gnu/store= disagrees with the store
+   database).
+2. =tests/check-static.sh= --- the channel contract first (every =.scm= is a
+   module, =.guix-channel= parses), then =guix style= and
+   =guix build --dry-run= for every package including the =*-bin= ones, so
+   formatting, unbound variables, bad hashes and unresolvable inputs fail
+   before anything is downloaded.
+3. =tests/lint.sh= --- =guix lint=, marked =continue-on-error=: it asks
+   repackaged vendor binaries for things they cannot have (a source archive, a
+   release monitor entry) and must not gate the build.
+4. =tests/build-all.sh= --- builds every *source-based* package, then runs
+   =tests/smoke/PACKAGE.sh= when present.  =*-bin= packages are skipped: their
+   build proves the download and the wrapping work, not that the software
+   builds, and their closure (Electron, GTK, Mesa) is far bigger than the
+   source package beside them.  Build one on purpose with
+   =PACKAGES="zcode-bin" ./tests/build-all.sh=, or everything with
+   =INCLUDE_BIN=1=.
+
+Run the same steps locally before pushing:
+
+#+begin_example
+./tests/check-static.sh
+./tests/build-all.sh
+#+end_example
+
+** =upstream.yml= --- version drift
+
+Nightly, compares =%version= in =sane-packages/zcode.scm= with what upstream
+serves, and fails so the workflow notification is the bump reminder.  Manual
+runs and pull requests only print the report.
+
+** What CI cannot tell you
+
+=zcode= is checked by =tests/smoke/zcode.sh=: the bundle parses under Guix's
+Node, and the three modules upstream deliberately left out of the bundle
+(=@zcode/tui=, =koffi=, =playwright-core=) resolve from next to it.  Whether the
+agent actually signs in and answers is a manual check, and it needs a
+provider token:
+
+#+begin_example
+guix install zcode && zcode
+#+end_example
+
+=zcode-bin= is checked for layout, a patched interpreter and runpath, and a
+rewritten =.desktop= entry --- but not started, since a GitHub-hosted runner has
+no display.  Launch it by hand after any wrapping or input change and say in
+the PR which version you opened.
+
+** Architectures
+
+GitHub-hosted runners are x86_64, so only =x86_64-linux= is verified here.
+=zcode= declares no other system at all; =zcode-bin= declares =aarch64-linux=
+because upstream serves an arm64 .deb, but nothing here verifies it, and binary
+builds of this kind do not cross-compile: an aarch64 build needs an aarch64
+builder (self-hosted runner, or =guix build= on the target).
+
+* Development rules
+
+- Never commit to =main=; work on =ai/<topic>= and merge after review.
+- Commit messages carry the model identity line, =Co-authored-by= trailers for
+  the agent and for Khalid, and a short note on which prompts shaped the
+  change.
+- Generated files (=*=-modules.scm=, crate tables) are committed, not rebuilt at
+  build time: a package must not need a network fetch to know its own
+  dependency hashes.  Change them by changing the generator, never by hand.
+- Every =define-public= needs a =--dry-run= to pass before it is pushed; that is
+  the cheapest real test available on this machine.

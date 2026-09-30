@@ -1,0 +1,62 @@
+name: build
+
+# One job, run in order: format, lint (advisory), dry-run, real build, smoke
+# test.  Splitting into jobs would mean installing Guix and pulling the
+# channels once per job, which costs more CI minutes than it saves review time.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  packages:
+    name: guix build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Download cache only: /gnu/store must not be restored from a cache, the
+      # store database would disagree with the files (see the note in
+      # PromyLOPh/guix-install-action's own workflow).
+      - name: Guix download cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/guix
+          key: guix-cache-${{ github.run_id }}
+          restore-keys: guix-cache-
+
+      - name: Install Guix
+        uses: PromyLOPh/guix-install-action@v1
+        with:
+          # The channel definitions themselves live in this repository and are
+          # passed with `-L`; nonguix is a real channel because the packages
+          # build on its binary build systems and licenses.
+          channels: |-
+            (cons
+             (channel
+              (name 'nonguix)
+              (url "https://gitlab.com/nonguix/nonguix")
+              (introduction
+               (make-channel-introduction
+                "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+                (openpgp-fingerprint
+                 "2A39 3FFF 68F4 EF7A 3D29 12AF 6F51 20A0 22FB B2D5"))))
+             %default-channels)
+
+      - name: Static checks (style, derivation validity)
+        run: ./tests/check-static.sh
+
+      - name: guix lint
+        # Advisory: lint has known false positives for repackaged vendor
+        # binaries (e.g. it asks for a source archive of the Electron app).
+        # The build below is the gate; this step only surfaces review hints.
+        continue-on-error: true
+        run: ./tests/lint.sh
+
+      - name: Build and smoke test
+        run: ./tests/build-all.sh

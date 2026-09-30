@@ -1,0 +1,38 @@
+name: upstream versions
+
+# Fails on purpose when a package is behind upstream, so that the usual
+# "workflow failed" notification is the version bump reminder.  Manual runs
+# and pull requests only print the report.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - scripts/latest-version.sh
+      - .github/workflows/upstream.yml
+
+jobs:
+  zcode:
+    name: zcode vs upstream
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare versions
+        env:
+          # A manual run or PR may not have a branch to compare against; the
+          # step then reports instead of failing.
+          FAIL_ON_DRIFT: ${{ github.event_name == 'schedule' }}
+        run: |
+          packaged="$(grep -oE '\(define %version "[0-9.]+"' \
+                        sane-packages/zcode.scm | grep -oE '[0-9.]+')"
+          upstream="$(./scripts/latest-version.sh)"
+          echo "packaged: ${packaged}   upstream: ${upstream}"
+          if [ "${packaged}" != "${upstream}" ]; then
+            echo "::error::zcode ${packaged} is behind upstream ${upstream}"
+            if [ "${FAIL_ON_DRIFT}" = "true" ]; then
+              exit 1
+            fi
+          fi

@@ -1,0 +1,14 @@
+# Guile byte-compiled files
+*.go
+*.scm.go
+
+# `guix build' result symlink
+result
+result-*
+
+# Downloaded sources, kept out of the tree by convention
+*.deb
+
+# Python bytecode from the generator scripts
+__pycache__/
+*.pyc
