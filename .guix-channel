@@ -16,7 +16,7 @@
 (channel
   (version 0)
   (news-file "news.txt")
-  (url "https://github.com/khaalidrafi/sane-packages") ;the primary URL
+  (url "https://github.com/khaalidrafi/packages") ;the primary URL
   (dependencies (channel
                   (name nonguix)
                   (version 0)

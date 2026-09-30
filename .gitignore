@@ -12,3 +12,11 @@ result-*
 # Python bytecode from the generator scripts
 __pycache__/
 *.pyc
+
+# Substitute publishing artifacts (tests/publish-substitutes.sh).  The bake
+# cache and the static mirror are regenerated each CI run; never commit them.
+.substitute-cache/
+.substitute-site/
+# CI handoff files: built store paths, and the recorded build exit status.
+built-paths.txt
+.build-status

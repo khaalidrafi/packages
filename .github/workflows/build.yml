@@ -1,8 +1,14 @@
 name: build
 
-# One job, run in order: format, lint (advisory), dry-run, real build, smoke
-# test.  Splitting into jobs would mean installing Guix and pulling the
-# channels once per job, which costs more CI minutes than it saves review time.
+# One job, in order: static checks, lint (advisory), build every package
+# (source-based first, `*-bin' after), smoke tests, then publish substitutes
+# for everything that built, and push them to the `gh-pages' branch.
+#
+# Splitting into jobs would mean installing Guix and pulling the channels
+# once per job, which costs more CI minutes than it saves review time.  It
+# also means the substitute cache from a build job could not be handed to a
+# publish job without uploading/downloading it, so publishing stays in the
+# same job as the build.
 
 on:
   push:
@@ -12,6 +18,10 @@ on:
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: write        # push the gh-pages branch
+  pages: write           # (informational; Pages is enabled once via gh api)
 
 jobs:
   packages:
@@ -58,5 +68,55 @@ jobs:
         continue-on-error: true
         run: ./tests/lint.sh
 
+      # The private half of the substitute-signing keypair; the public half is
+      # committed at .guix-substitutes.pub.  GUIX_BUILT_PATHS is how
+      # build-all.sh hands its freshly built store paths to the publisher
+      # without re-deriving them.
       - name: Build and smoke test
-        run: ./tests/build-all.sh
+        env:
+          GUIX_BUILT_PATHS: ${{ github.workspace }}/built-paths.txt
+        run: |
+          touch "$GUIX_BUILT_PATHS"
+          # Record the exit status so a later step can gate CI on it, after
+          # publishing has had a chance to run on whatever *did* build.
+          if ./tests/build-all.sh; then
+            echo ok > .build-status
+          else
+            echo fail > .build-status
+          fi
+
+      # Publishing runs even if a package failed, so the substitutes for the
+      # packages that DID build still go up.  The gate below re-fails CI so a
+      # red build stays red.  See tests/publish-substitutes.sh for mechanics.
+      # Skipped on pull_request (fork PRs have no access to the signing key,
+      # and we do not want PRs mutating the public mirror anyway).
+      - name: Publish substitutes
+        if: github.event_name != 'pull_request'
+        env:
+          GUIX_SIGNING_KEY: ${{ secrets.GUIX_SIGNING_KEY }}
+          GUIX_BUILT_PATHS: ${{ github.workspace }}/built-paths.txt
+        run: ./tests/publish-substitutes.sh
+
+      - name: Deploy substitute mirror to gh-pages
+        if: github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./.substitute-site
+          # Substitutes are opaque binary archives: no Jekyll, keep the store
+          # item names verbatim so the client's URL resolution works.
+          enable_jekyll: false
+          exclude_assets: ''
+          # Replace the mirror each run rather than accumulating history; nar
+          # files are large and Git would choke on thousands of old blobs.
+          force_orphan: true
+
+      - name: Gate CI on the build result
+        run: |
+          # Publish and deploy used `if:` conditions that let them run even on
+          # a failed build; here we re-surface the build-all.sh exit status so
+          # the workflow itself is red if any package or smoke test failed.
+          status=$(cat .build-status 2>/dev/null || echo fail)
+          echo "build-all.sh exited: $status"
+          [ "$status" = ok ]

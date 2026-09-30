@@ -27,9 +27,9 @@ with the generator that writes them under =scripts/=.
 most packages; move a package out of it into its own module when you touch it.
 
 The CI derives its build list from the =define-public= forms themselves, so
-adding a package means adding a definition --- no list to keep in sync.
-A package named =*-bin= is a repackaged vendor binary, and CI skips it (see
-CI below); it is still checked statically.
+adding a package means adding a definition --- no list to keep in sync.  A
+package named =*-bin= is a repackaged vendor binary; CI builds it after the
+source-based ones (see CI below) and publishes its output as a substitute too.
 
 * Using the channel
 ** Add it, then pull
@@ -41,8 +41,8 @@ most channel instructions:
 #+begin_example
 (cons (channel
         (name 'sane-packages)
-        (url "https://github.com/khaalidrafi/sane-packages")
-        (branch "main"))
+        (url "https://github.com/khaalidrafi/packages")
+        (branch "ai/packages"))
       %default-channels)
 #+end_example
 
@@ -55,6 +55,45 @@ The dependency's own =channel-introduction= (nonguix's first authenticated
 commit and signing key) lives in =.guix-channel=, so users get nonguix's
 authentication without copying it around.  See the Guix manual node /Declaring
 Channel Dependencies/; brix declares the same dependency this way.
+
+** Install without building: substitutes
+
+CI publishes every package it builds as a signed substitute on a static mirror
+hosted by GitHub Pages (https://khaalidrafi.github.io/packages/), so
+=guix install= downloads a ready store item instead of compiling it --- the
+whole point of building in CI rather than on a 4 GB laptop.  The mirror holds
+only this channel's own outputs; a package's shared dependencies (glibc, GCC,
+Mesa, ...) still come from =ci.guix.gnu.org= and =bordeaux.guix.gnu.org=, so
+keep those URLs alongside ours.
+
+Guix checks every substitute against an authorized signing key, so trust this
+server once.  The public key is committed at =.guix-substitutes.pub= (its
+private half is an Actions secret and is never pushed); this writes to the
+daemon's keyring, =/etc/guix/acl=, so run it as whoever owns the daemon:
+
+#+begin_example
+guix archive --authorize < .guix-substitutes.pub
+#+end_example
+
+Then point Guix at the mirror, per command:
+
+#+begin_example
+guix install --substitute-urls=\
+"https://ci.guix.gnu.org https://bordeaux.guix.gnu.org \
+https://khaalidrafi.github.io/packages" zcode
+#+end_example
+
+or, to make it permanent, add that URL to the =guix= service's
+=substitute-urls= in your =operating-system= declaration (on a foreign distro,
+to =/etc/guix/guix.conf=) and reconfigure.  Confirm the mirror actually serves
+a package before trusting it to avoid a build:
+
+#+begin_example
+guix weather --substitute-urls="https://khaalidrafi.github.io/packages" zcode
+#+end_example
+
+The mirror is rebuilt and force-replaced on every =push= to this branch (see CI
+below), so a package is downloadable the moment its build finishes.
 
 ** Authentication, and why there is no =.guix-authorizations= yet
 
@@ -296,7 +335,13 @@ of ~468 deps plus a baseline compile will freeze it.  Here, only
 =tests/smoke/cline-baseline.sh= then drives the real binary once a build exists.
 
 * CI
-** =build.yml= --- one job, four steps
+** =build.yml= --- build everything, publish, deploy
+
+One job runs, in order: static checks, lint, build every package, publish
+substitutes, deploy the mirror, then a final gate.  It is deliberately not
+split across jobs: that would reinstall Guix and re-pull the channels once per
+job, and the freshly built store paths must travel from the build to the
+publisher, which a separate job could only do by uploading the whole cache.
 
 1. Install Guix (=PromyLOPh/guix-install-action@v1=) with the =nonguix= channel
    pulled in; the =~/.cache/guix= download cache is restored between runs, the
@@ -310,15 +355,41 @@ of ~468 deps plus a baseline compile will freeze it.  Here, only
 3. =tests/lint.sh= --- =guix lint=, marked =continue-on-error=: it asks
    repackaged vendor binaries for things they cannot have (a source archive, a
    release monitor entry) and must not gate the build.
-4. =tests/build-all.sh= --- builds every *source-based* package, then runs
-   =tests/smoke/PACKAGE.sh= when present.  =*-bin= packages are skipped: their
-   build proves the download and the wrapping work, not that the software
-   builds, and their closure (Electron, GTK, Mesa) is far bigger than the
-   source package beside them.  Build one on purpose with
-   =PACKAGES="zcode-bin" ./tests/build-all.sh=, or everything with
-   =INCLUDE_BIN=1=.
+4. =tests/build-all.sh= --- builds every package, *source-based ones first* and
+   =*-bin= ones after; that ordering is what "prioritized" means here.  It runs
+   =tests/smoke/PACKAGE.sh= when present and attempts every package so one
+   broken one does not hide another.  Each built output path is appended to
+   =built-paths.txt= for step 5.  =cline-baseline= is the sole skip: its
+   fixed-output hash is still a placeholder (see the cline section), so a real
+   build there would only trip the hash check --- it is still evaluated in
+   step 2.  Narrow a run with =PACKAGES="zcode dsh" ./tests/build-all.sh=.
+5. =tests/publish-substitutes.sh= --- start a =guix publish --cache= server and
+   warm it by requesting each built path's =.narinfo=: that request is what
+   triggers the background bake (Guix manual, /Invoking guix publish/), so the
+   script fires every request and then waits for the bakes to land.  The
+   on-disk cache layout differs from the wire protocol, so the script
+   rearranges it into what a static host can serve --- =<hash>.narinfo= at the
+   root, the nars under =nar/gzip/=, plus =pubkey= and =nix-cache-info=.  It
+   runs only on =push=/=workflow_dispatch=: a fork's pull request has no access
+   to the signing key, and PRs should not mutate the public mirror.
+6. Deploy the mirror to the =gh-pages= branch with
+   =peaceiris/actions-gh-pages@v4=, =force_orphan= (each run replaces the
+   mirror --- nars are large and Git must not accumulate thousands of old
+   blobs) and Jekyll disabled (store item names are opaque bytes, not pages).
+7. Re-fail the workflow on step 4's recorded exit status, so a package that
+   could not build keeps CI red even though publish and deploy already ran on
+   whatever did build.
 
-Run the same steps locally before pushing:
+Enable GitHub Pages once, from the =gh-pages= branch (the deploy step pushes
+the branch, but Pages still has to be told to serve it):
+
+#+begin_example
+gh api -X POST repos/khaalidrafi/packages/pages \
+  -f 'source[branch]=gh-pages' -f 'source[filepath]=/'
+#+end_example
+
+Run the build steps locally before pushing --- the publish/deploy steps need
+the CI signing key and do not belong on a laptop:
 
 #+begin_example
 ./tests/check-static.sh
