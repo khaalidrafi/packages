@@ -104,11 +104,24 @@ trap - EXIT
 # --- rearrange the cache into the static (client-facing) layout --------------
 rm -rf "$SITE"; mkdir -p "$SITE/nar/gzip"
 count=0
+skipped=0
 for narinfo in "$CACHE"/gzip/*.narinfo; do
   [ -e "$narinfo" ] || continue
   base=$(basename "$narinfo" .narinfo)          # <hash>-<name>-<version>
+  nar_file="$CACHE/gzip/$base.nar"
+  
+  # Check if the nar file is larger than 95MB (to stay well under GitHub's 100MB limit)
+  if [ -f "$nar_file" ]; then
+    size=$(stat -c %s "$nar_file" 2>/dev/null || stat -f %z "$nar_file" 2>/dev/null || echo 0)
+    if [ "$size" -gt 99614720 ]; then
+      echo "==> Skipping large nar file ($(( size / 1024 / 1024 )) MB > 95MB limit): $base"
+      skipped=$((skipped + 1))
+      continue
+    fi
+  fi
+
   cp "$narinfo" "$SITE/${base%%-*}.narinfo"
-  cp "$CACHE/gzip/$base.nar" "$SITE/nar/gzip/$base"
+  cp "$nar_file" "$SITE/nar/gzip/$base"
   count=$((count + 1))
 done
 
@@ -117,4 +130,4 @@ done
 cp .guix-substitutes.pub "$SITE/pubkey"
 printf 'StoreDir=/gnu/store\nWantMassQuery=1\nPriority=10\n' > "$SITE/nix-cache-info"
 
-echo "static substitute mirror: $SITE ($count items)"
+echo "static substitute mirror: $SITE ($count items published, $skipped skipped due to size)"
