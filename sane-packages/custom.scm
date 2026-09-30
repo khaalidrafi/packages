@@ -1676,7 +1676,7 @@ activity notifications, and inline emoji/mention resolution.")
 (define %brow6el-cef-version
   "148.0.7+g5b12d32+chromium-148.0.7778.96")
 
-(define-public cef-dist
+(define cef-dist
   (package
     (name "cef-binary-dist")
     (version %brow6el-cef-version)
