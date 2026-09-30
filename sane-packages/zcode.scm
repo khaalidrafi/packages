@@ -473,8 +473,8 @@ plugin, MCP and search tooling.")
                                                                                         "/lib/nss"
                                                                                         "/lib")))
 
-                                                                               
-                                                                               (list #$@%zcode-rpath-inputs)))
+                                                                                
+                                                                                (list #$@%zcode-rpath-inputs)))
                                                                   ":"))))
                                                     (unless (pair? interpreter)
                                                       (error

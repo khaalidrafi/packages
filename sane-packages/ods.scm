@@ -6,20 +6,21 @@
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix git-download)
-  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module ((guix licenses)
+                #:prefix license:)
   #:use-module (guix build-system copy)
   #:use-module ((guix build utils))
   ;; Runtime tools the `ods' CLI looks up on PATH; propagated so they land in
   ;; the same profile as `ods' itself.
-  #:use-module (gnu packages docker)         ; docker, docker-compose
+  #:use-module (gnu packages docker) ;docker, docker-compose
   #:use-module (gnu packages curl)
-  #:use-module (gnu packages web)            ; jq lives here in this fork
+  #:use-module (gnu packages web) ;jq lives here in this fork
   #:use-module (gnu packages python)
-  #:use-module (gnu packages tls)            ; openssl (certs for curl/docker)
-  #:use-module (gnu packages version-control) ; git (the installer clones)
+  #:use-module (gnu packages tls) ;openssl (certs for curl/docker)
+  #:use-module (gnu packages version-control) ;git (the installer clones)
   ;; Build-side tools the generated wrapper calls by absolute store path.
   #:use-module (gnu packages bash)
-  #:use-module (gnu packages base)           ; coreutils (cp, chmod)
+  #:use-module (gnu packages base) ;coreutils (cp, chmod)
   #:export (ods))
 
 ;;;
@@ -60,10 +61,12 @@
 ;;; are Docker's concern, never a Guix input.  systemctl/pgrep/nvidia-smi are
 ;;; likewise host tools, not declared here.
 
-(define %ods-version "3.0.0")
+(define %ods-version
+  "3.0.0")
 
 (define %ods-commit
-  "bec0c42e7c9885a5aecd419a166a6a81e0d37236") ; tag v3.0.0 (no submodules)
+  "bec0c42e7c9885a5aecd419a166a6a81e0d37236")
+; tag v3.0.0 (no submodules)
 
 (define-public ods
   (package
@@ -88,7 +91,8 @@
       ;; Only the `ods/' subtree is the product; `installer/' is a separate
       ;; optional Tauri GUI and the repo root is docs/CI, neither of which the
       ;; CLI needs.
-      #:install-plan #~'(("ods" "share/ods"))
+      #:install-plan
+      #~'(("ods" "share/ods"))
       #:phases
       #~(modify-phases %standard-phases
           (add-after 'install 'prune
@@ -100,7 +104,7 @@
                           (list (string-append tree "/vendor/pixel")
                                 (string-append tree "/vendor/pixel.bundle")
                                 (string-append tree
-                                               "/vendor/PIXEL-SOURCE-PROVENANCE.md")
+                                 "/vendor/PIXEL-SOURCE-PROVENANCE.md")
                                 ;; Development trees upstream itself leaves out
                                 ;; when installing.
                                 (string-append tree "/tests")
@@ -108,7 +112,8 @@
                                 (string-append tree "/examples")))
                 ;; The git archive may not keep the executable bit on every
                 ;; script; make the CLI and all shell helpers runnable.
-                (for-each (lambda (f) (chmod f #o755))
+                (for-each (lambda (f)
+                            (chmod f #o755))
                           (cons (string-append tree "/ods-cli")
                                 (find-files tree "\\.sh$"))))))
           (add-after 'prune 'create-launcher
@@ -124,7 +129,9 @@
                     ;; Every value below is a store path or shell literal, so
                     ;; no user input reaches the shell (no injection surface).
                     (format port "#!~a/bin/bash\n" bash)
-                    (format port "# Wrapper for ODS: seed a writable working copy, run ods-cli.\n")
+                    (format port
+                     "# Wrapper for ODS: seed a writable working copy, run ods-cli.
+")
                     (format port "set -e\n")
                     (format port "ods_home=\"${ODS_HOME:-$HOME/ods}\"\n")
                     (format port "cu=\"~a/bin\"\n" coreutils)
@@ -132,20 +139,30 @@
                     ;; (their .env, data/, extensions), leave it alone.
                     (format port "if [ ! -e \"$ods_home/ods-cli\" ]; then\n")
                     (format port "  mkdir -p \"$ods_home\"\n")
-                    (format port "  \"$cu/cp\" -a \"~a/.\" \"$ods_home/\"\n" tree)
+                    (format port "  \"$cu/cp\" -a \"~a/.\" \"$ods_home/\"\n"
+                            tree)
                     (format port "  \"$cu/chmod\" -R u+w \"$ods_home\"\n")
                     (format port "fi\n")
                     ;; INSTALL_DIR makes ods-cli operate on the writable copy.
                     (format port "export INSTALL_DIR=\"$ods_home\"\n")
-                    (format port "exec \"~a/bin/bash\" \"$ods_home/ods-cli\" \"$@\"\n"
+                    (format port
+                            "exec \"~a/bin/bash\" \"$ods_home/ods-cli\" \"$@\"
+"
                             bash)))
                 (chmod bin #o755)))))))
     (inputs (list bash-minimal coreutils))
-    (propagated-inputs (list docker docker-compose curl jq python git openssl))
+    (propagated-inputs (list docker
+                             docker-compose
+                             curl
+                             jq
+                             python
+                             git
+                             openssl))
     (supported-systems '("x86_64-linux" "aarch64-linux"))
     (home-page "https://github.com/Osmantic/ods")
     (synopsis "Self-hosted private AI server stack driven by Docker Compose")
-    (description "ODS (the Osmantic Deployment System) installs and operates a
+    (description
+     "ODS (the Osmantic Deployment System) installs and operates a
 self-hosted AI server: Ollama or llama.cpp for inference, Open WebUI as the
 web front end, and optional services such as n8n, ComfyUI, RAG, and
 text-to-speech/speech-to-text, all wired together with Docker Compose and
