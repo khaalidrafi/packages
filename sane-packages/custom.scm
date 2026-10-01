@@ -2054,7 +2054,7 @@ build software, inspect code, and execute workflows.")
              "https://download.qoder.com/qoder-app/releases/latest/"
              "Qoder-linux-amd64.deb"))
        (sha256
-        (base32 "d2g3iq473twfq74mjyhdq4wfnfww2n4tamdbq5fvxypqs6ydaufq"))))
+        (base32 "02q50dxhj7xynms1h1h3jcvnsvb9qmr3h3jfiizmiv6wkx1v938y"))))
     (build-system copy-build-system)
     (supported-systems '("x86_64-linux"))
     (arguments
