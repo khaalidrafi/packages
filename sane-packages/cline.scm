@@ -197,6 +197,10 @@
     (build-system trivial-build-system)
     (arguments
      (list
+      ;; trivial-build-system's default builder module set does not include
+      ;; (guix build utils), so the (use-modules ...) below would fail with
+      ;; "no code for module (guix build utils)" at evaluation time.
+      #:modules '((guix build utils))
       #:builder
       #~(begin
           (use-modules (guix build utils))

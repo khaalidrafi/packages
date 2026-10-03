@@ -265,7 +265,18 @@
                          (assoc-ref %build-inputs label)
                          "--strip-components=1"
                          "-C"
-                         path))
+                         path)
+                 ;; pngjs ships its directories as drw-rw-rw- and its files as
+                 ;; -rw-rw-rw-, so every node lands without its user write bit.
+                 ;; tar then makes the directory it extracts a member into
+                 ;; unwritable the moment it has applied that mode: CI run
+                 ;; 37119444764 died with 24x `package/lib/foo.js: Cannot open:
+                 ;; Permission denied'.  tar's --no-same-permissions cannot help,
+                 ;; because the recorded mode holds no write bit to restore from.
+                 ;; The whole manifest is small, so walk what was just extracted.
+                 (for-each (lambda (file)
+                             (chmod file #o755))
+                           (find-files path)))
                 (("patch" path file)
                  (let ((patch-file (string-append work "/" file)))
                    (with-directory-excursion path
