@@ -309,6 +309,7 @@
             ;; node_modules tree has to sit next to it at run time too.  So it
             ;; is built where it will be installed -- the output directory is
             ;; writable during the build -- and never copied.
+            (mkdir-p "work")
             (with-directory-excursion "work"
               (copy-recursively source ".")
               (for-each (lambda (line)
