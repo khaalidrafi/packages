@@ -62,11 +62,23 @@ names=$(grep -hoE '^\(define-public [^ )]+' "${files[@]}" | awk '{print $2}')
 
 for f in "${style_files[@]}"; do
   echo "==> style: $f"
-  # `guix style -f -n' prints the file name when it would rewrite it.
-  if guix style -f -n "$f" 2>/dev/null | grep -q .; then
+  # NOT `guix style -f -n', even though -n is documented as "display files
+  # that would be edited but do nothing": with -f it rewrites the file and
+  # prints nothing, so the gate could never fire and CI's style step was a
+  # no-op (it also silently reformats whatever it is pointed at, which on a
+  # laptop is how a dry run ends up in the working tree).  Format for real
+  # into place and ask Git whether the file moved; restore it either way, so
+  # a *check* leaves nothing behind.
+  before=$(mktemp)
+  cp "$f" "$before"
+  guix style -f "$f" >/dev/null 2>&1 || true
+  if ! cmp -s "$before" "$f"; then
+    cp "$before" "$f"
+    rm -f "$before"
     echo "$f is not guix-style; run 'guix style -f $f' and commit." >&2
     exit 1
   fi
+  rm -f "$before"
 done
 
 # One Guix process for the whole channel.  Starting one costs about a minute --

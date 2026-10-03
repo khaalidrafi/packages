@@ -548,7 +548,7 @@ plugin, MCP and search tooling.")
                               ;; $out, not relative to the build dir: after 'install the tree lives
                               ;; in the output, while the unpacked deb still sits in ./usr/share.
                               (substitute* (string-append #$output
-                                             "/share/applications/zcode.desktop")
+                                            "/share/applications/zcode.desktop")
                                 (("/opt/ZCode/zcode")
                                  (string-append #$output "/bin/zcode"))))
                             with-wrapper))))
