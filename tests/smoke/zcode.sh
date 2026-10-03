@@ -25,12 +25,18 @@ grep -qF "$bundle" "$out/bin/zcode" ||
 
 # node --check only parses, which is the point: it proves the bundle is
 # complete JavaScript for this Node rather than a truncated write.
-guix shell -C node-lts -- node --check "$bundle"
+#
+# Run Node out of the store instead of through `guix shell -C': a container
+# mounts only the profile of the packages it starts, so neither $out nor the
+# node_modules targets it symlinks to are visible inside -- the failure would
+# be "No such file or directory", i.e. a false alarm about our own layout.
+node="$(guix build node-lts | head -1)/bin/node"
+"$node" --check "$bundle"
 
 # Resolve the three externals the way the running CLI does, from the bundle's
 # directory.  require.resolve walks node_modules exactly as described in
 # sane-packages/zcode-modules.scm, so this is the layout test.
-guix shell -C node-lts -- node -e '
+"$node" -e '
 const [dist] = process.argv.slice(1);
 for (const name of ["koffi", "playwright-core"]) {
   // require.resolve with `paths` walks node_modules from that directory, which

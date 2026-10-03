@@ -32,9 +32,22 @@ grep -q "^Exec=$out/bin/zcode" "$out/share/applications/zcode.desktop" ||
 grep -q '/opt/ZCode' "$out/share/applications/zcode.desktop" &&
   { echo "desktop entry still refers to /opt" >&2; exit 1; } || true
 
-patchelf() { guix shell -C patchelf -- patchelf "$@"; }
+# Run patchelf straight out of the store rather than through `guix shell -C':
+# a container mounts only the profile of the packages it starts, so the store
+# path under test is not visible inside it and patchelf reports a confusing
+# "getting info about ...: No such file or directory" for a file that plainly
+# exists on the host.
+patchelf="$(guix build patchelf | head -1)/bin/patchelf"
 
-interpreter="$(patchelf --print-interpreter "$out/lib/ZCode/zcode")"
+# patchelf has to look at the ELF, which is no longer at bin/zcode or at
+# lib/ZCode/zcode: wrap-program moved the original binary to
+# .<name>-real beside the wrapper it wrote.  Asking patchelf about the wrapper
+# fails with a misleading "getting info about ...: No such file or directory",
+# because it is a shell script, not a missing file.
+real="$out/lib/ZCode/.zcode-real"
+[ -f "$real" ] || { echo "missing wrapped ELF $real" >&2; exit 1; }
+
+interpreter="$("$patchelf" --print-interpreter "$real")"
 case "$interpreter" in
   /gnu/store/*) ;;
   *) echo "unpatched interpreter: $interpreter" >&2; exit 1 ;;
@@ -43,11 +56,23 @@ esac
 # $ORIGIN first: Electron's own helpers (libffmpeg.so, libEGL.so) live next to
 # the binary.  Then the Guix libraries it dlopens, which is the point of
 # %zcode-rpath-inputs -- a literal store path, not $out, since the app directory
-# is reached through $ORIGIN.
-runpath="$(patchelf --print-rpath "$out/lib/ZCode/zcode")"
-case "$runpath" in
-  '$ORIGIN:'*/gnu/store/*-lib) ;;
-  *) echo "unexpected runpath: $runpath" >&2; exit 1 ;;
-esac
+# is reached through $ORIGIN.  Checked entry by entry rather than with one
+# glob: the order of the entries follows the input list, and nss installs into
+# lib/nss while everything else uses lib, so a single pattern would be tied to
+# whichever package happens to be last.
+runpath="$("$patchelf" --print-rpath "$real")"
+[ "${runpath%%:*}" = '$ORIGIN' ] ||
+  { echo "runpath does not start with \$ORIGIN: $runpath" >&2; exit 1; }
+bad=""
+IFS=':' read -ra entries <<< "$runpath"
+for e in "${entries[@]:1}"; do
+  case "$e" in
+    /gnu/store/*/lib|/gnu/store/*/lib/nss) ;;
+    *) bad="$bad $e" ;;
+  esac
+done
+[ -z "$bad" ] || { echo "runpath entries outside the store:$bad" >&2; exit 1; }
+[ "${#entries[@]}" -gt 1 ] ||
+  { echo "runpath has no Guix libraries: $runpath" >&2; exit 1; }
 
 echo "zcode-bin smoke test passed"

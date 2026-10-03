@@ -433,7 +433,15 @@ plugin, MCP and search tooling.")
                                               (invoke "ar" "x" source)
                                               (invoke "tar" "xf" "data.tar.xz"))
                                             %standard-phases))
-               (with-patchelf (alist-cons-after 'unpack
+               ;; MUST run after 'install, not after 'unpack: everything in this
+               ;; phase -- and in the two phases chained after it -- operates on
+               ;; the *output* tree ($out/lib/ZCode/*, $out/share/applications),
+               ;; which copy-build-system only populates during 'install.  Before
+               ;; that the deb payload still sits in the build directory as
+               ;; ./opt/ZCode, so patchelf used to die with
+               ;; "getting info about '.../lib/ZCode/zcode': No such file or
+               ;; directory" (CI run 36815906901).
+               (with-patchelf (alist-cons-after 'install
                                                 'patchelf-binaries
                                                 (lambda* (#:key inputs
                                                           #:allow-other-keys)
@@ -536,8 +544,11 @@ plugin, MCP and search tooling.")
                             'fix-desktop-entry
                             (lambda _
                               ;; The deb's Exec names the path it was built for; without this the
-                              ;; menu entry points at a /opt that is not there.
-                              (substitute* "share/applications/zcode.desktop"
+                              ;; menu entry points at a /opt that is not there.  Addressed through
+                              ;; $out, not relative to the build dir: after 'install the tree lives
+                              ;; in the output, while the unpacked deb still sits in ./usr/share.
+                              (substitute* (string-append #$output
+                                             "/share/applications/zcode.desktop")
                                 (("/opt/ZCode/zcode")
                                  (string-append #$output "/bin/zcode"))))
                             with-wrapper))))
