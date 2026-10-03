@@ -224,12 +224,23 @@ runpath handling are hard to audit from here and this app's layout
 (=$ORIGIN=-relative helpers, an =.desktop= that names =/opt=) needs two
 customizations anyway.
 
-That same .deb carries the *terminal* CLI as well, as an esbuild bundle at
-=resources/glm/zcode.cjs=, and it needs nothing but Node (=zcode doctor= reports
-=default artifact: node-bundle=).  Upstream ships no launcher for it -- the
-desktop app spawns it -- so =zcode-bin= installs one as =zcode-cli=.  It reads
-the same =~/.zcode= state as the source-built =zcode=, which makes it the way to
-get the CLI onto a machine where a source build is not an option;
+That same .deb carries the *terminal* CLI too, as =resources/glm/zcode.cjs= --
+which is upstream's own =bin= entry for =zcode= in
+=apps/zcode-cli/packages/cli/package.json= -- and =zcode-bin= installs it as
+=zcode-cli=.  It is a real CLI, but from this copy it is not the whole one, and
+the two gaps are worth knowing before reaching for it:
+
+- the bundle needs a provider config next to itself, which the .deb only ships
+  for the desktop app, so the wrapper points
+  =ZCODE_BUILTIN_PROVIDER_CONFIG_FILE= (upstream's own variable) at it;
+- =@zcode/tui= is an esbuild external and lives inside the app's =app.asar=, not
+  next to the bundle, so =zcode-cli= *with no arguments* -- the full-screen TUI
+  the README opens with -- fails with "Cannot find package '@zcode/tui'".
+  =version=, =doctor=, =skills=, =plugins= and =-p PROMPT= all work.
+
+So =zcode-cli= is the agent's scriptable side, useful right now on a machine
+that cannot run the source build; the TUI and =--web= (which upstream's release
+launcher =bin/zcode.mjs= adds) are what the source package =zcode= is for.
 =tests/smoke/zcode-bin.sh= runs the wrapper and requires a version string back,
 so a moved bundle or a missing Node input fails CI rather than the user.
 

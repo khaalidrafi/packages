@@ -539,28 +539,48 @@ plugin, MCP and search tooling.")
                                                            "/lib/ZCode/zcode")
                                                           (string-append #$output
                                                            "/bin/zcode"))
-                                                 ;; The same .deb also carries the *terminal*
-                                                 ;; CLI: resources/glm/zcode.cjs, a
-                                                 ;; self-contained esbuild bundle that needs
-                                                 ;; nothing but Node ("zcode doctor" reports
-                                                 ;; "default artifact: node-bundle").  Upstream
-                                                 ;; ships no symlink for it -- the desktop app
-                                                 ;; spawns it -- so without this the package
-                                                 ;; would leave a working CLI unused.  Named
-                                                 ;; zcode-cli rather than zcode: bin/zcode is the
-                                                 ;; app (the deb's own choice), and the source
-                                                 ;; build `zcode' already claims that name for
-                                                 ;; its CLI, so the two packages must not
-                                                 ;; collide in one profile.
+                                                 ;; The same .deb also carries the *terminal* CLI:
+                                                 ;; resources/glm/zcode.cjs, which is upstream's own bin
+                                                 ;; target for `zcode' (apps/zcode-cli/packages/cli/
+                                                 ;; package.json), so this is the real CLI rather than a
+                                                 ;; re-implementation.  It is not self-contained, though:
+                                                 ;;
+                                                 ;; * provider config -- the bundle looks for
+                                                 ;; provider/zcode-builtin.json next to itself and
+                                                 ;; otherwise stops at "Cannot locate CLI ZCode
+                                                 ;; Built-in Provider Config".  The deb ships that
+                                                 ;; file for the desktop app (resources/config/), so
+                                                 ;; it is supplied through upstream's documented
+                                                 ;; ZCODE_BUILTIN_PROVIDER_CONFIG_FILE, as a default
+                                                 ;; the user can still override.
+                                                 ;;
+                                                 ;; * @zcode/tui -- esbuild keeps it external and the
+                                                 ;; deb packs it inside app.asar instead of next to
+                                                 ;; the bundle, so `zcode-cli' with no arguments (the
+                                                 ;; full-screen TUI the README opens with) fails with
+                                                 ;; "Cannot find package '@zcode/tui'".  Everything
+                                                 ;; else works: version, doctor, skills, plugins, -p
+                                                 ;; PROMPT.  That TUI is exactly what the source
+                                                 ;; build `zcode' exists for -- it rebuilds the
+                                                 ;; package from the Apache-2.0 sources.
+                                                 ;;
+                                                 ;; Named zcode-cli, not zcode: bin/zcode is the app (the
+                                                 ;; deb's own choice), upstream's CLI installer writes
+                                                 ;; `zcode' into ~/.local/bin, and the source package
+                                                 ;; already provides bin/zcode for its own CLI.
                                                  (let ((cli (string-append #$output
                                                              "/bin/zcode-cli")))
                                                    (call-with-output-file cli
                                                      (lambda (port)
                                                        (format port
                                                         "#!~a/bin/bash
+: \"${ZCODE_BUILTIN_PROVIDER_CONFIG_FILE:=~a}\"
+export ZCODE_BUILTIN_PROVIDER_CONFIG_FILE
 exec ~a/bin/node \"~a\" \"$@\"
 "
                                                         #$bash-minimal
+                                                        (string-append #$output
+                                                         "/lib/ZCode/resources/config/provider/zcode-builtin.json")
                                                         #$node-lts
                                                         (string-append #$output
                                                          "/lib/ZCode/resources/glm/zcode.cjs"))))
