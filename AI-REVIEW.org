@@ -130,6 +130,56 @@ near =%zcode-commit=.  On a bump, confirm both from
 =./scripts/latest-version.sh= and do not "simplify" back to one variable.  A
 silent divergence would look like a successful build of the wrong source.
 
+* TODO =zcode=: the unpack silently depends on =bsdtar=, not =tar=
+
+=custom.scm=/=zcode.scm=, =#:builder= manifest arm =("unpack" path …)=.
+
+The npm tarball is extracted with libarchive's =bsdtar= and then
+=chmod -R u+rwx=, not with GNU =tar=.  Some npm packages (=pngjs= is the one
+that bit us) ship their /directories/ with mode 0666 --- no execute bit --- and
+GNU =tar= aborts with "Permission denied" as soon as it tries to write a file
+into such a directory.  =--no-same-permissions= does not help: umask can only
+/clear/ bits, so it can never add the missing execute bit back.  =bsdtar= warns
+about the bad modes and exits 0; the recursive =chmod= then restores what node
+needs to descend the tree.
+
+Review point: if anyone "simplifies" this back to =tar=, or drops the =chmod=
+because "extraction already succeeded", the build breaks again --- and the
+failure looks like a permissions bug in the sandbox, not a packaging choice.
+Keep =(list "libarchive" libarchive)= in =native-inputs=; =bsdtar= is not on the
+build PATH otherwise.
+
+How to check: =./tests/smoke/zcode.sh=, or any =guix build zcode= from a clean
+checkout (an already-populated store can mask it with a cached substitute).
+
+* TODO =brow6el-bin=: =-Wl,-rpath-link= is load-bearing, and looks redundant
+
+=custom.scm=, package =brow6el-bin=, phase =build-cef-wrapper=.
+
+=libcef.so= ships =RUNPATH=$ORIGIN= and nothing else, and brow6el's
+=CMakeLists.txt= sets =CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE=.  So although
+glib, at-spi2-core, mesa, cups, expat, nspr/nss are all declared =inputs=, ld
+has no search path for them when it resolves /libcef.so's own/ =DT_NEEDED=
+entries --- and fails with ~600 "undefined reference" errors naming symbols
+that plainly belong to packages in the graph.
+
+The fix sets =LDFLAGS="-Wl,-rpath-link,<dir>"= for every input's =lib=, plus
+=nss/lib/nss= (where Guix puts =libnss3.so=) and the copied =cef_binary/Release=.
+Two things to note while reviewing:
+
+1. It is /link-time only/ --- it does not touch the runtime rpath, which
+   =install-cef-resources= sets with patchelf plus the =LD_LIBRARY_PATH= wrapper.
+   Do not "consolidate" the two lists; they answer different questions.
+2. The =-rpath-link= list is derived from =inputs= at run time, so adding a new
+   library dependency needs no edit here.  That is also why it looks like magic:
+   deleting an input from the package removes its dir from the search path, and
+   the error you get back is an =ld= undefined reference, not a missing input.
+
+Review point: if upstream brow6el ever stops using CMake's default link rule, or
+starts setting =CMAKE_EXE_LINKER_FLAGS= itself, =LDFLAGS= would be ignored ---
+CMake only reads it while /initialising/ the cache.  Symptom: the same wall of
+undefined references returns despite correct inputs.
+
 * DONE =cline=: the version lived in two files
 CLOSED: [2026-10-03 Fri]
 
