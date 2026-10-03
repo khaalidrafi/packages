@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Smoke test for zcode-bin: assert the vendor .deb's Electron layout survived
 # the copy phase, that the launcher and the .desktop entry point at the store
-# rather than at /opt, and that the main binary got a store interpreter and a
-# RUNPATH.  Nothing here needs a display; starting the GUI stays a manual check
-# (see README.org).
+# rather than at /opt, that the main binary got a store interpreter and a
+# RUNPATH, and that the terminal CLI the .deb carries actually starts.  Nothing
+# here needs a display; starting the GUI stays a manual check (see README.org).
 set -euo pipefail
 out="${1:?usage: $0 STORE-PATH}"
 
@@ -75,4 +75,16 @@ done
 [ "${#entries[@]}" -gt 1 ] ||
   { echo "runpath has no Guix libraries: $runpath" >&2; exit 1; }
 
-echo "zcode-bin smoke test passed"
+# The .deb also ships the terminal CLI, as an esbuild bundle under
+# resources/glm; bin/zcode-cli is the wrapper that runs it on Guix's Node.
+# Exercise the wrapper rather than node by hand, so this is the command a user
+# types, and require a version number back: the string comes from inside the
+# bundle, so a moved path, a missing Node input or a bundle that can no longer
+# start all fail here.
+cli_version="$("$out/bin/zcode-cli" --version 2>&1 | tail -1)"
+case "$cli_version" in
+  [0-9]*) ;;
+  *) echo "zcode-cli printed no version: $cli_version" >&2; exit 1 ;;
+esac
+
+echo "zcode-bin smoke test passed ($cli_version)"

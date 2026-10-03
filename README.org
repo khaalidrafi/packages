@@ -10,7 +10,7 @@ built by CI instead of by hand on a 4 GB laptop.
 | Package          | Module                   | Kind                              |
 |------------------+--------------------------+-----------------------------------|
 | zcode            | =(sane-packages zcode)=  | terminal agent, built from source |
-| zcode-bin        | =(sane-packages zcode)=  | vendor Electron .deb              |
+| zcode-bin        | =(sane-packages zcode)=  | vendor Electron .deb and its CLI  |
 | cline-baseline   | =(sane-packages cline)=  | Bun CLI, built for non-AVX2 CPUs  |
 | mcode, mcode-bin | =(sane-packages custom)= | Minimax Code CLI (npm artifact)   |
 | dsh, qoder-*, …  | =(sane-packages custom)= | everything predating this layout  |
@@ -223,6 +223,15 @@ nonguix ships =signal-desktop= or =bitwarden-desktop= --- but with
 runpath handling are hard to audit from here and this app's layout
 (=$ORIGIN=-relative helpers, an =.desktop= that names =/opt=) needs two
 customizations anyway.
+
+That same .deb carries the *terminal* CLI as well, as an esbuild bundle at
+=resources/glm/zcode.cjs=, and it needs nothing but Node (=zcode doctor= reports
+=default artifact: node-bundle=).  Upstream ships no launcher for it -- the
+desktop app spawns it -- so =zcode-bin= installs one as =zcode-cli=.  It reads
+the same =~/.zcode= state as the source-built =zcode=, which makes it the way to
+get the CLI onto a machine where a source build is not an option;
+=tests/smoke/zcode-bin.sh= runs the wrapper and requires a version string back,
+so a moved bundle or a missing Node input fails CI rather than the user.
 
 ** License
 

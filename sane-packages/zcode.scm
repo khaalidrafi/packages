@@ -538,7 +538,33 @@ plugin, MCP and search tooling.")
                                                  (symlink (string-append #$output
                                                            "/lib/ZCode/zcode")
                                                           (string-append #$output
-                                                           "/bin/zcode")))
+                                                           "/bin/zcode"))
+                                                 ;; The same .deb also carries the *terminal*
+                                                 ;; CLI: resources/glm/zcode.cjs, a
+                                                 ;; self-contained esbuild bundle that needs
+                                                 ;; nothing but Node ("zcode doctor" reports
+                                                 ;; "default artifact: node-bundle").  Upstream
+                                                 ;; ships no symlink for it -- the desktop app
+                                                 ;; spawns it -- so without this the package
+                                                 ;; would leave a working CLI unused.  Named
+                                                 ;; zcode-cli rather than zcode: bin/zcode is the
+                                                 ;; app (the deb's own choice), and the source
+                                                 ;; build `zcode' already claims that name for
+                                                 ;; its CLI, so the two packages must not
+                                                 ;; collide in one profile.
+                                                 (let ((cli (string-append #$output
+                                                             "/bin/zcode-cli")))
+                                                   (call-with-output-file cli
+                                                     (lambda (port)
+                                                       (format port
+                                                        "#!~a/bin/bash
+exec ~a/bin/node \"~a\" \"$@\"
+"
+                                                        #$bash-minimal
+                                                        #$node-lts
+                                                        (string-append #$output
+                                                         "/lib/ZCode/resources/glm/zcode.cjs"))))
+                                                   (chmod cli #o555)))
                                                with-patchelf)))
           (alist-cons-after 'create-wrapper
                             'fix-desktop-entry
@@ -580,6 +606,7 @@ plugin, MCP and search tooling.")
                   libxkbcommon
                   libxrandr
                   mesa
+                  node-lts ;bin/zcode-cli runs the deb's own bundle on it
                   nspr
                   nss
                   pango
@@ -593,9 +620,10 @@ plugin, MCP and search tooling.")
     (description
      "ZCode is Z.ai's desktop application for agentic software
 development, with a browser UI and a terminal agent sharing one workspace.  This
-package installs the vendor build of the desktop app from Z.ai's own .deb; for a
-build from the Apache-2.0 sources, see the @code{zcode} package in this channel,
-which provides the terminal agent.")
+package installs the vendor build of the desktop app from Z.ai's own .deb; the
+.deb also carries the terminal CLI, which is installed as @code{zcode-cli}.  For
+a build from the Apache-2.0 sources, see the @code{zcode} package in this
+channel, which provides the terminal agent.")
     ;; The .deb carries no license text beyond Electron/Chromium notices and its
     ;; control file says {@code License: unknown}, but upstream's own repository
     ;; (zai-org/ZCode) ships an Apache-2.0 LICENSE and NOTICE.md states first-party
