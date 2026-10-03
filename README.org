@@ -359,10 +359,11 @@ publisher, which a separate job could only do by uploading the whole cache.
    =*-bin= ones after; that ordering is what "prioritized" means here.  It runs
    =tests/smoke/PACKAGE.sh= when present and attempts every package so one
    broken one does not hide another.  Each built output path is appended to
-   =built-paths.txt= for step 5.  =cline-baseline= is the sole skip: its
-   fixed-output hash is still a placeholder (see the cline section), so a real
-   build there would only trip the hash check --- it is still evaluated in
-   step 2.  Narrow a run with =PACKAGES="zcode dsh" ./tests/build-all.sh=.
+   =built-paths.txt= for step 5.  Nothing is skipped: =cline-baseline= is built
+   too, and until its fixed-output hash is real (see the cline section) the
+   failure it produces is the useful one --- Guix prints the hash it computed,
+   which is the only way to get it without a network build on a laptop.
+   Narrow a run with =PACKAGES="zcode dsh" ./tests/build-all.sh=.
 5. =tests/publish-substitutes.sh= --- start a =guix publish --cache= server and
    warm it by requesting each built path's =.narinfo=: that request is what
    triggers the background bake (Guix manual, /Invoking guix publish/), so the
