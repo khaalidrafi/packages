@@ -9,25 +9,29 @@ out="${1:?usage: $0 STORE-PATH}"
 
 for path in \
     bin/zcode \
+    bin/zcode-desktop \
     lib/ZCode/zcode \
     lib/ZCode/libffmpeg.so \
     lib/ZCode/libEGL.so \
     lib/ZCode/icudtl.dat \
     lib/ZCode/resources/app.asar \
+    lib/ZCode/resources/glm/zcode.cjs \
+    lib/ZCode/resources/config/provider/zcode-builtin.json \
     share/applications/zcode.desktop \
     share/icons/hicolor/256x256/apps/zcode.png; do
   [ -e "$out/$path" ] || { echo "missing $out/$path" >&2; exit 1; }
 done
 
-# bin/zcode must reach the wrapper, and the wrapper must be the script
+# bin/zcode-desktop must reach the wrapper, and the wrapper must be the script
 # wrap-program wrote rather than the ELF itself: the RPATH set below is what
 # makes the binary run, but XDG_DATA_DIRS and PATH are what make it find icons,
 # mime types and xdg-open.
-[ -L "$out/bin/zcode" ] || { echo "$out/bin/zcode is not a symlink" >&2; exit 1; }
+[ -L "$out/bin/zcode-desktop" ] ||
+  { echo "$out/bin/zcode-desktop is not a symlink" >&2; exit 1; }
 grep -q 'XDG_DATA_DIRS' "$out/lib/ZCode/zcode" ||
   { echo "$out/lib/ZCode/zcode is not a wrapper" >&2; exit 1; }
 
-grep -q "^Exec=$out/bin/zcode" "$out/share/applications/zcode.desktop" ||
+grep -q "^Exec=$out/bin/zcode-desktop" "$out/share/applications/zcode.desktop" ||
   { echo "desktop Exec not rewritten to the store" >&2; exit 1; }
 grep -q '/opt/ZCode' "$out/share/applications/zcode.desktop" &&
   { echo "desktop entry still refers to /opt" >&2; exit 1; } || true
@@ -76,15 +80,20 @@ done
   { echo "runpath has no Guix libraries: $runpath" >&2; exit 1; }
 
 # The .deb also ships the terminal CLI, as an esbuild bundle under
-# resources/glm; bin/zcode-cli is the wrapper that runs it on Guix's Node.
+# resources/glm, and it is what gets the plain `zcode' name: upstream's own bin
+# target and upstream's own installer both call the command `zcode', and the
+# source package in this channel provides bin/zcode for the same program (the
+# two packages collide in one profile on purpose; see README.org).
 # Exercise the wrapper rather than node by hand, so this is the command a user
 # types, and require a version number back: the string comes from inside the
 # bundle, so a moved path, a missing Node input or a bundle that can no longer
 # start all fail here.
-cli_version="$("$out/bin/zcode-cli" --version 2>&1 | tail -1)"
+[ -L "$out/bin/zcode" ] &&
+  { echo "$out/bin/zcode is the app symlink, not the CLI wrapper" >&2; exit 1; } || true
+cli_version="$("$out/bin/zcode" --version 2>&1 | tail -1)"
 case "$cli_version" in
   [0-9]*) ;;
-  *) echo "zcode-cli printed no version: $cli_version" >&2; exit 1 ;;
+  *) echo "zcode printed no version: $cli_version" >&2; exit 1 ;;
 esac
 
 echo "zcode-bin smoke test passed ($cli_version)"

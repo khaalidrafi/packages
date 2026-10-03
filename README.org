@@ -226,23 +226,52 @@ customizations anyway.
 
 That same .deb carries the *terminal* CLI too, as =resources/glm/zcode.cjs= --
 which is upstream's own =bin= entry for =zcode= in
-=apps/zcode-cli/packages/cli/package.json= -- and =zcode-bin= installs it as
-=zcode-cli=.  It is a real CLI, but from this copy it is not the whole one, and
-the two gaps are worth knowing before reaching for it:
+=apps/zcode-cli/packages/cli/package.json= -- and =zcode-bin= installs it under
+the name upstream gives it: =bin/zcode=.  The desktop app, which the .deb ships
+as =/usr/bin/zcode=, is therefore installed as =bin/zcode-desktop=, and the
+=.desktop= entry points at that.  The CLI is a real CLI, but from this copy it
+is not the whole one, and the two gaps are worth knowing before reaching for it:
 
 - the bundle needs a provider config next to itself, which the .deb only ships
   for the desktop app, so the wrapper points
   =ZCODE_BUILTIN_PROVIDER_CONFIG_FILE= (upstream's own variable) at it;
 - =@zcode/tui= is an esbuild external and lives inside the app's =app.asar=, not
-  next to the bundle, so =zcode-cli= *with no arguments* -- the full-screen TUI
-  the README opens with -- fails with "Cannot find package '@zcode/tui'".
+  next to the bundle, so =zcode= *with no arguments* -- the full-screen TUI the
+  README opens with -- fails with "Cannot find package '@zcode/tui'".
   =version=, =doctor=, =skills=, =plugins= and =-p PROMPT= all work.
 
-So =zcode-cli= is the agent's scriptable side, useful right now on a machine
-that cannot run the source build; the TUI and =--web= (which upstream's release
-launcher =bin/zcode.mjs= adds) are what the source package =zcode= is for.
-=tests/smoke/zcode-bin.sh= runs the wrapper and requires a version string back,
-so a moved bundle or a missing Node input fails CI rather than the user.
+So the =zcode= that comes from =zcode-bin= is the agent's scriptable side, useful
+right now on a machine that cannot run the source build; the TUI and =--web=
+(which upstream's release launcher =bin/zcode.mjs= adds) are what the source
+package =zcode= is for.  =tests/smoke/zcode-bin.sh= runs the wrapper and requires
+a version string back, so a moved bundle or a missing Node input fails CI rather
+than the user.
+
+** Conflicts between a =*-bin= and its source package
+
+=bin/zcode= is the CLI in /both/ =zcode= and =zcode-bin=, so installing the two
+into one profile is a file collision, and =guix package= refuses it by default.
+That is the intended outcome, not a defect to design around: they are two
+deliveries of the same command, and one of them has to win.  Renaming the binary
+in the =*-bin= package (=zcode-cli= was) would dodge the error message while
+leaving the two CLIs fighting over the user's config, sessions and login state
+under whatever names they do have.
+
+Note that this is a /profile/ property, not a package one.  Current Guix has no
+=conflicts= field on =package= --- =(@ (guix packages) package-conflicts)= is an
+unbound variable, and the development manual documents no such thing --- so
+there is nothing to declare.  The one knob is =guix package --allow-collisions=
+(=--allow-collisions do not treat collisions in the profile as an error=), which
+exists for collisions you have judged harmless.  This one is not: the two
+=zcode='s write to the same places.  The choice stays the user's at install
+time, which is why the packages say nothing about it.
+
+If you do want both, put them in separate profiles:
+
+#+begin_example
+guix install -p ~/.guix-extra-profiles/a/a zcode
+guix install -p ~/.guix-extra-profiles/b/b zcode-bin
+#+end_example
 
 ** License
 

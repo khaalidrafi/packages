@@ -80,6 +80,13 @@
 (define %version
   "3.14.3")
 
+;; The vendor .deb lives in its own version space: Z.ai ships desktop builds on
+;; its CDN faster than it tags the repository, and 3.14.4 is on the CDN while
+;; the newest tag is still v3.14.3.  Keeping one variable per delivery means
+;; bumping the desktop app cannot drag the source package's git tag along.
+(define %bin-version
+  "3.14.4")
+
 ;;; Tag v3.14.3.  Pinned by commit rather than tag: a tag can be moved, and
 ;;; git-fetch has to resolve the object name anyway.
 (define %zcode-commit
@@ -376,11 +383,11 @@ plugin, MCP and search tooling.")
 ;;; is not cross-compilation: binary-build systems of this kind want the
 ;;; matching .deb on the matching machine.
 (define %zcode-bin-builds
-  `(("x86_64-linux" "linux-x64" . "0ksv1dxkfghdpapwkc0dl5aq4h3bdsl0k9livkncg1lni1wgn4l5")
+  `(("x86_64-linux" "linux-x64" . "1gp4d6x1caad1xm7vvyyan9xkj5411y93hybkk15gq758n462lyp")
     ;; Declared because upstream serves the arm64 .deb, and the URL and payload
     ;; layout are the same; no runner here can verify it, since binary packages
     ;; of this kind do not cross-compile.
-    ("aarch64-linux" "linux-arm64" . "0xylxzcqp4wcn85izyc17kajc4alm4frg9namz4x8gsn4gnkq9hq")))
+    ("aarch64-linux" "linux-arm64" . "067p9v261qx4909hra1sxn7fd2v406h3j7yq8q3q88lm0x38")))
 
 (define (zcode-bin-source)
   (let* ((entry (or (assoc (%current-system) %zcode-bin-builds)
@@ -390,21 +397,21 @@ plugin, MCP and search tooling.")
     (origin
       (method url-fetch)
       (uri (string-append "https://cdn-zcode.z.ai/zcode/electron/releases/"
-                          %version
+                          %bin-version
                           "/"
                           arch
                           "/ZCode-"
-                          %version
+                          %bin-version
                           "-"
                           arch
                           ".deb"))
-      (file-name (string-append "zcode-bin-" %version ".deb"))
+      (file-name (string-append "zcode-bin-" %bin-version ".deb"))
       (sha256 (base32 hash)))))
 
 (define-public zcode-bin
   (package
     (name "zcode-bin")
-    (version %version)
+    (version %bin-version)
     (source
      (zcode-bin-source))
     (build-system copy-build-system)
@@ -532,13 +539,22 @@ plugin, MCP and search tooling.")
                                                    `("PATH" suffix
                                                      (,(string-append #$xdg-utils
                                                                       "/bin"))))
-                                                 ;; Entry point, like the deb's own /usr/bin/zcode symlink.
+                                                 ;; Two entry points share this phase and only one of
+                                                 ;; them may be called `zcode'.  The deb's own choice
+                                                 ;; is /usr/bin/zcode -> /opt/ZCode/zcode, i.e. the
+                                                 ;; app, but upstream's CLI installer writes the
+                                                 ;; *command* `zcode' into ~/.local/bin and the
+                                                 ;; source package `zcode' here provides bin/zcode
+                                                 ;; for that CLI, so `zcode' means the CLI and the
+                                                 ;; app takes a suffix -- which is also how Guix
+                                                 ;; names other Electron repackagements
+                                                 ;; (`signal-desktop', `bitwarden-desktop').
                                                  (mkdir-p (string-append #$output
                                                            "/bin"))
                                                  (symlink (string-append #$output
                                                            "/lib/ZCode/zcode")
                                                           (string-append #$output
-                                                           "/bin/zcode"))
+                                                           "/bin/zcode-desktop"))
                                                  ;; The same .deb also carries the *terminal* CLI:
                                                  ;; resources/glm/zcode.cjs, which is upstream's own bin
                                                  ;; target for `zcode' (apps/zcode-cli/packages/cli/
@@ -556,7 +572,7 @@ plugin, MCP and search tooling.")
                                                  ;;
                                                  ;; * @zcode/tui -- esbuild keeps it external and the
                                                  ;; deb packs it inside app.asar instead of next to
-                                                 ;; the bundle, so `zcode-cli' with no arguments (the
+                                                 ;; the bundle, so `zcode' with no arguments (the
                                                  ;; full-screen TUI the README opens with) fails with
                                                  ;; "Cannot find package '@zcode/tui'".  Everything
                                                  ;; else works: version, doctor, skills, plugins, -p
@@ -564,12 +580,12 @@ plugin, MCP and search tooling.")
                                                  ;; build `zcode' exists for -- it rebuilds the
                                                  ;; package from the Apache-2.0 sources.
                                                  ;;
-                                                 ;; Named zcode-cli, not zcode: bin/zcode is the app (the
-                                                 ;; deb's own choice), upstream's CLI installer writes
-                                                 ;; `zcode' into ~/.local/bin, and the source package
-                                                 ;; already provides bin/zcode for its own CLI.
+                                                 ;; Installing `zcode' and `zcode-bin' in one profile
+                                                 ;; is a file collision and `guix package' refuses it
+                                                 ;; by default; they are two deliveries of the same
+                                                 ;; CLI, so pick one (see README.org).
                                                  (let ((cli (string-append #$output
-                                                             "/bin/zcode-cli")))
+                                                             "/bin/zcode")))
                                                    (call-with-output-file cli
                                                      (lambda (port)
                                                        (format port
@@ -596,7 +612,7 @@ exec ~a/bin/node \"~a\" \"$@\"
                               (substitute* (string-append #$output
                                             "/share/applications/zcode.desktop")
                                 (("/opt/ZCode/zcode")
-                                 (string-append #$output "/bin/zcode"))))
+                                 (string-append #$output "/bin/zcode-desktop"))))
                             with-wrapper))))
     (native-inputs (list binutils patchelf))
     (inputs (list (list gcc "lib") ;libgcc_s.so.1
@@ -626,7 +642,7 @@ exec ~a/bin/node \"~a\" \"$@\"
                   libxkbcommon
                   libxrandr
                   mesa
-                  node-lts ;bin/zcode-cli runs the deb's own bundle on it
+                  node-lts ;bin/zcode runs the deb's own bundle on it
                   nspr
                   nss
                   pango
@@ -641,9 +657,11 @@ exec ~a/bin/node \"~a\" \"$@\"
      "ZCode is Z.ai's desktop application for agentic software
 development, with a browser UI and a terminal agent sharing one workspace.  This
 package installs the vendor build of the desktop app from Z.ai's own .deb; the
-.deb also carries the terminal CLI, which is installed as @code{zcode-cli}.  For
-a build from the Apache-2.0 sources, see the @code{zcode} package in this
-channel, which provides the terminal agent.")
+.deb also carries the terminal CLI, which is installed as @code{zcode} -- the
+name upstream gives it -- while the desktop app is installed as
+@code{zcode-desktop}.  For a build from the Apache-2.0 sources, see the
+@code{zcode} package in this channel, which provides the terminal agent
+including its full-screen TUI.")
     ;; The .deb carries no license text beyond Electron/Chromium notices and its
     ;; control file says {@code License: unknown}, but upstream's own repository
     ;; (zai-org/ZCode) ships an Apache-2.0 LICENSE and NOTICE.md states first-party
