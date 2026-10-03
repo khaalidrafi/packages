@@ -2166,13 +2166,35 @@ locales) and the cmake find modules required to compile CEF-based apps.")
             (lambda* (#:key inputs #:allow-other-keys)
               (use-modules (guix build utils))
               (let* ((cef-src (assoc-ref inputs "cef-binary-dist"))
-                     (work (string-append (getcwd) "/cef_binary")))
+                     (work (string-append (getcwd) "/cef_binary"))
+                     (lib-dirs (delete-dups (append (filter file-exists?
+                                                            (map (lambda (i)
+                                                                   (string-append
+                                                                    (cdr i)
+                                                                    "/lib"))
+                                                                 inputs))
+                                                    (list (string-append (assoc-ref
+                                                                          inputs
+                                                                          "nss")
+                                                           "/lib/nss")
+                                                          (string-append work
+                                                           "/Release"))))))
                 (mkdir-p work)
                 (copy-recursively cef-src work)
                 (mkdir-p (string-append work "/build"))
                 (with-directory-excursion (string-append work "/build")
                   (invoke "cmake" "-DCMAKE_BUILD_TYPE=Release" work)
                   (invoke "make" "-j" "1" "libcef_dll_wrapper"))
+                ;; libcef.so has RUNPATH=$ORIGIN, so when linking the executable
+                ;; against it ld cannot resolve libcef.so's own NEEDED entries
+                ;; (glib, atk, atspi, cairo, cups, gbm, expat ...).  -Wl,-rpath-link
+                ;; adds each input's lib dir to ld's search for those second-order
+                ;; dependencies (no DT_RUNPATH change, runtime is already handled
+                ;; by the install-cef-resources wrapper).
+                (setenv "LDFLAGS"
+                        (string-join (map (lambda (d)
+                                            (string-append "-Wl,-rpath-link,"
+                                                           d)) lib-dirs) " "))
                 ;; Not used by CMake (see the note above) -- install-cef-resources
                 ;; below reads it to find the .so, .pak and locale files.  setenv
                 ;; persists across phases because the whole build is one process.
