@@ -28,12 +28,12 @@ else
     exit 1
   fi
   all=$(grep -hoE '^\(define-public [^ )]+' "${files[@]}" | awk '{print $2}')
-  # cline-baseline's fixed-output hash is still a placeholder (see README.org):
-  # the one-time network build that captures it has not run, so building it here
-  # would only fail on the expected hash mismatch.  It is still evaluated by
-  # tests/check-static.sh, and you can build it on purpose with
-  # PACKAGES="cline-baseline".  Drop this filter once the real hash is committed.
-  source_pkgs=$(printf '%s\n' $all | grep -vE -- '-bin$|^cline-baseline$' || true)
+  # Nothing is excluded: every define-public in the channel is built, so a
+  # placeholder hash or a broken phase cannot hide.  cline-baseline is the
+  # package that most often fails here -- its fixed-output hash can only be
+  # captured by the one-time network build that no laptop here runs, so CI is
+  # what reports the "hash mismatch ... proposed value" line to fill in.
+  source_pkgs=$(printf '%s\n' $all | grep -vE -- '-bin$' || true)
   bin_pkgs=$(printf '%s\n' $all | grep -E -- '-bin$' || true)
   names="$(printf '%s\n' $source_pkgs) $(printf '%s\n' $bin_pkgs)"
 fi
