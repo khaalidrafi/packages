@@ -2041,6 +2041,20 @@ locales) and the cmake find modules required to compile CEF-based apps.")
     (native-inputs (list pkg-config))
     (arguments
      (list
+      ;; brow6el's CMakeLists reads CEF_ROOT as a *cache* variable:
+      ;;   set(CEF_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/cef_binary" CACHE PATH ...)
+      ;;   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CEF_ROOT}/cmake")
+      ;;   find_package(CEF REQUIRED)
+      ;; so the CEF_ROOT that 'build-cef-wrapper exports into the environment is
+      ;; invisible to it -- CMP0074 (the *_ROOT hint) only applies to config-file
+      ;; packages found through CMAKE_PREFIX_PATH, not to a set(... CACHE)
+      ;; default.  That is why CI died with "Could not find a package
+      ;; configuration file provided by "CEF"": CMake looked in the (absent)
+      ;; ./cef_binary/cmake.  Seed the cache entry from the env var instead; the
+      ;; flag is a G-expression, so (getenv ...) runs inside the build, after
+      ;; 'build-cef-wrapper created the writable CEF copy.
+      #:configure-flags
+      #~(list (string-append "-DCEF_ROOT=" (getenv "CEF_ROOT")))
       #:phases
       #~(modify-phases %standard-phases
           ;; The CEF "minimal" binary distribution ships the libcef_dll_wrapper
