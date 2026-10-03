@@ -166,6 +166,16 @@ guix build -L . zcode
 guix environment -L . zcode
 #+end_example
 
+#+begin_quote
+*Gotcha on a machine that also has =GUIX_PACKAGE_PATH= set* (e.g. a dotfiles
+directory of loose =.scm= packages): a bare =guix build -L . PKG= can resolve
+=PKG= to that older copy rather than this working tree, so a fix you just made
+here looks like it did nothing.  Clear it for local checks
+(=GUIX_PACKAGE_PATH= guix build -L . ...=) or name the module outright
+(=-e '(@@ (sane-packages custom) PKG)'=).  CI is unaffected: it has no
+=GUIX_PACKAGE_PATH=.
+#+end_quote
+
 * zcode and zcode-bin
 
 ZCode (https://zcode.z.ai) is Z.ai's AI coding workspace: a terminal agent, a
