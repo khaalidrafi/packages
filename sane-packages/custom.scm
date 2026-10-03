@@ -1,4 +1,12 @@
 (define-module (sane-packages custom)
+  ;; The one non-package name this module exports.  (sane-packages cline)
+  ;; already imports this module for bun-bin, and cline's CLI release number
+  ;; covers all three deliveries (see %cline-version below); exporting it lets
+  ;; that number be written once.  It goes through #:export rather than
+  ;; `define-public' because tests/check-static.sh harvests package names by
+  ;; grepping `define-public' forms -- a version *string* must not show up
+  ;; there.
+  #:export (%cline-version)
   #:use-module (gnu packages base)
   #:use-module (gnu packages suckless)
   #:use-module (gnu packages xorg)
@@ -56,7 +64,7 @@
 (define-public bcon
   (package
     (name "bcon")
-    (version "1.4.0")
+    (version "1.5.1")
     (source
      (origin
        (method git-fetch)
@@ -65,7 +73,7 @@
              (commit (string-append "v" version))))
        (file-name (git-file-name name version))
        (sha256
-        (base32 "1gv23ksgm94h8i2frk54csh65kyjkb7dl3qysvjg0m0qal8cbzrj"))))
+        (base32 "1hvswk4c3q0r6kpdpwf4vfran9zc4cwr3rk91gk1hqyyp6006k14"))))
     (build-system cargo-build-system)
     (arguments
      (list
@@ -319,7 +327,7 @@ release binaries are used instead.")
     (license license:expat)))
 
 (define %opencode-version
-  "1.18.29")
+  "1.18.34")
 (define %opencode-url
   "https://github.com/anomalyco/opencode/releases/download/v")
 
@@ -328,14 +336,14 @@ release binaries are used instead.")
     (method url-fetch)
     (uri (string-append %opencode-url %opencode-version
                         "/opencode-linux-x64.tar.gz"))
-    (sha256 (base32 "150ig9lljx78z79xjbv8np2a8z2iwb0ryv0ja84vf9k2ymzhp07a"))))
+    (sha256 (base32 "16ky3nkw3vs11flwcbdnf0wdlyzfh80d55cmv4nisv928yb4f8hg"))))
 
 (define opencode-baseline-source
   (origin
     (method url-fetch)
     (uri (string-append %opencode-url %opencode-version
                         "/opencode-linux-x64-baseline.tar.gz"))
-    (sha256 (base32 "0b84gxaspjlidmd6lkgmxjkcamlz73mki9y3wkipfd72cgqg58q3"))))
+    (sha256 (base32 "09qvv23azpvqmdv4iys9n12ljzygxwyk0ri1fnr4ix8ys9cd9c14"))))
 
 (define-public opencode-bin
   (package
@@ -415,7 +423,7 @@ loader, so no FHS emulation is required.")
     (license license:expat)))
 
 (define %cursor-cli-version
-  "2026.09.02-c22c1a3")
+  "2026.10.01-e373342")
 
 (define cursor-cli-source
   (origin
@@ -423,7 +431,7 @@ loader, so no FHS emulation is required.")
     (uri (string-append "https://downloads.cursor.com/lab/"
                         %cursor-cli-version
                         "/linux/x64/agent-cli-package.tar.gz"))
-    (sha256 (base32 "0g7ma23y8arn1bb8h429a6l5d8xmqd8wqz0dq87mqlv28y2mjfxp"))))
+    (sha256 (base32 "1s18mqck59bplrhy9av75f08js2sfx2lrgkh76chwlj4wv32d5x7"))))
 
 (define-public cursor-cli-bin
   (package
@@ -527,14 +535,14 @@ its library path, so no FHS emulation is needed.")
               "Proprietary Cursor license — unfree, non-redistributable."))))
 
 (define %copilot-version
-  "1.0.83")
+  "1.0.91")
 
 (define copilot-loader-source
   (origin
     (method url-fetch)
     (uri (string-append "https://registry.npmjs.org/@github/copilot/-/"
                         "copilot-" %copilot-version ".tgz"))
-    (sha256 (base32 "11kakqqbmw2rcsf4wsy7r97d1fmw5xpa0xmzbnskl5hk5gy0cm8k"))))
+    (sha256 (base32 "109pv3cng77zsl01s2ggg7xkpdiyi1qgbl16x6abjv0yi9qmsc2g"))))
 
 (define copilot-platform-source
   (origin
@@ -542,7 +550,7 @@ its library path, so no FHS emulation is needed.")
     (uri (string-append
           "https://registry.npmjs.org/@github/copilot-linux-x64/-/"
           "copilot-linux-x64-" %copilot-version ".tgz"))
-    (sha256 (base32 "0imsjv8y8rpyhdix7p7z09z3j6pav2kznf2i6b0rzqn52kynz413"))))
+    (sha256 (base32 "0141f3fmpcv2zlqxmxx2kyjqk2zwg3mfxrh1n9qb4n8dlgaxrl8i"))))
 
 (define-public copilot-cli-bin
   (package
@@ -650,7 +658,7 @@ FHS emulation is needed.  Requires a GitHub account to authenticate.")
               "Proprietary GitHub/Microsoft license - unfree."))))
 
 (define %goose-version
-  "1.50.0")
+  "1.53.0")
 
 (define goose-source
   (origin
@@ -658,7 +666,7 @@ FHS emulation is needed.  Requires a GitHub account to authenticate.")
     (uri (string-append
           "https://github.com/aaif-goose/goose/releases/download/v"
           %goose-version "/goose-x86_64-unknown-linux-gnu.tar.gz"))
-    (sha256 (base32 "1qjib122vbmy2h82pxzpbwqj2421mikd8j51dw0dwy018jjfx2b3"))))
+    (sha256 (base32 "1p0mm5wd7s12hvydzxd2iz6gk8jycm95rz1j0aic1b3mdcd1kcny"))))
 
 (define-public goose-cli-bin
   (package
@@ -745,7 +753,7 @@ live under ~/.config/goose.")
 ;;; can find all shared libraries on a non-FHS Guix system.
 
 (define %terminal-browser-version
-  "0.8.1")
+  "0.13.4")
 
 (define %terminal-browser-source
   (origin
@@ -753,7 +761,7 @@ live under ~/.config/goose.")
     (uri (string-append
           "https://github.com/zenbu-labs/terminal-browser/releases/download/v"
           %terminal-browser-version "/terminal-browser-linux-x64.tar.gz"))
-    (sha256 (base32 "0zklfxdwfmxyygflyjrrni1mbvap7nhd5mxvjbsc9788s64q1rrm"))))
+    (sha256 (base32 "196k97b9cr68w9v50pf51bkwbylympzwsq8r7ymi2rxipamdlxv2"))))
 
 (define-public terminal-browser-bin
   (package
@@ -941,7 +949,7 @@ remote server while rendering locally.")
 ;;; FHS emulation, no patchelf.
 
 (define %pi-version
-  "0.85.1")
+  "1.0.0")
 
 (define %pi-source
   (origin
@@ -949,7 +957,7 @@ remote server while rendering locally.")
     (uri (string-append
           "https://github.com/earendil-works/pi/releases/download/v"
           %pi-version "/pi-linux-x64.tar.gz"))
-    (sha256 (base32 "0np23zma1b5xbfswlsd166ax98r1x6jzd1ik1gs22kfp8y7ljkj9"))))
+    (sha256 (base32 "0f6wcdx981mm82n1ibha4k2pag77d74zdjvwsl5dd2d8a8x59mcg"))))
 
 (define-public pi-coding-agent-bin
   (package
@@ -1027,18 +1035,51 @@ runtime or FHS emulation needed.  Config and sessions live under
 ;;; propagate pi-coding-agent-bin (which now also provides `pi').
 
 (define %pi-acp-version
-  "0.0.33")
+  "0.0.34")
 
 (define %pi-acp-source
   (origin
     (method url-fetch)
     (uri (string-append "https://registry.npmjs.org/pi-acp/-/pi-acp-"
                         %pi-acp-version ".tgz"))
-    (sha256 (base32 "0jyy62bdsf9kgxsmgaz111rh0wj411cz6hkjq0r6n18cg2kbiplz"))))
+    (sha256 (base32 "0l16ixhg3r0765cxlh0p8y784r740qczmz6p7psbglmyf6ygcfsb"))))
 
-;; pi-acp's prebuilt dist/ (ESM) imports @agentclientprotocol/sdk and zod at
-;; runtime.  Both are dependency-free, so we vendor their npm tarballs into the
-;; package's node_modules (resolved by Node's ESM bare-specifier lookup).
+;; pi-acp ships a prebuilt dist/index.js, and tsup does not finish bundling it:
+;; the file still carries bare ESM imports for @agentclientprotocol/sdk, zod
+;; and cross-spawn.  cross-spawn entered `dependencies' at 0.0.34, and it is
+;; not dependency-free either (which -> isexe, path-key, shebang-command ->
+;; shebang-regex), so the whole closure is listed here.  npm never runs in this
+;; build, so each import is satisfied by unpacking that package's npm tarball
+;; into node_modules beside the script, which is where Node's bare-specifier
+;; lookup looks.
+;;
+;; Bumping pi-acp means re-reading the `dependencies' field of
+;; pi-acp-<version> on the registry and updating %pi-acp-deps to match; the
+;; versions below are what npm's ranges resolve to today.
+(define %pi-acp-deps
+  `(("zod" "3.25.76" "0xw3m1qdqbqam3fhxiv8ag9l9kampywwx4gfcjmis36xy02il7wy")
+    ("cross-spawn" "7.0.6"
+     "1siqxlydjwpihy7klgd15cah56vsmxrdm3q90gndyfj1vh63530q")
+    ("which" "2.0.2" "1p2fkm4lr36s85gdjxmyr6wh86dizf0iwmffxmarcxpbvmgxyfm1")
+    ("isexe" "2.0.0" "0nc3rcqjgyb9yyqajwlzzhfcqmsb682z7zinnx9qrql8w1rfiks7")
+    ("path-key" "3.1.1" "14kvp849wnkg6f3dqgmcb73nnb5k6b3gxf65sgf0x0qlp6n9k2ab")
+    ("shebang-command" "2.0.0"
+     "0vjmdpwcz23glkhlmxny8hc3x01zyr6hwf4qb3grq7m532ysbjws")
+    ("shebang-regex" "3.0.0"
+     "13wmb23w5srjpn9xx1c85yk5jbc5z9ypg0iz33h6nv5jdnmapnzy")))
+
+(define (pi-acp-dep-source dep)
+  ;; DEP is (name version sha256), straight out of %pi-acp-deps.
+  (origin
+    (method url-fetch)
+    (uri (string-append "https://registry.npmjs.org/"
+                        (car dep)
+                        "/-/"
+                        (car dep)
+                        "-"
+                        (cadr dep)
+                        ".tgz"))
+    (sha256 (base32 (caddr dep)))))
 
 (define %pi-acp-sdk-source
   (origin
@@ -1046,16 +1087,6 @@ runtime or FHS emulation needed.  Config and sessions live under
     (uri
      "https://registry.npmjs.org/@agentclientprotocol/sdk/-/sdk-0.26.0.tgz")
     (sha256 (base32 "14yzrz07cb3whqagpzgjza6v6ykm9n71r5g9lz36q93msabbbsgj"))))
-
-(define %pi-acp-zod-version
-  "3.25.76")
-
-(define %pi-acp-zod-source
-  (origin
-    (method url-fetch)
-    (uri (string-append "https://registry.npmjs.org/zod/-/zod-"
-                        %pi-acp-zod-version ".tgz"))
-    (sha256 (base32 "0xw3m1qdqbqam3fhxiv8ag9l9kampywwx4gfcjmis36xy02il7wy"))))
 
 (define-public pi-acp-bin
   (package
@@ -1071,37 +1102,44 @@ runtime or FHS emulation needed.  Config and sessions live under
       #~(let ((install (lambda* (#:key inputs outputs #:allow-other-keys)
                          (let* ((out (assoc-ref outputs "out"))
                                 (sdk (assoc-ref inputs "sdk-source"))
-                                (zod (assoc-ref inputs "zod-source"))
                                 (nm (string-append out "/node_modules")))
                            ;; main adapter script (dist/index.js, already executable)
                            (mkdir-p (string-append out "/bin"))
                            (copy-file "dist/index.js"
                                       (string-append out "/bin/pi-acp"))
                            (chmod (string-append out "/bin/pi-acp") #o555)
-                           ;; vendored runtime deps: ESM bare imports resolve via
-                           ;; node_modules adjacent to the importing module
-                           (mkdir-p (string-append nm
-                                     "/@agentclientprotocol/sdk"))
-                           (mkdir-p (string-append nm "/zod"))
-                           (invoke "tar"
-                                   "xzf"
-                                   sdk
-                                   "-C"
-                                   (string-append nm
-                                                  "/@agentclientprotocol/sdk")
-                                   "--strip-components=1")
-                           (invoke "tar"
-                                   "xzf"
-                                   zod
-                                   "-C"
-                                   (string-append nm "/zod")
-                                   "--strip-components=1")
+                           ;; vendored runtime deps: ESM bare imports resolve
+                           ;; through node_modules next to the importing script.
+                           ;; The scoped one keeps its @scope directory, the rest
+                           ;; are flat exactly as npm would have installed them --
+                           ;; which is also how they find *their* dependencies.
+                           (let ((dest (string-append nm
+                                        "/@agentclientprotocol/sdk")))
+                             (mkdir-p dest)
+                             (invoke "tar"
+                                     "xzf"
+                                     sdk
+                                     "-C"
+                                     dest
+                                     "--strip-components=1"))
+                           (for-each (lambda (name)
+                                       (let ((dest (string-append nm "/" name)))
+                                         (mkdir-p dest)
+                                         (invoke "tar"
+                                                 "xzf"
+                                                 (assoc-ref inputs name)
+                                                 "-C"
+                                                 dest
+                                                 "--strip-components=1")))
+                                     #$(map car %pi-acp-deps))
                            #t))))
           (modify-phases %standard-phases
             (replace 'install
               install)))))
-    (native-inputs (list (list "sdk-source" %pi-acp-sdk-source)
-                         (list "zod-source" %pi-acp-zod-source)))
+    (native-inputs (append (list (list "sdk-source" %pi-acp-sdk-source))
+                           (map (lambda (dep)
+                                  (list (car dep)
+                                        (pi-acp-dep-source dep))) %pi-acp-deps)))
     (propagated-inputs (list node pi-coding-agent-bin))
     (synopsis "ACP (Agent Client Protocol) adapter for the pi coding agent")
     (description
@@ -1109,8 +1147,9 @@ runtime or FHS emulation needed.  Config and sessions live under
 it speaks ACP JSON-RPC 2.0 over stdio to an ACP client (e.g. the Zed editor)
 and spawns `pi --mode rpc', translating requests and events between the two.
 This packages the upstream prebuilt dist (a single JavaScript file) and runs
-it with Node.js; its two runtime dependencies (@agentclientprotocol/sdk, zod)
-are vendored into node_modules.")
+it with Node.js; the runtime dependencies it still imports by name
+(@agentclientprotocol/sdk, zod and cross-spawn with its own closure) are
+vendored into node_modules.")
     (home-page "https://github.com/svkozak/pi-acp")
     (license license:expat)))
 
@@ -1124,14 +1163,14 @@ are vendored into node_modules.")
 (define-public node-ws
   (package
     (name "node-ws")
-    (version "8.21.3")
+    (version "8.22.0")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "https://registry.npmjs.org/ws/-/ws-" version
                            ".tgz"))
        (sha256
-        (base32 "1hrd1jn7vgi9f82x60bzkymf3gzrvii1f95rnm8cx4ap43pm8d6z"))))
+        (base32 "1j5bwyagz7a0vk0j61ikkfq15ah10ppm0gviqvxfh771nac3g6ya"))))
     (build-system node-build-system)
     (arguments
      (list
@@ -1156,7 +1195,7 @@ are vendored into node_modules.")
     (license license:expat)))
 
 (define %oh-my-pi-version
-  "18.2.0")
+  "18.5.0")
 
 (define %oh-my-pi-source
   (origin
@@ -1164,7 +1203,7 @@ are vendored into node_modules.")
     (uri (string-append
           "https://github.com/can1357/oh-my-pi/releases/download/v"
           %oh-my-pi-version "/omp-linux-x64"))
-    (sha256 (base32 "1n3qg5dfbnzn3x2vvrjpdjmj1ka2l17jlxyxq0yd6z4ay51pmdj1"))))
+    (sha256 (base32 "18f8frhrnqq9lcq77idnnqiljydgq8jw0yqxkdx3qhjs11p3whdq"))))
 
 (define-public oh-my-pi-bin
   (package
@@ -1247,7 +1286,7 @@ FHS emulation or bun runtime install needed.")
 (define-public casty-bin
   (package
     (name "casty-bin")
-    (version "1.2.2")
+    (version "1.3.3")
     (source
      (origin
        (method url-fetch)
@@ -1255,7 +1294,7 @@ FHS emulation or bun runtime install needed.")
              "https://registry.npmjs.org/@sanohiro/casty/-/casty-" version
              ".tgz"))
        (sha256
-        (base32 "0zy4axvz5s2q7fmf7k5zahcvh92dhgddygva0xpmnr4yplmq672m"))))
+        (base32 "0igc4mpqdfvmad8ypys9zh7zdp9x9hl4l4fsnv0hj94xfi11q0j0"))))
     (build-system node-build-system)
     (arguments
      (list
@@ -1450,14 +1489,14 @@ FHS emulation or bun runtime install needed.")
 (define-public node-better-sqlite3
   (package
     (name "node-better-sqlite3")
-    (version "12.11.1")
+    (version "13.0.3")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "https://registry.npmjs.org/better-sqlite3"
                            "/-/better-sqlite3-" version ".tgz"))
        (sha256
-        (base32 "0d98zanqyakga6zxqjlf6ay1b7wxyi703gabnarvr7d5lxsyvw7b"))))
+        (base32 "1jv8d3apzhby0jz0bnkyg04k2h1zmnspyk7crqxznsd4q4ym3q3p"))))
     (build-system node-build-system)
     (arguments
      (list
@@ -1550,7 +1589,21 @@ FHS emulation or bun runtime install needed.")
                              "SQLITE_SOUNDEX"
                              "SQLITE_THREADSAFE=2"
                              "SQLITE_TRACE_SIZE_LIMIT=32"
-                             "SQLITE_USE_URI=0"))))
+                             "SQLITE_USE_URI=0")))
+                     ;; binding.gyp's `defines' for the C++ target, new in the
+                     ;; 13.x series: NAPI_VERSION picks which node-api surface
+                     ;; node-addon-api compiles against, and the two exception
+                     ;; flags decide how a throwing call is marshalled.  These
+                     ;; are compile-time ABI choices, so they have to match
+                     ;; upstream rather than our taste.  binding.gyp also adds
+                     ;; -flto to cflags_cc, which is left out on purpose: it
+                     ;; only means something when the link step uses -flto too,
+                     ;; and here the link is the plain g++ below.
+                     (napi-cflags (list "-DNAPI_VERSION=10"
+                                   "-DNAPI_DISABLE_CPP_EXCEPTIONS"
+                                   "-DNODE_API_SWALLOW_UNTHROWABLE_EXCEPTIONS"
+                                   "-fvisibility=hidden"
+                                   "-fvisibility-inlines-hidden")))
                 ;; 1. SQLite amalgamation (C).
                 (apply invoke
                        "gcc"
@@ -1576,6 +1629,7 @@ FHS emulation or bun runtime install needed.")
                        "deps/sqlite3"
                        "-I"
                        (string-append node-dir "/include/node")
+                       napi-cflags
                        (append sql-defines
                                '("-o" "better_sqlite3.o")))
                 ;; 3. link with binding.gyp's linux ldflags; sqlite3.o goes
@@ -1607,7 +1661,7 @@ own SQLite build.")
     (license license:expat)))
 
 (define %mcode-version
-  "0.4.5")
+  "0.6.2")
 
 ;;; The npm tarball IS the prebuilt artifact (bundled JS + wasm + native
 ;;; helpers); both `mcode' (node-build-system install) and `mcode-bin'
@@ -1617,7 +1671,7 @@ own SQLite build.")
     (method url-fetch)
     (uri (string-append "https://registry.npmjs.org/@minimax-ai/code"
                         "/-/code-" %mcode-version ".tgz"))
-    (sha256 (base32 "11nza2gv5275g41gd83kmavmigsc4jcn4fl99gbhf9b8jkig8mnx"))))
+    (sha256 (base32 "1iscvgxazl54jdp324mbgxmicih2yfajaby6s91f6anl8wa03lfy"))))
 
 (define-public mcode
   (package
@@ -1776,12 +1830,15 @@ around Node.js.")
 ;;; skipped since the plugin loads fine without them.
 ;;; ---------------------------------------------------------------------------
 (define %purple-discord-commit
-  "b7ac72399218d2ce011ac84bb171b572560aa2d2")
+  "2ae1e6147cef73ad38079c38dba28b25179567b8")
 
 (define-public purple-discord
   (package
     (name "purple-discord")
-    (version "0.9.2021.10.17") ;unstable-2021-10-17
+    ;; Upstream declares DISCORD_PLUGIN_VERSION "1.0" in libdiscord.c at the
+    ;; commit pinned below; the date suffix is that commit's date, since this
+    ;; is a snapshot of a repository that tags nothing.
+    (version "1.0.2026.09.18") ;unstable-2026-09-18
     (source
      (origin
        (method url-fetch)
@@ -1789,7 +1846,7 @@ around Node.js.")
              "https://github.com/EionRobb/purple-discord/archive/"
              %purple-discord-commit ".tar.gz"))
        (sha256
-        (base32 "0sspym6glcxn3f8v5dvxxnw3j0svba3nwx1xnmi8ngk78385v00p"))))
+        (base32 "10c7gal60gpc92izxg60v1ri6cq21jg9ngyfa21qcyw1y5n22x9f"))))
     (build-system gnu-build-system)
     (supported-systems '("x86_64-linux"))
     (arguments
@@ -1837,9 +1894,12 @@ from source against the store libpurple headers.")
 ;;; real script file and the data file must be installed adjacent.
 
 (define %rdircd-commit
-  "ecbebbf93fb8e47b6c7bdb1a34c28ba25379d310")
+  "57e2307fae006142953967084852278a859bac60")
+;; Snapshot version of the commit above: YYYYMMDD of its author date, plus a
+;; counter for the case where a day carries two bumps.  The previous value
+;; read 20250913.0 for a commit dated 2026-09-13 -- the year was simply wrong.
 (define %rdircd-version
-  "20250913.0")
+  "20260927.0")
 
 (define-public rdircd
   (package
@@ -1852,7 +1912,7 @@ from source against the store libpurple headers.")
                            "reliable-discord-client-irc-daemon/archive/"
                            %rdircd-commit ".tar.gz"))
        (sha256
-        (base32 "0y1s95b69g6q0wdl39wpn9x1jxsrr4b6ay7pj50569pzjyld80nj"))))
+        (base32 "059qp3f2wyafqz0l4ffgd773qw6r6h6n51s7kf6cyjlvf5yf2p6v"))))
     (build-system copy-build-system)
     (supported-systems '("x86_64-linux"))
     (arguments
@@ -2252,10 +2312,21 @@ kitty, ghostty, mlterm, xterm, etc.).")
     (home-page "https://tangled.org/janantos.tngl.sh/brow6el.git")
     (license license:expat)))
 
+;; One version for one upstream release line.  Cline tags the CLI as
+;; cli-vX.Y.Z, publishes X.Y.Z to npm as @cline/* (which is what cline-bin
+;; repackages) and the same number drives cline-baseline's git tag, so the
+;; number is written exactly once here and (sane-packages cline) reads it back
+;; through the module import it already has -- via the #:export at the top of
+;; this module, since a plain `define' is private to its module in Guile and
+;; cline.scm would otherwise see an unbound variable.  Importing the other way
+;; would have made the dependency between the two modules circular.
+(define %cline-version
+  "3.0.68")
+
 (define-public cline-bin
   (package
     (name "cline-bin")
-    (version "3.0.62")
+    (version %cline-version)
     (source
      (origin
        (method url-fetch)
@@ -2263,7 +2334,7 @@ kitty, ghostty, mlterm, xterm, etc.).")
              "https://registry.npmjs.org/@cline/cli-linux-x64/-/cli-linux-x64-"
              version ".tgz"))
        (sha256
-        (base32 "082kndwpqg80hbym9sgfjwaf64k76g82lrirzr37b8wymd6zdzgi"))))
+        (base32 "1ccav6m9rj2gvgb7jq796mm4v5k8jd8wzqh7755r76pbj2894yd9"))))
     (build-system trivial-build-system)
     (arguments
      (list
@@ -2318,7 +2389,7 @@ linux-x64 binary distribution.")
 (define-public qoder-cli-bin
   (package
     (name "qoder-cli-bin")
-    (version "1.1.58")
+    (version "1.1.65")
     (source
      (origin
        (method url-fetch)
@@ -2326,7 +2397,7 @@ linux-x64 binary distribution.")
              "https://qoder-ide.oss-accelerate.aliyuncs.com/qodercli/releases/"
              version "/qodercli-linux-x64.tar.gz"))
        (sha256
-        (base32 "1z6awzw5yiqi4m3ihx5qrq3w26nya1n8lv48pkzvdb5z5pqppm5a"))))
+        (base32 "137w44d6nf831j6sy2y98bic5xjkk3r8883s0i87hx8jr2wvp7ml"))))
     (build-system trivial-build-system)
     (arguments
      (list
@@ -2367,13 +2438,12 @@ build software, inspect code, and execute workflows.")
 (define-public qoder-desktop-bin
   (package
     (name "qoder-desktop-bin")
-    (version "0.3.4")
+    (version "0.4.3")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append
-             "https://download.qoder.com/qoder-app/releases/latest/"
-             "Qoder-linux-amd64.deb"))
+       (uri (string-append "https://download.qoder.com/qoder-app/releases/"
+                           version "/Qoder-linux-amd64.deb"))
        (sha256
         (base32 "02q50dxhj7xynms1h1h3jcvnsvb9qmr3h3jfiizmiv6wkx1v938y"))))
     (build-system copy-build-system)
@@ -2587,7 +2657,7 @@ and is not endorsed by Guix upstream.")
 (define-public dsh
   (package
     (name "dsh")
-    (version "0.1.7-alpha.1")
+    (version "0.2.0-rc.2")
     (source
      (origin
        (method url-fetch)
@@ -2595,7 +2665,7 @@ and is not endorsed by Guix upstream.")
              "https://registry.npmjs.org/@deepseek-ai/dsh/-/dsh-" version
              ".tgz"))
        (sha256
-        (base32 "13zb10dq6lyksq3krgaq1lmj7zvdxrz0v05qdr4d99bplyjlsmps"))))
+        (base32 "0nc8yfpypiarpdwgcw9hz6g67ixwpc31ryf1b9b8mmjw8iy889xx"))))
     (build-system trivial-build-system)
     (inputs (list bash node procps))
     (native-inputs (append (list (list "tar" tar)
@@ -2726,7 +2796,7 @@ and is not endorsed by Guix upstream.")
 ;;; cua-cursor-theme helper relative to its own executable.
 
 (define %cua-driver-version
-  "0.28.2")
+  "0.32.0")
 
 (define %cua-driver-source
   (origin
@@ -2739,7 +2809,7 @@ and is not endorsed by Guix upstream.")
           "https://github.com/trycua/cua/releases/download/cua-driver-rs-v"
           %cua-driver-version "/cua-driver-rs-" %cua-driver-version
           "-linux-x86_64.tar.gz"))
-    (sha256 (base32 "0z8gca8rkrvfpima0ck3icspzixa803g8r6cxv89ik9bkrk5nglg"))))
+    (sha256 (base32 "12gqs7mafif3q1fim1kcsxiic32gn95pzl525ml6mdrq5i2n73lr"))))
 
 (define-public cua-driver-bin
   (package

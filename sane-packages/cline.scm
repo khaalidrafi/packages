@@ -41,12 +41,14 @@
   #:use-module (gnu packages nss) ;nss-certs
   #:use-module (gnu packages version-control) ;git
   #:use-module (sane-packages custom))
-; bun-bin
+; bun-bin, %cline-version
 
 ;; The CLI is released under cli-vX.Y.Z tags; the npm wrapper and the platform
-;; packages all carry this same version.
-(define %cline-version
-  "3.0.65")
+;; packages all carry this same version.  %cline-version itself is defined in
+;; (sane-packages custom), which this module already imports for bun-bin: it is
+;; the module that carries cline-bin, and one version for one upstream release
+;; line has to be written down once.  Importing the other way would have made
+;; the dependency between the two modules circular.
 (define %cline-url
   "https://github.com/cline/cline")
 (define %cline-tag
