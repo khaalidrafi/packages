@@ -51,6 +51,7 @@
   #:use-module (guix build-system copy)
   #:use-module (guix build-system trivial)
   #:use-module (gnu packages base)
+  #:use-module (gnu packages backup)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages cups)
@@ -214,6 +215,8 @@
                                       "/bin/bash"))
                  (tar (string-append (assoc-ref %build-inputs "tar")
                                      "/bin/tar"))
+                 (bsdtar (string-append (assoc-ref %build-inputs "libarchive")
+                                        "/bin/bsdtar"))
                  (patch (string-append (assoc-ref %build-inputs "patch")
                                        "/bin/patch"))
                  (gzip (string-append (assoc-ref %build-inputs "gzip") "/bin"))
@@ -260,23 +263,24 @@
                  (mkdir-p path)
                  ;; Every npm tarball has exactly one top-level directory, which
                  ;; is why one strip-components rule fits all of them.
-                 (invoke tar
+                 (invoke bsdtar
                          "xzf"
                          (assoc-ref %build-inputs label)
                          "--strip-components=1"
                          "-C"
                          path)
-                 ;; pngjs ships its directories as drw-rw-rw- and its files as
-                 ;; -rw-rw-rw-, so every node lands without its user write bit.
-                 ;; tar then makes the directory it extracts a member into
-                 ;; unwritable the moment it has applied that mode: CI run
-                 ;; 37119444764 died with 24x `package/lib/foo.js: Cannot open:
-                 ;; Permission denied'.  tar's --no-same-permissions cannot help,
-                 ;; because the recorded mode holds no write bit to restore from.
-                 ;; The whole manifest is small, so walk what was just extracted.
-                 (for-each (lambda (file)
-                             (chmod file #o755))
-                           (find-files path)))
+                 ;; pngjs ships its directories as drw-rw-rw-: no execute bit.
+                 ;; Creating a file inside a directory needs both write *and*
+                 ;; execute on it, so GNU tar dies the moment it writes a member
+                 ;; into such a directory -- CI run 37119444764 with 24x
+                 ;; `package/lib/foo.js: Cannot open: Permission denied'.
+                 ;; --no-same-permissions cannot help either: umask can only
+                 ;; clear recorded bits, never add the execute bit back.
+                 ;; bsdtar tolerates the bad modes and exits 0, then this
+                 ;; recursive chmod restores the bits Node needs to descend
+                 ;; into the tree.  The manifest is small, so one pass over
+                 ;; what was just extracted is cheap enough.
+                 (invoke (string-append bin "/chmod") "-R" "u+rwx" path))
                 (("patch" path file)
                  (let ((patch-file (string-append work "/" file)))
                    (with-directory-excursion path
@@ -371,6 +375,7 @@
                    (list "gzip" gzip)
                    (list "patch" patch)
                    (list "tar" tar)
+                   (list "libarchive" libarchive)
                    (list "manifest" %zcode-build-manifest))
              ;; One hash-verified origin per npm tarball, labelled by the
              ;; install path it belongs at.
