@@ -31,6 +31,15 @@ Review points:
 4. *Version coupling* -- the addon is compiled against the headers of the =node=
    input.  Bumping node without rebuilding this package (i.e. reusing an old
    substitute) risks an ABI mismatch that only shows up at import time.
+5. *NAPI flags (new in 13.x)* -- =napi-cflags= is transcribed from
+   =binding.gyp='s =defines= and =cflags_cc= for the addon target; 12.x had no
+   =defines= at all, so this list is version-specific rather than universal.  A
+   wrong =NAPI_VERSION= or a dropped exception flag still compiles: the addon
+   then marshals errors differently from upstream (=process.abort= on a thrown
+   JS exception, or =undefined= where upstream would throw).  =-flto= is
+   deliberately *not* copied over --- upstream's link step uses it, ours is the
+   plain =g++= below, and a lone compile-time LTO flag only narrows the code.
+   Re-read =binding.gyp= (not just =deps/defines.gypi=) on every major bump.
 
 How to check: =./tests/smoke/mcode-bin.sh= loads the addon and runs the CLI; to
 exercise the library itself:
@@ -85,6 +94,82 @@ formatter and their generator should not fight.
 Now it copies the file, formats for real, =cmp=s, and restores the copy either
 way, so a *check* leaves no trace and a drift fails the job.  Review point: if
 guix style ever fixes its =-n=, this can go back to the one-liner.
+
+* TODO =*-bin= entry points collide with the source package /by design/
+
+=zcode-bin= installs =bin/zcode=, which =zcode= also installs; =mcode-bin= does
+the same against =mcode=.  An earlier revision renamed the =zcode-bin= CLI to
+=zcode-cli= to make the collision go away.  That was wrong and it is reverted:
+the .deb's own =bin= entry is =zcode= (upstream
+=apps/zcode-cli/packages/cli/package.json=), and dodging the error would leave
+two CLIs competing over one set of config, sessions and login state under
+different names while neither wins.
+
+Review point: if you ever see a =*-bin= shipping a suffixed binary name
+(=foo-cli=, =foo-bin=, =foo-legacy=), treat it as a bug unless the *upstream*
+tool is actually named that --- =bin/zcode-desktop= is legitimate only because
+the deb's GUI binary is =zcode= and something else had to give, and the desktop
+name is not what a user types.  Guix has no =conflicts= field on =package=, so
+there is nothing to declare and the profile's default refusal is the only
+guardrail.  See "Conflicts between a =*-bin= and its source package" in
+README.org.
+
+How to check: =GUIX_PACKAGE_PATH= guix install -p /tmp/t zcode zcode-bin= should
+fail with a collision error, not silently pick one.
+
+* TODO =zcode=: one upstream, two version variables
+
+=%version= (3.14.3) labels the git tag the source build uses; =%bin-version=
+(3.14.4) labels the vendor .deb on Z.ai's CDN.  They differ because the CDN is
+ahead of the tag --- the desktop build ships before the repository is tagged ---
+and a single variable would either break =%zcode-source='s hash or pin the .deb
+to an artifact that no longer matches the label.
+
+Review point: this only holds while the .deb really is built from a commit at or
+near =%zcode-commit=.  On a bump, confirm both from
+=./scripts/latest-version.sh= and do not "simplify" back to one variable.  A
+silent divergence would look like a successful build of the wrong source.
+
+* DONE =cline=: the version lived in two files
+CLOSED: [2026-10-03 Fri]
+
+Was: =cline-bin= carried =(version "3.0.68")= inline in =custom.scm= while
+=cline-baseline= and the source =cline= read a second =%cline-version= from
+=cline.scm= --- three deliveries of one upstream, two places to edit, already
+out of step.  Now =%cline-version= is defined once, in
+=(sane-packages custom)= (the lower module, so the import stays acyclic), and
+=cline.scm= derives =%cline-tag= and its =version= from it.
+
+Review point: the unification is a *claim* that one upstream release number
+covers all three deliveries: the =cli-vX.Y.Z= git tag, the =@cline/*= npm
+packages that =cline-bin= repackages, and =cline-baseline='s source.  If
+upstream ever ships the npm wrapper behind the tag, =guix download= just fails
+loudly, so the risk is the other direction --- a tag that exists but an npm
+version that does not.  On each bump confirm both:
+=git ls-remote --tags https://github.com/cline/cline cli-v*,* and
+=npm view @cline/cli-linux-x64 versions=.
+
+Note for whoever reads the diff: =%cline-version= is a plain =define= plus a
+=#:export= clause in =custom.scm='s =define-module= form, not
+=define-public=.  A plain =define= is private to its module in Guile, so
+=cline.scm= would not see it at all (that part is caught at load time, as an
+"unbound variable"); but =define-public= would also make =tests/check-static.sh=
+harvest =%cline-version= as a *package* name, since it greps those forms.  Both
+sides of that trade are worth a look if the script's harvesting ever changes.
+
+* TODO Vendor URLs must be versioned, not =latest=
+
+=qoder-desktop-bin= was pinned at =(version "0.3.4")= while its URI ended in
+=/latest/Qoder-linux-amd64.deb=.  The sha256 still matched, because the hash had
+been taken from whatever the CDN served that day --- 0.4.3's bytes.  Nothing in
+Guix can catch that: the derivation builds, the store path is correct, and only
+the label lies.  Fixed by putting =version= into the path
+(=/qoder-app/releases/VERSION/Qoder-linux-amd64.deb=).
+
+Review point: for every =*-bin=, grep its URI for =latest=, =stable=, =beta= or a
+bare =/download=.  Any of them plus a pinned sha256 is a version label with no
+relationship to the artifact.  Prefer a path that contains =version=; if
+upstream publishes no such path, say so in a comment next to the hash.
 
 * How this file is used
 Add an entry whenever AI-written code encodes an assumption that a compiler or
