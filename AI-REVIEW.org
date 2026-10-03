@@ -72,6 +72,20 @@ Review points:
    cheap path that needs no npm at build time.  Keep both honest: a fix to the
    dependency wiring usually belongs in both.
 
+* TODO check-static.sh: the style gate reformats on purpose, then compares
+=tests/check-static.sh=, the =style_files= loop.
+
+It used to be `guix style -f -n FILE | grep -q .`, on the assumption that =-n= is
+a dry run.  It is not: with =-f=, guix style *rewrites* the file and prints
+nothing, so the gate could never report a failure (CI's style step has been a
+no-op) and every local "dry run" quietly reformatted the tree --- including the
+generated =*-modules.scm= files, which the script deliberately skips because a
+formatter and their generator should not fight.
+
+Now it copies the file, formats for real, =cmp=s, and restores the copy either
+way, so a *check* leaves no trace and a drift fails the job.  Review point: if
+guix style ever fixes its =-n=, this can go back to the one-liner.
+
 * How this file is used
 Add an entry whenever AI-written code encodes an assumption that a compiler or
 a test suite cannot check (transcribed constants, upstream layouts, implicit
