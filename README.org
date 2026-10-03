@@ -7,13 +7,13 @@ A small GNU Guix channel holding packages that upstream Guix cannot carry
 built by CI instead of by hand on a 4 GB laptop.
 
 * Contents
-| Package          | Module                       | Kind                              |
-|------------------+------------------------------+-----------------------------------|
-| zcode            | =(sane-packages zcode)=      | terminal agent, built from source |
-| zcode-bin        | =(sane-packages zcode)=      | vendor Electron .deb              |
-| cline-baseline   | =(sane-packages cline)=      | Bun CLI, built for non-AVX2 CPUs  |
-| ods              | =(sane-packages ods)=        | self-hosted AI server (Docker)    |
-| dsh, qoder-*, …  | =(sane-packages custom)=     | everything predating this layout  |
+| Package          | Module                   | Kind                              |
+|------------------+--------------------------+-----------------------------------|
+| zcode            | =(sane-packages zcode)=  | terminal agent, built from source |
+| zcode-bin        | =(sane-packages zcode)=  | vendor Electron .deb              |
+| cline-baseline   | =(sane-packages cline)=  | Bun CLI, built for non-AVX2 CPUs  |
+| mcode, mcode-bin | =(sane-packages custom)= | Minimax Code CLI (npm artifact)   |
+| dsh, qoder-*, …  | =(sane-packages custom)= | everything predating this layout  |
 
 ** Module and package naming
 

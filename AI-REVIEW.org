@@ -1,0 +1,78 @@
+#+title: AI-REVIEW --- points a human should check in AI-written code
+#+author: Khalid Rafi
+#+options: toc:2 num:nil
+
+This file tracks the parts of AI-generated code in this channel that are worth
+a human read: places where a plausible-looking change silently breaks at
+run time rather than at build time.  Each entry says *what to look at*, *why it
+is fragile* and *how to check it*; delete the entry once you are satisfied.
+
+* TODO node-better-sqlite3: the hand-compiled native addon
+=custom.scm=, package =node-better-sqlite3=, phase =compile-addon=.
+
+Guix has no better-sqlite3, and upstream builds the addon with node-gyp driven
+by npm's =install= script, which downloads node headers and prebuilt =.node=
+binaries -- impossible in a sandbox.  So the phase compiles it with plain
+=gcc=/=g++= instead: the SQLite amalgamation (=deps/sqlite3/sqlite3.c=, shipped
+inside the npm tarball) plus the single C++ TU =src/better_sqlite3.cpp=, linked
+into =build/Release/better_sqlite3.node=.
+
+Review points:
+1. *Compile defines* -- the =SQLITE_*/HAVE_*= list is transcribed from
+   =deps/defines.gypi=.  If it drifts from what binding.gyp passes, the addon
+   still builds and loads; it just behaves differently from upstream (missing
+   FTS5, wrong =SQLITE_THREADSAFE=, ...).  Diff it against
+   =deps/defines.gypi= after any version bump.
+2. *C++ standard* -- =-std=c++20= must match =binding.gyp='s
+   =cxx_std=.  A lower standard can compile and still give an ABI mismatch.
+3. *Undefined symbols* -- the =.node= deliberately leaves node/v8 symbols
+   undefined; the interpreter provides them at =dlopen=.  Hence
+   =(delete 'validate-runpath)=.  Do not "fix" that by re-adding the phase.
+4. *Version coupling* -- the addon is compiled against the headers of the =node=
+   input.  Bumping node without rebuilding this package (i.e. reusing an old
+   substitute) risks an ABI mismatch that only shows up at import time.
+
+How to check: =./tests/smoke/mcode-bin.sh= loads the addon and runs the CLI; to
+exercise the library itself:
+#+begin_example
+cd $(guix build -L . mcode-bin)/share/mcode-bin
+node -e 'const D=require("better-sqlite3");const d=new D(":memory:");\
+d.exec("CREATE TABLE t(a)");d.prepare("INSERT INTO t VALUES(?)").run(42);\
+console.log(d.prepare("SELECT * FROM t").all())'
+#+end_example
+
+* TODO node-better-sqlite3: why =scripts.install= is neutralized, not deleted
+Deleting the script is not enough: npm sees =binding.gyp= and runs
+=node-gyp rebuild= itself, which fails for want of Python in the build
+environment.  The phase therefore *replaces* the script with =true=.  If a
+future version drops =binding.gyp= or npm changes that implicit build, this can
+be simplified -- but test that =compile-addon= is still the only thing
+producing the =.node=.
+
+* TODO mcode-bin: node_modules symlinks instead of an npm install
+=custom.scm=, package =mcode-bin=, phases =link-node-modules= and
+=make-wrappers=.
+
+The vendor npm bundle is installed as-is; its three native/runtime dependencies
+are *symlinked* from the store into the app's own =node_modules=, so npm never
+runs at build- or run-time.
+
+Review points:
+1. *Store layout coupling* -- each =symlink= hardcodes the dependency's path
+   inside its output (=.../lib/node_modules/better-sqlite3=,
+   =.../lib/node_modules/@vscode/ripgrep=, ...).  A Guix-side change to one of
+   those packages leaves a dangling symlink that only fails when the CLI
+   imports it.  The smoke test asserts =-e= (follows the link) plus a real
+   =mcode --version=, so CI catches it.
+2. *Wrappers, not shebangs* -- =cli.js= starts with =#!/usr/bin/env node=, which
+   depends on the user's PATH; the =bin/mcode= wrapper execs node by store path
+   instead.  Same reasoning as the other =*-bin= packages here.
+3. *Why =mcode= (source) and =mcode-bin= coexist* -- =mcode= runs a real npm
+   install offline and is what CI builds for correctness; =mcode-bin= is the
+   cheap path that needs no npm at build time.  Keep both honest: a fix to the
+   dependency wiring usually belongs in both.
+
+* How this file is used
+Add an entry whenever AI-written code encodes an assumption that a compiler or
+a test suite cannot check (transcribed constants, upstream layouts, implicit
+tool behaviour).  Entries should be short enough to actually get read.

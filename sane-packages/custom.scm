@@ -3,6 +3,7 @@
   #:use-module (gnu packages suckless)
   #:use-module (gnu packages xorg)
   #:use-module (gnu packages node)
+  #:use-module (gnu packages node-xyz)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module (guix download)
@@ -1421,17 +1422,209 @@ FHS emulation or bun runtime install needed.")
      "Fork of @crosscopy/clipboard with latest clipboard-rs and musl (Alpine) support.")
     (license license:expat)))
 
-(define-public mcode
+;;; ---------------------------------------------------------------------------
+;;; node-better-sqlite3 -- the native addon mcode's session store imports at
+;;; runtime (chunk-WOISMRTU.js: `import ... from "better-sqlite3"`).  Dropping
+;;; it made `mcode acp` die with "Cannot find package 'better-sqlite3'".
+;;;
+;;; Upstream compiles it with node-gyp from npm's install script, which
+;;; downloads node headers and prebuilt binaries -- impossible offline.  So we
+;;; compile it ourselves, mirroring binding.gyp + deps/defines.gypi:
+;;;   * src/better_sqlite3.cpp is a single TU that #includes all other .cpp
+;;;     files; deps/sqlite3/sqlite3.c is the bundled SQLite amalgamation.
+;;;   * Guix's node sets v8_enable_pointer_compression=0 and
+;;;     v8_enable_sandbox=0 (see include/node/config.gypi), so no V8 ABI
+;;;     defines are needed; headers come from the same `node` input, so the
+;;;     addon's ABI matches the interpreter that will dlopen it.
+;;;   * node/v8 symbols are intentionally left undefined in the .so -- the
+;;;     node binary provides them at dlopen time, hence validate-runpath? #f.
+;;; `bindings' (pure JS, an upstream runtime dep) locates the .node under
+;;; build/Release/ at load time, so we must not change that layout.
+;;;
+;;; NOTE: the SQLITE_*/HAVE_* compile defines live as a *quoted literal*
+;;; inside the compile-addon phase, not as a module variable: a G-exp `#$'
+;;; unquote splices a list value as an EXPRESSION (its head gets called as a
+;;; procedure -- "Wrong type to apply" at build time), so module-level lists
+;;; of strings cannot be unquoted into phase code.
+;;; ---------------------------------------------------------------------------
+(define-public node-better-sqlite3
   (package
-    (name "mcode")
-    (version "0.4.5")
+    (name "node-better-sqlite3")
+    (version "12.11.1")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "https://registry.npmjs.org/@minimax-ai/code"
-                           "/-/code-" version ".tgz"))
+       (uri (string-append "https://registry.npmjs.org/better-sqlite3"
+                           "/-/better-sqlite3-" version ".tgz"))
        (sha256
-        (base32 "11nza2gv5275g41gd83kmavmigsc4jcn4fl99gbhf9b8jkig8mnx"))))
+        (base32 "0d98zanqyakga6zxqjlf6ay1b7wxyi703gabnarvr7d5lxsyvw7b"))))
+    (build-system node-build-system)
+    (arguments
+     (list
+      #:tests? #f
+      #:phases
+      #~(modify-phases %standard-phases
+          (add-after 'patch-dependencies 'neutralize-native-build-script
+            (lambda _
+              ;; Two reasons scripts.install must not survive:
+              ;; * it is "prebuild-install || node-gyp rebuild --release",
+              ;; which downloads node headers and vendor prebuilt .node
+              ;; binaries -- impossible offline;
+              ;; * deleting it is NOT enough.  npm treats a package that
+              ;; ships a binding.gyp as a native addon and, when no
+              ;; install script is defined, runs `node-gyp rebuild'
+              ;; itself -- which then fails for want of a Python in the
+              ;; build environment.  So the script has to be *replaced*
+              ;; by a no-op, which also overrides that implicit build.
+              ;; 'compile-addon below is what really produces the .node.
+              ;; prebuild-install is only used by that script, so drop the
+              ;; dependency too -- otherwise npm would try to install it and
+              ;; its many native-download-capable deps at configure time.
+              (modify-json (lambda (meta)
+                             (let ((s (assoc-ref meta "scripts")))
+                               (if s
+                                   (begin
+                                     (assoc-set! s "install" "true") meta)
+                                   (assoc-set! meta "scripts"
+                                               '(("install" . "true"))))))
+                           (lambda (meta)
+                             (let ((d (assoc-ref meta "dependencies")))
+                               (if d
+                                   (assoc-set! meta "dependencies"
+                                               (assoc-remove! d
+                                                "prebuild-install")) meta))))))
+          ;; chai/mocha/etc. are test-only deps with no store substitute;
+          ;; npm --offline would fail ENOTCACHED on them in 'configure.
+          (add-after 'patch-dependencies 'delete-dev-dependencies
+            (lambda _
+              (modify-json (delete-dev-dependencies))))
+          (delete 'build)
+          ;; The .so deliberately has undefined node/v8 symbols (the host
+          ;; binary supplies them at dlopen), which 'validate-runpath would
+          ;; choke on.  node-build-system has no #:validate-runpath? keyword
+          ;; here, so drop the phase itself.
+          (delete 'validate-runpath)
+          (add-after 'configure 'compile-addon
+            (lambda* (#:key inputs outputs #:allow-other-keys)
+              (use-modules (srfi srfi-1))
+              (let* ((node-dir (assoc-ref inputs "node"))
+                     (gcc-lib (string-append (assoc-ref inputs "gcc") "/lib"))
+                     (sql-defines
+                      ;; Verbatim from deps/defines.gypi (generated by
+                      ;; upstream deps/download.sh).  A quoted literal, not a
+                      ;; module variable: gexp `#$' would splice the list as
+                      ;; code (see note above the package).
+                      (map (lambda (f)
+                             (string-append "-D" f))
+                           '("HAVE_INT16_T=1" "HAVE_INT32_T=1"
+                             "HAVE_INT8_T=1"
+                             "HAVE_STDINT_H=1"
+                             "HAVE_UINT16_T=1"
+                             "HAVE_UINT32_T=1"
+                             "HAVE_UINT8_T=1"
+                             "HAVE_USLEEP=1"
+                             "SQLITE_DEFAULT_CACHE_SIZE=-16000"
+                             "SQLITE_DEFAULT_FOREIGN_KEYS=1"
+                             "SQLITE_DEFAULT_MEMSTATUS=0"
+                             "SQLITE_DEFAULT_WAL_SYNCHRONOUS=1"
+                             "SQLITE_DQS=0"
+                             "SQLITE_ENABLE_COLUMN_METADATA"
+                             "SQLITE_ENABLE_DBSTAT_VTAB"
+                             "SQLITE_ENABLE_DESERIALIZE"
+                             "SQLITE_ENABLE_FTS3"
+                             "SQLITE_ENABLE_FTS3_PARENTHESIS"
+                             "SQLITE_ENABLE_FTS4"
+                             "SQLITE_ENABLE_FTS5"
+                             "SQLITE_ENABLE_GEOPOLY"
+                             "SQLITE_ENABLE_JSON1"
+                             "SQLITE_ENABLE_MATH_FUNCTIONS"
+                             "SQLITE_ENABLE_PERCENTILE"
+                             "SQLITE_ENABLE_RTREE"
+                             "SQLITE_ENABLE_STAT4"
+                             "SQLITE_ENABLE_UPDATE_DELETE_LIMIT"
+                             "SQLITE_LIKE_DOESNT_MATCH_BLOBS"
+                             "SQLITE_OMIT_DEPRECATED"
+                             "SQLITE_OMIT_PROGRESS_CALLBACK"
+                             "SQLITE_OMIT_SHARED_CACHE"
+                             "SQLITE_OMIT_TCL_VARIABLE"
+                             "SQLITE_SOUNDEX"
+                             "SQLITE_THREADSAFE=2"
+                             "SQLITE_TRACE_SIZE_LIMIT=32"
+                             "SQLITE_USE_URI=0"))))
+                ;; 1. SQLite amalgamation (C).
+                (apply invoke
+                       "gcc"
+                       "-c"
+                       "deps/sqlite3/sqlite3.c"
+                       "-O2"
+                       "-std=c11"
+                       "-fPIC"
+                       (append sql-defines
+                               '("-o" "sqlite3.o")))
+                ;; 2. the addon: one C++ TU that #includes the rest.
+                (apply invoke
+                       "g++"
+                       "-c"
+                       "src/better_sqlite3.cpp"
+                       "-O2"
+                       "-std=c++20"
+                       "-fPIC"
+                       "-DNDEBUG"
+                       "-I"
+                       "src"
+                       "-I"
+                       "deps/sqlite3"
+                       "-I"
+                       (string-append node-dir "/include/node")
+                       (append sql-defines
+                               '("-o" "better_sqlite3.o")))
+                ;; 3. link with binding.gyp's linux ldflags; sqlite3.o goes
+                ;; in statically (that is what deps/sqlite3.gyp's static lib
+                ;; target achieves upstream).
+                (mkdir-p "build/Release")
+                (invoke "g++"
+                        "-shared"
+                        "-fPIC"
+                        "-Wl,-Bsymbolic"
+                        "-Wl,--exclude-libs,ALL"
+                        "-Wl,-rpath"
+                        gcc-lib
+                        "-lm"
+                        "-lpthread"
+                        "-o"
+                        "build/Release/better_sqlite3.node"
+                        "better_sqlite3.o"
+                        "sqlite3.o")))))))
+    (inputs (list node node-bindings
+                  (list gcc "lib")))
+    (native-inputs (list gcc-toolchain))
+    (home-page "https://github.com/WiseLibs/better-sqlite3")
+    (synopsis "The fastest and simplest library for SQLite in Node.js")
+    (description
+     "better-sqlite3 exposes SQLite to Node.js through a straightforward,
+synchronous API.  Unlike node-sqlite3 it is fully synchronous and ships its
+own SQLite build.")
+    (license license:expat)))
+
+(define %mcode-version
+  "0.4.5")
+
+;;; The npm tarball IS the prebuilt artifact (bundled JS + wasm + native
+;;; helpers); both `mcode' (node-build-system install) and `mcode-bin'
+;;; (copy + store symlinks, no npm) draw from it.
+(define %mcode-source
+  (origin
+    (method url-fetch)
+    (uri (string-append "https://registry.npmjs.org/@minimax-ai/code"
+                        "/-/code-" %mcode-version ".tgz"))
+    (sha256 (base32 "11nza2gv5275g41gd83kmavmigsc4jcn4fl99gbhf9b8jkig8mnx"))))
+
+(define-public mcode
+  (package
+    (name "mcode")
+    (version %mcode-version)
+    (source
+     %mcode-source)
     (build-system node-build-system)
     (arguments
      (list
@@ -1439,10 +1632,31 @@ FHS emulation or bun runtime install needed.")
       #:phases
       #~(modify-phases %standard-phases
           (delete 'build)
-          (add-after 'patch-dependencies 'remove-optional-deps
+          (add-before 'patch-dependencies 'promote-better-sqlite3
+            ;; 'patch-dependencies' only rewrites entries under
+            ;; dependencies/devDependencies/peerDependencies to file: paths;
+            ;; npm resolves optionalDependencies itself and silently SKIPS
+            ;; them when offline -- which is what left the ACP session store
+            ;; without better-sqlite3 at runtime.  Promote it to a hard
+            ;; dependency so the node-better-sqlite3 input gets wired in.
             (lambda _
               (modify-json (lambda (meta)
-                             (assoc-remove! meta "optionalDependencies")))))
+                             (let* ((optional (assoc-ref meta
+                                               "optionalDependencies"))
+                                    (bs3 (and optional
+                                              (assoc-ref optional
+                                                         "better-sqlite3"))))
+                               (if bs3
+                                   (begin
+                                     (assoc-set! meta "optionalDependencies"
+                                                 (assoc-remove! optional
+                                                  "better-sqlite3"))
+                                     (assoc-set! meta "dependencies"
+                                                 (cons (cons "better-sqlite3"
+                                                             bs3)
+                                                       (or (assoc-ref meta
+                                                            "dependencies")
+                                                           '())))) meta))))))
           (add-before 'configure 'remove-postinstall
             (lambda _
               (when (file-exists? "package.json")
@@ -1454,10 +1668,102 @@ FHS emulation or bun runtime install needed.")
                                                  (assoc-remove! s
                                                                 "postinstall"))
                                      meta))))))))))
-    (inputs (list node-mariozechner-clipboard node-vscode-ripgrep))
+    (inputs (list node-better-sqlite3 node-mariozechner-clipboard
+                  node-vscode-ripgrep))
     (home-page "https://www.npmjs.com/package/@minimax-ai/code")
     (synopsis "Minimax Code -- terminal coding agent")
     (description "Minimax Code -- terminal coding agent.")
+    (license license:expat)))
+
+;;; ---------------------------------------------------------------------------
+;;; mcode-bin -- the same prebuilt npm artifact as `mcode', installed WITHOUT
+;;; npm: copy-build-system lays the tree down, the three bare specifiers the
+;;; bundled chunks import at runtime (better-sqlite3, @vscode/ripgrep,
+;;; @mariozechner/clipboard) are wired in as node_modules symlinks pointing at
+;;; their store packages, and bin/ shell wrappers exec `node' on the two
+;;; package.json bin entries.  This sidesteps every node-build-system pitfall
+;;; (offline optionalDependencies, blocked install scripts).
+;;; ---------------------------------------------------------------------------
+(define-public mcode-bin
+  (package
+    (name "mcode-bin")
+    (version %mcode-version)
+    (source
+     %mcode-source)
+    (build-system copy-build-system)
+    ;; the three node_modules links are x86_64 prebuilts / native addons
+    (supported-systems '("x86_64-linux"))
+    (arguments
+     (list
+      #:validate-runpath? #f
+      #:install-plan
+      ;; "." not "package/": the standard 'unpack phase chdirs into the npm
+      ;; tarball's single top-level directory, so the package tree IS the
+      ;; build's current directory by the time copy-build-system installs.
+      ;; (Same shape as terminal-browser-bin and pi-coding-agent-bin.)
+      #~'(("." "share/mcode-bin"))
+      #:phases
+      #~(modify-phases %standard-phases
+          (add-after 'install 'link-node-modules
+            (lambda* (#:key inputs outputs #:allow-other-keys)
+              (let* ((out (assoc-ref outputs "out"))
+                     (pkg (string-append out "/share/mcode-bin"))
+                     (nm (string-append pkg "/node_modules")))
+                ;; Node's bare-specifier lookup walks up from the importing
+                ;; file's directory, so symlinks in the app's own
+                ;; node_modules make the store packages importable with no
+                ;; npm install at build- or run-time.
+                (mkdir-p (string-append nm "/@vscode"))
+                (mkdir-p (string-append nm "/@mariozechner"))
+                (symlink (string-append (assoc-ref inputs
+                                                   "node-better-sqlite3")
+                                        "/lib/node_modules/better-sqlite3")
+                         (string-append nm "/better-sqlite3"))
+                (symlink (string-append (assoc-ref inputs
+                                                   "node-vscode-ripgrep")
+                                        "/lib/node_modules/@vscode/ripgrep")
+                         (string-append nm "/@vscode/ripgrep"))
+                (symlink (string-append (assoc-ref inputs
+                                         "node-mariozechner-clipboard")
+                          "/lib/node_modules/@mariozechner/clipboard")
+                         (string-append nm "/@mariozechner/clipboard"))
+                ;; JS helper spawned by relative path (a #!/bin/sh script)
+                (chmod (string-append pkg "/internal-bin/mcode-tools") #o755))))
+          (add-after 'link-node-modules 'make-wrappers
+            (lambda* (#:key inputs outputs #:allow-other-keys)
+              (let* ((out (assoc-ref outputs "out"))
+                     (pkg (string-append out "/share/mcode-bin"))
+                     (node (string-append (assoc-ref inputs "node") "/bin"))
+                     (bash (string-append (assoc-ref inputs "bash-minimal")
+                                          "/bin/bash")))
+                ;; cli.js / mcode-tools.js carry "#!/usr/bin/env node"
+                ;; shebangs; the wrappers exec node by store path instead so
+                ;; nothing depends on the user's PATH.
+                (mkdir-p (string-append out "/bin"))
+                (for-each (lambda (bin)
+                            (let ((script (string-append out "/bin/"
+                                                         (car bin))))
+                              (call-with-output-file script
+                                (lambda (port)
+                                  (format port
+                                          "#!~a\nexec ~a/node \"~a/~a\" \"$@\"\n"
+                                          bash
+                                          node
+                                          pkg
+                                          (cdr bin))))
+                              (chmod script #o555)))
+                          '(("mcode" . "cli.js")
+                            ("mcode-tools" . "mcode-tools.js")))))))))
+    (inputs (list bash-minimal node node-better-sqlite3
+                  node-mariozechner-clipboard node-vscode-ripgrep))
+    (home-page "https://www.npmjs.com/package/@minimax-ai/code")
+    (synopsis "Minimax Code (prebuilt npm artifact) -- terminal coding agent")
+    (description
+     "Minimax Code is a terminal coding agent.  This package installs the
+official npm release -- bundled JavaScript plus its WASM and native helpers
+-- without running npm: the native dependencies are symlinked from the Guix
+store into the app's node_modules and the CLI starts through a wrapper
+around Node.js.")
     (license license:expat)))
 
 ;;; ---------------------------------------------------------------------------
