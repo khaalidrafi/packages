@@ -225,12 +225,21 @@
             ;; Nothing any build script may exec is on PATH by default in a
             ;; trivial build.  A '#!/usr/bin/env node' shebang -- which
             ;; is how npm writes its own bin shims -- needs `env' *and* `node'
-            ;; findable, so both go into a shim directory of ours.
+            ;; findable, so both go into a shim directory of ours.  The REAL node
+            ;; bin dir is listed ahead of that shim on purpose: 'bin' rows below
+            ;; hand every program a .bin entry points at to patch-shebang, and
+            ;; patch-shebang writes back whatever search-path returns, verbatim --
+            ;; it does not resolve symlinks (see guix/build/utils.scm, the
+            ;; (bin (search-path path cmd)) line).  Shadowed by the shim it would
+            ;; bake "#!/tmp/guix-build-zcode-.../shim/bin/node" into an installed
+            ;; file: a path that stops existing when the build ends.
             (mkdir-p "shim/bin")
             (symlink node "shim/bin/node")
             (symlink (string-append bin "/env") "shim/bin/env")
             (setenv "PATH"
-                    (string-append (getcwd)
+                    (string-append (dirname node)
+                                   ":"
+                                   (getcwd)
                                    "/shim/bin:"
                                    gzip
                                    ":"
@@ -310,7 +319,17 @@
                                                                      (symlink-target
                                                                       path))))))
                    (when prog
-                     (chmod prog #o755))))
+                     (chmod prog #o755)
+                     ;; npm writes these programs' first line as
+                     ;; '#!/usr/bin/env node'.  The kernel resolves a shebang
+                     ;; literally, so exec'ing one in the sandbox dies with
+                     ;; "cannot execute: required file not found" -- PATH is not
+                     ;; consulted, /usr/bin/env simply does not exist (that is
+                     ;; why CI run 37148319887 got past the unpack and then fell
+                     ;; over on `tsc').  patch-shebang rewrites the line to the
+                     ;; store node found on PATH, which is also what makes the
+                     ;; installed tree runnable without a shim on the user's PATH.
+                     (patch-shebang prog))))
                 (("script" directory command)
                  (with-directory-excursion directory
                    ;; npm and turbo run a package's script with that package's
