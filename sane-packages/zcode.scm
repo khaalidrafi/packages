@@ -355,7 +355,48 @@
               (copy-recursively source ".")
               (for-each (lambda (line)
                           (perform (getcwd) line))
-                        (read-rows manifest)))
+                        (read-rows manifest))
+              ;; The 'bin' rows above only reach the executables listed in
+              ;; %zcode-node-bin-links, and that list is not complete: pnpm
+              ;; itself creates node_modules/.bin/tsc while the build scripts
+              ;; run, from the package.json of the workspace it installs.  CI run
+              ;; 37179344851 still failed on `tsc' with "cannot execute: required
+              ;; file not found" after the per-link patch-shebang, because no bin
+              ;; row ever named that program.
+              ;;
+              ;; So sweep every shebang in the tree instead.  This has to be
+              ;; lstat: pnpm's node_modules/.pnpm/node_modules links point back up
+              ;; at their own directory, so following them would loop forever.
+              ;; (find-files :directories? #t) alone returns the .bin directory
+              ;; but not its symlinked entries, and those entries are exactly
+              ;; what bash execs.
+              (let loop
+                ((dir (getcwd)))
+                (for-each (lambda (file)
+                            (when (and (not (string-suffix? ".node" file))
+                                       (false-if-exception (call-with-input-file file
+                                                             (lambda (port)
+                                                               (equal? (list (get-char*
+                                                                              port)
+                                                                             (get-char*
+                                                                              port))
+                                                                       (list
+                                                                             #\#
+                                                                             #\!))))))
+                              (chmod file #o755)
+                              (patch-shebang file)))
+                          (find-files dir
+                                      #:directories? #t
+                                      #:stat lstat))
+                (for-each (lambda (sub)
+                            ;; Don't re-enter the top: its .bin entries point back up into
+                            ;; it, so descending through them revisits this same directory.
+                            (unless (string=? sub
+                                              (getcwd))
+                              (loop sub)))
+                          (find-files dir
+                                      #:directories? #t
+                                      #:stat lstat))))
             (mkdir-p (dirname lib))
             (rename-file "work" lib)
             ;; The bundle is plain JavaScript with a node shebang, so the
