@@ -168,6 +168,18 @@
                                     (chmod #$output #o555))))
                             #:system system
                             #:guile-for-build guile
+                            ;; (guix build utils) has to be copied into the build
+                            ;; environment for the (use-modules ...) above: this is
+                            ;; a raw gexp->derivation, not a package built by a
+                            ;; build system, so nothing else provides it.  Without
+                            ;; it the build dies before doing any work with
+                            ;; "no code for module (guix build utils)" (CI run
+                            ;; 37148319887).  gexp->derivation's #:modules is
+                            ;; documented as deprecated in favour of
+                            ;; with-imported-modules, which would mean wrapping
+                            ;; the whole gexp in another form; the keyword does
+                            ;; the same job with a one-line diff.
+                            #:modules '((guix build utils))
                             #:hash hash
                             #:hash-algo hash-algo
                             #:recursive? #f ;the output is one file, not a tree

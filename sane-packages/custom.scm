@@ -1706,6 +1706,16 @@ own SQLite build.")
       #:phases
       #~(modify-phases %standard-phases
           (delete 'build)
+          ;; The app ships vendor prebuilds (better-sqlite3's
+          ;; prebuilds/linuxmusl-x64.node and friends) that reference libstdc++
+          ;; and libc.musl-x86_64.so.1 by SONAME with no RUNPATH at all; node
+          ;; loads them with dlopen and resolves them itself.  Validating them
+          ;; cannot succeed on a non-FHS system and there is nothing to fix in
+          ;; the binaries.  node-build-system accepts no #:validate-runpath?
+          ;; keyword (it is not among the arguments it takes -- passing one
+          ;; aborts evaluation with "Unrecognized keyword"), so the phase has
+          ;; to be deleted instead.
+          (delete 'validate-runpath)
           (add-before 'patch-dependencies 'promote-better-sqlite3
             ;; 'patch-dependencies' only rewrites entries under
             ;; dependencies/devDependencies/peerDependencies to file: paths;
