@@ -84,11 +84,24 @@
                                       (bun #$bun-bin)
                                       (coreutils #$coreutils)
                                       (tar #$tar)
+                                      (gcc #$gcc)
                                       (certs #$nss-certs))
                                   ;; bun/git want a writable HOME and cache; the store output is
                                   ;; produced by this builder, so work entirely under /tmp.
                                   (setenv "HOME" "/tmp")
                                   (setenv "XDG_CACHE_HOME" "/tmp/.cache")
+                                  ;; grpc-tools' install script is `node-pre-gyp install', which
+                                  ;; downloads a *glibc-linked* protoc binary and runs it.  That
+                                  ;; binary's PT_INTERP is the absolute path /lib64/ld-linux-x86-64.so.2,
+                                  ;; which does not exist here -- hence CI run 37179344851 dying with
+                                  ;; "exec: cannot open shared object file: No such file or directory"
+                                  ;; and exit 127.  LD_LIBRARY_PATH is what ld.so consults for
+                                  ;; ld-linux itself when the PT_INTERP path cannot be resolved,
+                                  ;; so pointing it at glibc's lib (which gcc pulls in transitively)
+                                  ;; lets the loader find itself.  Keeping the store path here rather
+                                  ;; than creating /lib64 is what makes this work without privileges.
+                                  (setenv "LD_LIBRARY_PATH"
+                                          (string-append gcc "/lib"))
                                   ;; build.ts shells out to cp/chmod/rm/mkdir (coreutils) and tar, so
                                   ;; all four bin directories must be on PATH, not just bun/git.
                                   (setenv "PATH"

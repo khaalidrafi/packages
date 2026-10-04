@@ -180,6 +180,106 @@ starts setting =CMAKE_EXE_LINKER_FLAGS= itself, =LDFLAGS= would be ignored ---
 CMake only reads it while /initialising/ the cache.  Symptom: the same wall of
 undefined references returns despite correct inputs.
 
+* TODO =zcode=: PATH order decides what =patch-shebang= writes into the store
+
+=zcode.scm=, the =PATH= setup in the builder's let-bindings, and the
+=(("bin" path target)= arm of =perform=.
+
+Two facts about Guix meet in these two places, and together they make the PATH
+order load-bearing:
+
+1. The kernel resolves a =#!= interpreter /literally/; PATH is never consulted
+   and =/usr/bin/env= does not exist on Guix.  So npm's own
+   =#!/usr/bin/env node= shims die with "cannot execute: required file not
+   found" (exit 127) unless something rewrites them --- a symlink on PATH does
+   not help.  Hence =(patch-shebang prog)= in the =bin= arm.
+2. =patch-shebang= writes back whatever =(search-path path cmd)= returns
+   /verbatim/; it does not =canonicalize-path= (see =guix/build/utils.scm=,
+   the =(bin (search-path path cmd))= line).  So if our =shim/bin= dir were
+   first on PATH, the installed tree would carry a
+   =#!/tmp/guix-build-zcode-.../shim/bin/node= shebang --- a path that stops
+   existing the moment the build ends.  Hence =(dirname node)= goes /before/
+   the shim dir.
+
+Review point: moving the shim dir to the front of PATH looks harmless and is
+not --- the builds still pass, and the breakage only shows up on the user's
+machine, as an installed binary that says "cannot execute".  The same trap
+applies to the chmod in that arm: it is applied to the /resolved/ program, not
+to the symlink, because Guile's =chmod= follows links and would otherwise fail
+on a broken =.bin= entry with an unhelpful error.
+
+The first attempt at this was the /wrong shape/ and cost one CI run: patching
+only the programs the =%zcode-node-bin-links= manifest names.  That list is not
+complete.  pnpm creates =node_modules/.bin/tsc= itself, while the build scripts
+run, out of a workspace =package.json= --- so no bin row ever names it, and the
+build died on =tsc= with exactly the error the patch was supposed to prevent
+(CI run 37179344851).  The fix is now a sweep of every shebang in the finished
+tree, run after the manifest, with two details worth keeping:
+- =lstat=, not =stat=.  pnpm's =node_modules/.pnpm/node_modules= links point
+  back up at their own directory; following them loops forever.
+- =find-files= with =#:directories? #t= does /not/ descend into symlinked
+  directories, so it returns =node_modules/.bin= but none of its entries ---
+  and those entries are precisely what bash =exec=s.  The =loop= re-enters each
+  real subdirectory itself for that reason.
+
+Review point: if the manifest ever needs to name a program /explicitly/ again,
+it is no longer a correctness requirement, only a size optimisation.  Prefer
+leaving it alone rather than adding rows that the sweep already covers.
+
+* TODO =cline-baseline=: the fix that is only a guess
+
+=sane-packages/cline.scm=, the =LD_LIBRARY_PATH= setenv in
+=cline-baseline-build=.
+
+CI run 37179344851 got as far as =bun install= (so the =#:modules= fix worked)
+and then failed with =install script from "grpc-tools" exited with 127= and
+=exec: cannot open shared object file=.  grpc-tools' install script is
+=node-pre-gyp install=, which downloads a glibc-linked =protoc= and runs it;
+that binary's =PT_INTERP= is the absolute path =/lib64/ld-linux-x86-64.so.2=,
+which does not exist on Guix.
+
+Review point: bun printed the message but not the /name/ of the missing
+library, so pointing =LD_LIBRARY_PATH= at gcc's =lib= (which pulls in glibc)
+is a well-reasoned guess rather than a diagnosis, and it is the one change in
+this batch that is not confirmed by evidence.  If the next run fails the same
+way, read the actual =protoc= ELF instead of adding another library:
+=readelf -l= for =PT_INTERP= and =readelf -d= for =NEEDED=.  A missing
+=libstdc++.so.6= is the likeliest alternative, which would mean also binding
+=glib=; that possibility is why the note names gcc rather than glibc even
+though the loader is what is missing.
+
+* TODO =mcode=: =validate-runpath= is deleted, and there is no off switch
+
+=custom.scm=, package =mcode=, =#:phases=.
+
+The app ships vendor prebuilds (=better-sqlite3='s
+=prebuilds/linuxmusl-x64.node= and friends) that name =libstdc++.so.6= and
+=libc.musl-x86_64.so.1= by SONAME with /no RUNPATH at all/.  That is
+deliberate on upstream's side: node =dlopen()s them and resolves them itself.
+Guix's =validate-runpath= cannot succeed on such a file, and there is nothing
+to fix in the binary, so the phase is deleted.
+
+Review point: there is no gentler version of this.  =node-build-system= does
+not accept =#:validate-runpath?= at all --- it is not among the arguments it
+takes, and passing one aborts /evaluation/ with "Unrecognized keyword", which
+reads like a typo rather than a rejected design.  So if you are ever tempted to
+reintroduce the keyword, check that signature first.
+
+* TODO =cline-baseline=: the source hash is still a placeholder
+
+=sane-packages/cline.scm=, =%cline-baseline-source=.
+
+=(sha256 (base32 "00000000000000000000000000000000000000000000000000"))= is
+deliberate, not an oversight.  =cline-baseline-build= is a custom origin
+method, and a derivation made that way is one of the few allowed to reach the
+network, so CI can download the sources once and report the real hash.
+
+Review point: the first CI run after this will fail /after/ doing the whole
+Bun build, and the failure message contains the hash to paste back.  Do not
+treat that failure as a regression, and do not substitute a hash for a
+different file to make it go away.  Until the real hash lands, this package is
+known-not-to-build and everything else in the channel is unaffected.
+
 * DONE =cline=: the version lived in two files
 CLOSED: [2026-10-03 Fri]
 

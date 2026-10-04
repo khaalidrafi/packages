@@ -951,7 +951,7 @@ remote server while rendering locally.")
 ;;; FHS emulation, no patchelf.
 
 (define %pi-version
-  "1.0.0")
+  "1.0.2")
 
 (define %pi-source
   (origin
@@ -959,7 +959,7 @@ remote server while rendering locally.")
     (uri (string-append
           "https://github.com/earendil-works/pi/releases/download/v"
           %pi-version "/pi-linux-x64.tar.gz"))
-    (sha256 (base32 "0f6wcdx981mm82n1ibha4k2pag77d74zdjvwsl5dd2d8a8x59mcg"))))
+    (sha256 (base32 "062x52daww4anigbacc908zfxs9wd0l6pjv4ys7sifpwm6k8fxhd"))))
 
 (define-public pi-coding-agent-bin
   (package
@@ -1202,7 +1202,7 @@ vendored into node_modules.")
     (license license:expat)))
 
 (define %oh-my-pi-version
-  "18.5.0")
+  "18.6.0")
 
 (define %oh-my-pi-source
   (origin
@@ -1210,7 +1210,7 @@ vendored into node_modules.")
     (uri (string-append
           "https://github.com/can1357/oh-my-pi/releases/download/v"
           %oh-my-pi-version "/omp-linux-x64"))
-    (sha256 (base32 "18f8frhrnqq9lcq77idnnqiljydgq8jw0yqxkdx3qhjs11p3whdq"))))
+    (sha256 (base32 "0mdddqd9hanzkfypg7hflmfj0qzr95h77cz4md9c3i0fc8668k44"))))
 
 (define-public oh-my-pi-bin
   (package
@@ -2174,7 +2174,8 @@ locales) and the cmake find modules required to compile CEF-based apps.")
           ;; the source directory (configure is what chdirs into ./build).
           (add-before 'configure 'build-cef-wrapper
             (lambda* (#:key inputs #:allow-other-keys)
-              (use-modules (guix build utils))
+              (use-modules (guix build utils)
+                           (srfi srfi-1))
               (let* ((cef-src (assoc-ref inputs "cef-binary-dist"))
                      (work (string-append (getcwd) "/cef_binary"))
                      (lib-dirs (delete-dups (append (filter file-exists?
