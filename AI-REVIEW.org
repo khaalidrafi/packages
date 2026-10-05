@@ -321,6 +321,58 @@ Note for whoever reads the diff: =%cline-version= is a plain =define= plus a
 harvest =%cline-version= as a *package* name, since it greps those forms.  Both
 sides of that trade are worth a look if the script's harvesting ever changes.
 
+* TODO =codebuddy-code-bin=: the npm route is the /only/ route, and why
+
+=custom.scm=, packages =node-esbuild-linux-x64=, =node-esbuild= and
+=codebuddy-code-bin=.
+
+Upstream ships three artifacts: an npm tarball (bundled JS) and two
+Bun-compiled native tarballs (glibc and musl).  Only the npm one is
+packaged, and that is not a shortcut.  The glibc build has
+=PT_INTERP=/lib64/ld-linux-x86-64.so.2=, which the kernel resolves by
+*literal path* before =ld.so= ever starts, so no wrapper, =LD_LIBRARY_PATH=
+or RUNPATH edit can rescue it; the musl build wants =libstdc++.so.6= out of
+an FHS tree.  Compare =qoder-desktop-bin= and =dsh=, which do get away with
+=patchelf=, and note the difference: those had a =PT_INTERP= that pointed
+somewhere writable, this one points at =/lib64/=.
+
+Review point: the esbuild wiring is the subtle half.  esbuild is /two/ npm
+tarballs.  =esbuild= holds =lib/main.js=, which resolves its binary with
+=require.resolve("@esbuild/linux-x64/bin/esbuild")=; since =lib/main.js=
+sits at =$esbuild/lib/main.js=, Node's bare-specifier walk up from there
+reaches =$esbuild/node_modules=, so one symlink in the /esbuild/ package
+suffices.  The obvious move --- linking it beside codebuddy, into the
+consumer's =node_modules= --- is wrong: it only works while that consumer
+happens to sit at the same directory depth.  The link belongs in the package
+whose lookup reaches it.
+
+Also worth knowing when reading the smoke test: it runs =--help=, not
+=--version=, on purpose.  The version check short-circuits before
+=dist/codebuddy.js= loads, so it exits 0 even with esbuild missing and would
+pass on a broken build.  A smoke test that cannot fail is worse than none.
+
+* TODO =brow6el-bin=: =#:build-type "Release"= is invisible in the builder
+
+=custom.scm=, =brow6el-bin=, =#:build-type=.
+
+CEF names its runtime directory after the build type
+(=cef_variables.cmake:223=), and the prebuilt dist only ever ships
+=Release/=, so Guix's default =RelWithDebInfo= made the POST_BUILD
+=chrome-sandbox= copy miss and the build die *after* the executable had
+already linked.  Setting =Release= is not a guess: =cef_variables.cmake:46-50=
+defaults to exactly that.
+
+Review point, and it cost several rounds of wasted debugging: how
+=#:build-type= reaches cmake is /not/ a command-line flag and /not/ visible
+in the builder text.  =guix/build/cmake-build-system.scm:70= writes it into a
+CMake cache init file via =(save-to-cache "CMAKE_BUILD_TYPE" build-type)= and
+hands that file to cmake with =-C=.  So grepping a =*-builder= for
+=#:build-type= is a probe that /cannot/ succeed, and the =.drv= hash not
+moving is expected rather than evidence the change was ignored.  If a
+similar "my argument did nothing" report arrives, read the build-system
+module first and find out how the argument is transported before concluding
+anything about the fix.
+
 * TODO Vendor URLs must be versioned, not =latest=
 
 =qoder-desktop-bin= was pinned at =(version "0.3.4")= while its URI ended in
