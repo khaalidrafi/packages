@@ -90,16 +90,19 @@
                                   ;; produced by this builder, so work entirely under /tmp.
                                   (setenv "HOME" "/tmp")
                                   (setenv "XDG_CACHE_HOME" "/tmp/.cache")
-                                  ;; grpc-tools' install script is `node-pre-gyp install', which
-                                  ;; downloads a *glibc-linked* protoc binary and runs it.  That
-                                  ;; binary's PT_INTERP is the absolute path /lib64/ld-linux-x86-64.so.2,
-                                  ;; which does not exist here -- hence CI run 37179344851 dying with
-                                  ;; "exec: cannot open shared object file: No such file or directory"
-                                  ;; and exit 127.  LD_LIBRARY_PATH is what ld.so consults for
-                                  ;; ld-linux itself when the PT_INTERP path cannot be resolved,
-                                  ;; so pointing it at glibc's lib (which gcc pulls in transitively)
-                                  ;; lets the loader find itself.  Keeping the store path here rather
-                                  ;; than creating /lib64 is what makes this work without privileges.
+                                  ;; For any prebuilt helper binary that does get exec'd during
+                                  ;; the build (esbuild's, @opentui/core's native addons, all
+                                  ;; linked against a system libstdc++).  gcc's lib directory
+                                  ;; is the only one in the store that has one, and gcc is
+                                  ;; already an input for the store paths below.
+                                  ;;
+                                  ;; This is NOT what makes grpc-tools' protoc run, and a
+                                  ;; previous revision's comment here claimed it was.  It
+                                  ;; cannot be: the kernel resolves PT_INTERP before ld.so
+                                  ;; gets a say, so no environment variable can make
+                                  ;; /lib64/ld-linux-x86-64.so.2 appear.  The install scripts
+                                  ;; that would have needed it are skipped instead -- see
+                                  ;; `bun install --ignore-scripts' below.
                                   (setenv "LD_LIBRARY_PATH"
                                           (string-append gcc "/lib"))
                                   ;; build.ts shells out to cp/chmod/rm/mkdir (coreutils) and tar, so
@@ -153,8 +156,29 @@
                                     ;; Install the workspace.  --single builds only this host, so the
                                     ;; host @opentui/core native addon from a plain install suffices;
                                     ;; no --os/--cpu fan-out is needed for a native (same-arch) build.
+                                    ;;
+                                    ;; --ignore-scripts is not optional here.  Cline's root
+                                    ;; package.json lists trustedDependencies =
+                                    ;; ["better-sqlite3", "grpc-tools"], and grpc-tools' install
+                                    ;; script is node-pre-gyp, which fetches a prebuilt protoc
+                                    ;; compiled for a *stock* glibc and runs it.  Guix is not FHS:
+                                    ;; that binary's PT_INTERP (/lib64/ld-linux-x86-64.so.2) and
+                                    ;; the libs it needs do not exist, and LD_LIBRARY_PATH does not
+                                    ;; help -- the kernel resolves PT_INTERP before ld.so is even
+                                    ;; running.  CI runs 37179344851 and 37183041125 both died
+                                    ;; there, the second one as
+                                    ;; "install script from \"grpc-tools\" exited with 127".
+                                    ;;
+                                    ;; Nothing in this build needs those scripts: the output is
+                                    ;; `bun build --compile' of TypeScript sources, so protobuf
+                                    ;; codegen (what grpc-tools exists for) and better-sqlite3's
+                                    ;; native binding check are both irrelevant here.  Bun skips
+                                    ;; untrusted dependency scripts by default anyway -- the
+                                    ;; trustedDependencies list is what opts these two back in --
+                                    ;; so this flag only takes away what the upstream project
+                                    ;; asked for, in a sandbox that cannot run it.
                                     (invoke (string-append bun "/bin/bun")
-                                            "install")
+                                            "install" "--ignore-scripts")
 
                                     ;; Make Bun compile for the baseline (non-AVX2) ISA.  Cline's
                                     ;; build.ts has no baseline target (upstream PR #11412 adds one);

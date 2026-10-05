@@ -2178,18 +2178,24 @@ locales) and the cmake find modules required to compile CEF-based apps.")
                            (srfi srfi-1))
               (let* ((cef-src (assoc-ref inputs "cef-binary-dist"))
                      (work (string-append (getcwd) "/cef_binary"))
-                     (lib-dirs (delete-dups (append (filter file-exists?
-                                                            (map (lambda (i)
-                                                                   (string-append
-                                                                    (cdr i)
-                                                                    "/lib"))
-                                                                 inputs))
-                                                    (list (string-append (assoc-ref
-                                                                          inputs
-                                                                          "nss")
-                                                           "/lib/nss")
-                                                          (string-append work
-                                                           "/Release"))))))
+                     ;; delete-duplicates is the SRFI-1 name.  There is no
+                     ;; delete-dups in Guile, Guix or srfi-1, and CI run
+                     ;; 37183041125 died in this phase with "Unbound variable:
+                     ;; delete-dups" -- the first line of this let*, so nothing
+                     ;; else in the phase had run yet.
+                     (lib-dirs (delete-duplicates (append (filter file-exists?
+                                                           (map (lambda (i)
+                                                                  (string-append
+                                                                   (cdr i)
+                                                                   "/lib"))
+                                                                inputs))
+                                                          (list (string-append
+                                                                 (assoc-ref
+                                                                  inputs "nss")
+                                                                 "/lib/nss")
+                                                                (string-append
+                                                                 work
+                                                                 "/Release"))))))
                 (mkdir-p work)
                 (copy-recursively cef-src work)
                 (mkdir-p (string-append work "/build"))
