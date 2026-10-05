@@ -85,6 +85,7 @@
                                       (coreutils #$coreutils)
                                       (tar #$tar)
                                       (gcc #$gcc)
+                                      (bash #$bash-minimal)
                                       (certs #$nss-certs))
                                   ;; bun/git want a writable HOME and cache; the store output is
                                   ;; produced by this builder, so work entirely under /tmp.
@@ -107,6 +108,23 @@
                                           (string-append gcc "/lib"))
                                   ;; build.ts shells out to cp/chmod/rm/mkdir (coreutils) and tar, so
                                   ;; all four bin directories must be on PATH, not just bun/git.
+                                  ;;
+                                  ;; bash-minimal is NOT optional and is not here for build.ts:
+                                  ;; Cline's `bun run build:sdk' fans out one nested `bun run
+                                  ;; build' per SDK workspace package, and that inner CLI resolves a
+                                  ;; real shell binary before running a package.json script
+                                  ;; (find_shell: `which bash', `which sh', `which zsh' on PATH,
+                                  ;; then a hardcoded list that includes /bin/sh and /usr/bin/sh).
+                                  ;; A Guix sandbox has no /bin at all, so that lookup finds
+                                  ;; nothing and the CLI dies with "error: An internal error
+                                  ;; occurred (MissingShell)" -- which is why the outer `$` calls
+                                  ;; in build.ts succeed (Bun's tagged-template shell is its own
+                                  ;; interpreter and never looks for a shell) while the nested
+                                  ;; `bun run' one line later fails.  Verified by masking /bin and
+                                  ;; /usr/bin in a mount namespace: with bash off PATH it raises
+                                  ;; MissingShell, with bash-minimal's bin dir on PATH it passes.
+                                  ;; NOTE Bun 1.4.2 calls find_shell before it consults --shell=,
+                                  ;; so `--shell=bun' does NOT dodge this (upstream issue #43231).
                                   (setenv "PATH"
                                           (string-append git
                                            "/bin:"
@@ -115,6 +133,8 @@
                                            coreutils
                                            "/bin:"
                                            tar
+                                           "/bin:"
+                                           bash
                                            "/bin"
                                            ":/run/setuid-programs:/bin:/usr/bin"))
 
