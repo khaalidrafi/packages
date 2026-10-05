@@ -202,7 +202,10 @@
       #:modules '((guix build utils))
       #:builder
       #~(begin
-          (use-modules (guix build utils)
+          ;; srfi-1 first: (guix build utils) re-exports a `delete' that keeps
+          ;; `modify-phases' pattern matching working, and it has to win.
+          (use-modules (srfi srfi-1)
+                       (guix build utils)
                        (ice-9 match)
                        (ice-9 rdelim))
           (let* ((out (assoc-ref %outputs "out"))
@@ -312,24 +315,39 @@
                  ;; hands it over without the bit set.  Read the link rather than
                  ;; chmod the path: Guile's chmod follows links, and a broken one
                  ;; would fail the build instead of showing what is wrong.
+                 ;;
+                 ;; The reader is readlink, not symlink-target: there is no
+                 ;; symlink-target in Guile or Guix.  CI runs 37179344851 and
+                 ;; 37183041125 both died on `tsc' with "cannot execute: required
+                 ;; file not found" *with this code in place*, because
+                 ;; false-if-exception turned the unbound-variable error into #f
+                 ;; for every one of the ~150 bin rows -- so not one program was
+                 ;; chmodded or patch-shebang'd, and the build said nothing at
+                 ;; all.  A guard that swallows "you called a function that does
+                 ;; not exist" is worse than no guard: it turns a typo into a
+                 ;; silent no-op, and the real error surfaces two hundred rows
+                 ;; later as a bare "cannot execute".
                  (let ((prog (false-if-exception (canonicalize-path (string-append
                                                                      (dirname
                                                                       path)
                                                                      "/"
-                                                                     (symlink-target
+                                                                     (readlink
                                                                       path))))))
-                   (when prog
-                     (chmod prog #o755)
-                     ;; npm writes these programs' first line as
-                     ;; '#!/usr/bin/env node'.  The kernel resolves a shebang
-                     ;; literally, so exec'ing one in the sandbox dies with
-                     ;; "cannot execute: required file not found" -- PATH is not
-                     ;; consulted, /usr/bin/env simply does not exist (that is
-                     ;; why CI run 37148319887 got past the unpack and then fell
-                     ;; over on `tsc').  patch-shebang rewrites the line to the
-                     ;; store node found on PATH, which is also what makes the
-                     ;; installed tree runnable without a shim on the user's PATH.
-                     (patch-shebang prog))))
+                   (unless prog
+                     (throw 'build-error
+                            "bin entry points at a target that is not there"
+                            path target))
+                   (chmod prog #o755)
+                   ;; npm writes these programs' first line as
+                   ;; '#!/usr/bin/env node'.  The kernel resolves a shebang
+                   ;; literally, so exec'ing one in the sandbox dies with
+                   ;; "cannot execute: required file not found" -- PATH is not
+                   ;; consulted, /usr/bin/env simply does not exist (that is
+                   ;; why CI run 37148319887 got past the unpack and then fell
+                   ;; over on `tsc').  patch-shebang rewrites the line to the
+                   ;; store node found on PATH, which is also what makes the
+                   ;; installed tree runnable without a shim on the user's PATH.
+                   (patch-shebang prog)))
                 (("script" directory command)
                  (with-directory-excursion directory
                    ;; npm and turbo run a package's script with that package's
@@ -353,50 +371,55 @@
             (mkdir-p "work")
             (with-directory-excursion "work"
               (copy-recursively source ".")
-              (for-each (lambda (line)
-                          (perform (getcwd) line))
-                        (read-rows manifest))
-              ;; The 'bin' rows above only reach the executables listed in
-              ;; %zcode-node-bin-links, and that list is not complete: pnpm
-              ;; itself creates node_modules/.bin/tsc while the build scripts
-              ;; run, from the package.json of the workspace it installs.  CI run
-              ;; 37179344851 still failed on `tsc' with "cannot execute: required
-              ;; file not found" after the per-link patch-shebang, because no bin
-              ;; row ever named that program.
-              ;;
-              ;; So sweep every shebang in the tree instead.  This has to be
-              ;; lstat: pnpm's node_modules/.pnpm/node_modules links point back up
-              ;; at their own directory, so following them would loop forever.
-              ;; (find-files :directories? #t) alone returns the .bin directory
-              ;; but not its symlinked entries, and those entries are exactly
-              ;; what bash execs.
-              (let loop
-                ((dir (getcwd)))
-                (for-each (lambda (file)
-                            (when (and (not (string-suffix? ".node" file))
-                                       (false-if-exception (call-with-input-file file
-                                                             (lambda (port)
-                                                               (equal? (list (get-char*
-                                                                              port)
-                                                                             (get-char*
-                                                                              port))
-                                                                       (list
-                                                                             #\#
-                                                                             #\!))))))
-                              (chmod file #o755)
-                              (patch-shebang file)))
-                          (find-files dir
-                                      #:directories? #t
+              ;; The manifest is one flat list of rows, and its "script" rows
+              ;; are the build itself, so they have to come last: nothing may run
+              ;; before the tree those scripts compile against is complete.  That
+              ;; also means the shebang sweep below cannot live after the whole
+              ;; manifest, which is where it used to be -- it then ran only once
+              ;; the first `tsc' had already killed the build (CI run
+              ;; 37183041125).  Split the rows instead of reordering the
+              ;; generated file: "script" is the one kind that executes anything.
+              (let* ((rows (read-rows manifest))
+                     (script-row? (lambda (line)
+                                    (string-prefix? "script\t" line)))
+                     (setup (filter (lambda (line)
+                                      (not (script-row? line))) rows))
+                     (scripts (filter script-row? rows)))
+                (for-each (lambda (line)
+                            (perform (getcwd) line)) setup)
+                ;; The 'bin' rows above only reach the executables listed in
+                ;; %zcode-node-bin-links, and that list is not complete: pnpm
+                ;; itself creates node_modules/.bin/tsc while the build scripts
+                ;; run, from the package.json of the workspace it installs.  CI
+                ;; run 37179344851 still failed on `tsc' with "cannot execute:
+                ;; required file not found" after the per-link patch-shebang,
+                ;; because no bin row ever named that program.
+                ;;
+                ;; So sweep every shebang in the tree as well.  This is Guix's
+                ;; own `patch-source-shebangs' phase
+                ;; (build/gnu-build-system.scm:276) copied verbatim rather than
+                ;; reinvented: find-files already recurses, and its #:stat default
+                ;; is lstat, so a symlink reads as a leaf and is never descended
+                ;; -- which is what keeps pnpm's
+                ;; node_modules/.pnpm/node_modules links, each pointing back up at
+                ;; its own directory, from looping.
+                ;;
+                ;; Regular files only matters twice over.  patch-shebang
+                ;; finishes by renaming its temp file over FILE
+                ;; (build/utils.scm:1138), so handed a node_modules/.bin symlink
+                ;; it would silently replace the link with a copy.  Patching the
+                ;; link's target is enough: the link then resolves to the
+                ;; already-patched file.  patch-shebang also checks for `#!'
+                ;; itself and returns #f without it, so no peek of ours is
+                ;; needed, and no chmod either -- it restores the mode it read.
+                (for-each patch-shebang
+                          (find-files "."
+                                      (lambda (file stat)
+                                        (eq? 'regular
+                                             (stat:type stat)))
                                       #:stat lstat))
-                (for-each (lambda (sub)
-                            ;; Don't re-enter the top: its .bin entries point back up into
-                            ;; it, so descending through them revisits this same directory.
-                            (unless (string=? sub
-                                              (getcwd))
-                              (loop sub)))
-                          (find-files dir
-                                      #:directories? #t
-                                      #:stat lstat))))
+                (for-each (lambda (line)
+                            (perform (getcwd) line)) scripts)))
             (mkdir-p (dirname lib))
             (rename-file "work" lib)
             ;; The bundle is plain JavaScript with a node shebang, so the

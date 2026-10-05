@@ -214,13 +214,27 @@ complete.  pnpm creates =node_modules/.bin/tsc= itself, while the build scripts
 run, out of a workspace =package.json= --- so no bin row ever names it, and the
 build died on =tsc= with exactly the error the patch was supposed to prevent
 (CI run 37179344851).  The fix is now a sweep of every shebang in the finished
-tree, run after the manifest, with two details worth keeping:
-- =lstat=, not =stat=.  pnpm's =node_modules/.pnpm/node_modules= links point
-  back up at their own directory; following them loops forever.
-- =find-files= with =#:directories? #t= does /not/ descend into symlinked
-  directories, so it returns =node_modules/.bin= but none of its entries ---
-  and those entries are precisely what bash =exec=s.  The =loop= re-enters each
-  real subdirectory itself for that reason.
+tree.
+
+That sweep is Guix's own =patch-source-shebangs= phase copied verbatim
+(=guix/build/gnu-build-system.scm:276=), and it replaced a 27-line hand-rolled
+recursion that got three things wrong.  Read the source before writing this
+kind of loop:
+- =find-files= /already/ recurses, and its =#:stat= /default/ is =lstat=, so a
+  symlink is a leaf and is never descended.  The manual =loop= and its
+  =#:directories? #t= were reimplementing the traversal =find-files= does, to
+  work around a pnpm symlink cycle that =lstat= alone already prevents.
+- =patch-shebang= renames its temp file over the file it is handed
+  (=guix/build/utils.scm:1138=).  Run on a =node_modules/.bin= /symlink/ it
+  therefore replaces the link with a regular copy.  The predicate's
+  =(eq? 'regular (stat:type stat))= is not decoration: patch the target and the
+  link resolves to it, whereas patching the link destroys the layout being
+  installed.  This was a live bug in the previous version, not a style point.
+- No mode or mtime bookkeeping is needed: =patch-shebang= restores the mode it
+  read and defaults to =keep-mtime? #t=.  It also checks for the =#!= itself and
+  returns =#f= without one, so opening every file to peek two characters was
+  duplicated work --- and the old code's =(not (string-suffix? ".node" file))=
+  guard was pointless for the same reason (an ELF file has no =#!=).
 
 Review point: if the manifest ever needs to name a program /explicitly/ again,
 it is no longer a correctness requirement, only a size optimisation.  Prefer
