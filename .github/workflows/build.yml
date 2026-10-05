@@ -33,12 +33,24 @@ jobs:
       # Download cache only: /gnu/store must not be restored from a cache, the
       # store database would disagree with the files (see the note in
       # PromyLOPh/guix-install-action's own workflow).
+      #
+      # The key is `guix-cache-${{ github.sha }}` with a branch-scoped
+      # restore-key, NOT `github.run_id`.  A run-id key is unique per run, so
+      # it never matches anything on a miss and the `guix-cache-` prefix then
+      # selects the single most recent cache -- the download cache survives
+      # exactly one run and is then evicted by the 10GB LRU, so a slow build
+      # re-downloads tarballs it should have had.  Keying on the commit makes
+      # the cache follow the branch: a rerun of the same SHA reuses it, a new
+      # commit saves a new one, and `ref-` keeps two branches from thrashing
+      # each other's entries.
       - name: Guix download cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/guix
-          key: guix-cache-${{ github.run_id }}
-          restore-keys: guix-cache-
+          key: guix-cache-${{ github.sha }}
+          restore-keys: |
+            guix-cache-${{ github.ref }}-
+            guix-cache-
 
       - name: Install Guix
         uses: PromyLOPh/guix-install-action@v1
@@ -46,6 +58,17 @@ jobs:
           # The channel definitions themselves live in this repository and are
           # passed with `-L`; nonguix is a real channel because the packages
           # build on its binary build systems and licenses.
+          #
+          # pullAfterInstall is off so the pin below decides what the daemon
+          # runs.  The action's own `guix pull --fallback' follows the *tip*
+          # of guix master and nonguix master, and both move daily: a build
+          # green this morning can be red this afternoon with no change to
+          # this repository, and the log then blames a package definition
+          # nobody touched.  channels-lock.scm pins both to exact commits, so
+          # a red build is reproducible and an upstream regression stays red
+          # until the pin is deliberately moved.  Bump it with
+          # tests/update-channels-lock.sh.
+          pullAfterInstall: false
           channels: |-
             (cons
              (channel
@@ -57,6 +80,25 @@ jobs:
                 (openpgp-fingerprint
                  "2A39 3FFF 68F4 EF7A 3D29 12AF 6F51 20A0 22FB B2D5"))))
              %default-channels)
+
+      # `guix pull', not `guix time-machine': time-machine would compile a
+      # whole Guix profile on every run, and the daemon is already reachable
+      # here, so pulling into it is what we actually want.  This reads the
+      # committed lock rather than duplicating the hashes a second time.
+      #
+      # --fallback matters: without it, `guix pull' refuses to move a channel
+      # the daemon already has unless the new commit is reachable from it, and
+      # nonguix is simply absent on a fresh runner.
+      # --allow-downgrades matters because the pin is usually *older* than the
+      # guix commit the nightly tarball carries.  Guix calls that refusal
+      # `ensure-forward-channel-update' (guix/scripts/pull.scm:88) and it is
+      # exactly the check we are overriding on purpose here: without it, any
+      # pin that is not newer than the tarball fails the step, which is the
+      # opposite of what a lock file is for.
+      - name: Pin channels to tests/channels-lock.scm
+        run: |
+          guix pull --fallback --allow-downgrades -C tests/channels-lock.scm
+          guix describe
 
       - name: Static checks (style, derivation validity)
         run: ./tests/check-static.sh

@@ -44,6 +44,11 @@ for name in $names; do
   # Only stdout (the store paths) is captured; progress and errors stream to
   # the log from stderr, where Guix writes them.  A package can have several
   # outputs, so the result may be more than one path.
+  #
+  # `-L .', not `-L sane-packages': the modules are named `(sane-packages ...)'.
+  # See the note on the derivations step in tests/check-static.sh for what the
+  # root on the load path costs (one harmless "error: channel: unbound
+  # variable" line, because tests/channels-lock.scm is a bare channel list).
   if ! outs="$(guix build -L . "$name")"; then
     failed+=("$name (build)")
     continue

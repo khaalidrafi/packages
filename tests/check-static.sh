@@ -32,8 +32,20 @@ done
 # (directory ...), so the root *is* the module path), makes every user's pull
 # fail.  tests/, scripts/ and copy-pasteable examples are where such files
 # tend to appear.
+#
+# The exceptions are hand-maintained on purpose, not derived: a bare channel
+# list cannot be made a module (`guix pull -C' loads it with load* and
+# #isolated? #t, where define-module is unbound), and forcing one in would
+# mean the file stops being loadable as a channels file -- see the header of
+# tests/channels-lock.scm.  It is out of the load path only because .guix-
+# channel declares no (directory ...); anything else there is still compiled.
+# Any new exemption must come with the reason it cannot be a module.
 echo "==> channel: every .scm file is a module"
+non_module_ok='^\./tests/channels-lock\.scm$'
 while IFS= read -r f; do
+  if grep -Eq "$non_module_ok" <<<"$f"; then
+    continue
+  fi
   grep -q '(define-module' "$f" && continue
   cat >&2 <<EOF
 $f is a Scheme file but not a Guile module.
@@ -92,6 +104,18 @@ done
 # it loads every (gnu packages *) module these files import -- so looping here
 # would make the CI job mostly measure Guix's start-up time.  When the batch
 # fails, re-run per package so the log says which one.
+#
+# `-L .' and not `-L sane-packages': the modules are named `(sane-packages
+# cline)' etc., so Guile has to find them at ./sane-packages/cline.scm, which
+# needs the repository root on the load path.  The cost is one harmless line
+# per invocation: with the root on the path, Guile also maps any `(...)'
+# module name onto tests/*.scm, so the bare `(list (channel ...))' in
+# tests/channels-lock.scm gets read as the module `(list ...)' and Guix prints
+# "error: channel: unbound variable" before doing any work.  It is only noise
+# -- the exit status is unaffected, and the dry run still resolves every
+# derivation (verified by removing the file: the line disappears, the result
+# does not).  The alternative, `-L sane-packages', breaks resolution outright
+# with "cline-baseline: unknown package".
 echo "==> derivations: $(printf '%s ' $names)"
 if ! guix build -L . --dry-run $names; then
   for name in $names; do
