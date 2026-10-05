@@ -58,6 +58,13 @@ if ! meta_out=$(guix style -f -n "$meta_dir/channel.scm" 2>&1); then
 fi
 rm -rf "$meta_dir"
 
+# zcode's dependency tables are generated, so nothing in guix style or in a
+# dry-run can look at them: both only see Scheme that parses.  The one thing
+# that can be wrong in them is a relative link that resolves nowhere, and that
+# only shows up as a hard build failure in CI, one dangling link at a time.
+echo "==> generated tables: zcode dependency links resolve"
+./tests/check-zcode-links.py
+
 names=$(grep -hoE '^\(define-public [^ )]+' "${files[@]}" | awk '{print $2}')
 
 for f in "${style_files[@]}"; do
