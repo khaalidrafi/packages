@@ -416,7 +416,6 @@ def main():
                               "../../%s/node_modules/%s/%s" % (dir_name(key), name, rel)))
     for directory in order:
         entry = as_dict(importers.get(directory))
-        depth = len(directory.split("/")) + 1
         rows = []
         for kind in ("dependencies", "devDependencies", "optionalDependencies"):
             for name, spec in as_dict(entry.get(kind)).items():
@@ -425,18 +424,28 @@ def main():
                     continue
                 if version.startswith("link:"):
                     target = os.path.normpath(os.path.join(directory, version[len("link:"):]))
+                    link = "%s/node_modules/%s" % (directory, name)
                     workspace_links.append(
-                        ("%s/node_modules/%s" % (directory, name),
-                         os.path.relpath(target, os.path.join(directory, "node_modules"))))
+                        (link, os.path.relpath(target, os.path.dirname(link))))
                     continue
                 key = snapshot_key(name, version, snapshots)
                 if key is None or not fits(key, packages) or key not in seen:
                     continue
                 rows.append((name, "npm", package_dir[key]))
                 n, v = name_version(key)
+                # relpath from the .bin directory itself, not from
+                # <workspace>/node_modules: the link is created *inside*
+                # .bin, so the extra component is part of the path back out.
+                # Counting `../' by hand got this wrong by one level and left
+                # every workspace .bin entry dangling at packages/node_modules
+                # or apps/node_modules -- CI run 37183041125 died on the very
+                # first of them with "bin entry points at a target that is not
+                # there".
                 for cmd, rel in sorted(bin_entries(n, v).items()):
-                    bin_links.append(("%s/node_modules/.bin/%s" % (directory, cmd),
-                                      "%s%s/%s" % ("../" * depth, package_dir[key], rel)))
+                    link = "%s/node_modules/.bin/%s" % (directory, cmd)
+                    bin_links.append(
+                        (link, os.path.relpath(os.path.join(package_dir[key], rel),
+                                               os.path.dirname(link))))
 
     # patchedDependencies keys carry no peer suffix while snapshot keys do, so
     # match on the part before the first "(".
