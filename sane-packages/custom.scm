@@ -2145,6 +2145,20 @@ locales) and the cmake find modules required to compile CEF-based apps.")
     (native-inputs (list pkg-config))
     (arguments
      (list
+      ;; Guix's cmake-build-system defaults CMAKE_BUILD_TYPE to RelWithDebInfo,
+      ;; and CEF then looks for its own runtime files in a directory named after
+      ;; it: cef_binary/RelWithDebInfo.  The prebuilt CEF distribution only ever
+      ;; ships Release/, so brow6el's POST_BUILD rule -- COPY_FILES at
+      ;; CMakeLists.txt:135, driven by CEF_BINARY_FILES in cef_variables.cmake --
+      ;; died with `Error copying file (if different)' the moment it reached
+      ;; chrome-sandbox, after the executable had already linked.  CI run
+      ;; 37183041125 stopped there.  Release is both what CEF defaults to when no
+      ;; type is given (cef_variables.cmake:46-50) and what the dist contains, so
+      ;; asking for it here fixes the path without patching anything.  Note that
+      ;; build-cef-wrapper below also configures its libcef_dll_wrapper build as
+      ;; Release: the two must agree, since libcef.so is linked from the same
+      ;; CEF_ROOT/Release directory.
+      #:build-type "Release"
       ;; No #:configure-flags here, which is what a reader will look for first.
       ;; brow6el's CMakeLists says
       ;; set(CEF_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/cef_binary" CACHE PATH ...)
