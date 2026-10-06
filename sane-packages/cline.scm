@@ -211,6 +211,31 @@
                                       (("bun-\\$\\{targetOs\\}-\\$\\{item\\.arch\\}")
                                        "bun-${targetOs}-x64-baseline"))
 
+                                    ;; `build:sdk' is `bun --production -F './sdk/packages/*' build',
+                                    ;; and Bun no longer has a `--production' flag: it was deprecated in
+                                    ;; 1.1 and removed in 1.2, so the pinned 1.4.2 answers
+                                    ;; "bun: unrecognized option '--production'" and exits 1.  This is
+                                    ;; not a case of choosing a different spelling upstream still
+                                    ;; supports -- `bun run build:sdk' is the only entry point and it
+                                    ;; carries the flag itself.
+                                    ;;
+                                    ;; Dropping it is safe rather than merely expedient.  As a global
+                                    ;; flag it only ever meant "omit devDependencies", and that applies
+                                    ;; to an *install*; it had no effect on which script `bun run' then
+                                    ;; executed.  Here the install above is a full one (no
+                                    ;; --production), so the dev dependencies are on disk regardless --
+                                    ;; which is what we want anyway, because those SDK packages build
+                                    ;; with `tsc', itself a devDependency.
+                                    ;;
+                                    ;; Substituted before `bun install' so the manifest is already
+                                    ;; correct by the time anything reads it, and anchored on the
+                                    ;; `build:sdk' key so the unrelated `build:apps' line -- which also
+                                    ;; says --production but is not what build.ts invokes -- is left as
+                                    ;; upstream wrote it rather than silently rewritten.
+                                    (substitute* "package.json"
+                                      (("\"build:sdk\": \"bun --production ")
+                                       "\"build:sdk\": \"bun "))
+
                                     ;; build.ts --single then orchestrates, in order: build:sdk, the
                                     ;; CLI bundle, the Cline Hub webview, and `bun build --compile'
                                     ;; for the (now baseline) host target.
