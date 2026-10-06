@@ -9,7 +9,23 @@ actually populates:
   * a .bin entry must land inside an install path from %zcode-node-modules,
     which is the only place a tarball is ever unpacked;
   * a workspace link must land in a workspace directory from
-    %zcode-workspace-order, i.e. a source directory copied out of the origin.
+    %zcode-workspace-order, i.e. a source directory copied out of the origin;
+  * every %zcode-node-links row must land under node_modules/.pnpm/.
+
+The third rule exists because that table was previously unchecked, and it is
+where a whole class of bug hides.  Its rows have targets that are relative to
+the link's OWN directory, and a scoped package name puts the link one level
+deeper than an unscoped one: node_modules/@types/node, not node_modules/node.
+A target spelled for the node_modules level therefore resolves from
+node_modules/@types/ to node_modules/@types/.pnpm/... and dangles.  That is
+invisible to the two rules above (it is not a bin row and not a workspace row),
+and the first thing that trips over it is tsc, which resolves
+compilerOptions `types: ["node"]' by walking for node_modules/@types and finds
+a dead symlink -- TS2688, "Cannot find type definition file for 'node'".  CI run
+37302102392 died there.  Requiring the resolved path to start at
+node_modules/.pnpm/ catches the whole family at once, because the peer-suffix
+rows (a package whose dependency resolved to a different snapshot) do not name
+an install path directly and would false-positive against the stricter rule.
 
 Both failures are dangling symlinks at run time and hard build failures at
 build time -- zcode's builder reads each link and throws "bin entry points at a
@@ -62,6 +78,7 @@ def rows(name, width):
 install_paths = {f[3] for f in rows("%zcode-node-modules", 4)}
 order = [q for line in block("%zcode-workspace-order").splitlines()
          for q in quoted(line)]
+node_rows = rows("%zcode-node-links", 2)
 bin_rows = rows("%zcode-node-bin-links", 2)
 workspace_rows = rows("%zcode-workspace-links", 2)
 
@@ -77,6 +94,13 @@ def under(path, prefixes):
 def main():
     broken = []
     workspace_prefixes = tuple("%s/node_modules/.bin/" % d for d in order)
+    for link, target in node_rows:
+        where = resolve(link, target)
+        # Only the *shape* is checked here, not membership of install_paths:
+        # see the module docstring for why that distinction matters.
+        if not (where == "node_modules/.pnpm" or
+                where.startswith("node_modules/.pnpm/")):
+            broken.append(("[node]", link, target, where))
     for link, target in bin_rows:
         where = resolve(link, target)
         if not under(where, install_paths):
@@ -84,9 +108,15 @@ def main():
                            link, target, where))
     for link, target in workspace_rows:
         where = resolve(link, target)
-        if not under(where, order):
+        # Two legitimate kinds of target, distinguished by the lockfile, not by
+        # the path: a `link:' specifier means a sibling workspace source
+        # directory, anything else means this workspace's own .pnpm snapshot.
+        # Judging both by the workspace list would have flagged every npm
+        # dependency of every workspace.
+        if not (under(where, order) or under(where, install_paths)):
             broken.append(("[ws-link]", link, target, where))
 
+    print("node rows:       %d" % len(node_rows))
     print("bin rows:        %d" % len(bin_rows))
     print("workspace rows:  %d" % len(workspace_rows))
     print("install paths:   %d" % len(install_paths))

@@ -173,8 +173,8 @@
                ;; already unpacked by now.
                (manifest-block "patch" %zcode-node-patches)
                ;; The dependency graph pnpm would have built: one symlink per
-               ;; edge inside .pnpm, the two flat views, and the @zcode/*
-               ;; workspace links.
+               ;; edge inside .pnpm, the two flat views, and one
+               ;; symlink per dependency each workspace declares.
                (manifest-block "sym" %zcode-node-links)
                (manifest-block "sym" %zcode-workspace-links)
                ;; node_modules/.bin entries: how a package's build script reaches
