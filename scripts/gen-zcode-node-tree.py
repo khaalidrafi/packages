@@ -396,11 +396,26 @@ def main():
     #       `require("playwright-core")` in place (build.mjs's `external'), and
     #       Node resolves those by walking up from dist/ to the repository root,
     #       where only the flat view can answer.
+    #
+    # Both targets go through os.path.relpath against the link's OWN directory
+    # rather than being written out as a fixed prefix.  That is not tidiness: a
+    # scoped package name puts the link one level deeper than an unscoped one
+    # (node_modules/@types/node, not node_modules/types-node), so a target
+    # spelled for the node_modules level -- ".pnpm/<dir>/node_modules/<name>" --
+    # resolves from node_modules/@types/ to node_modules/@types/.pnpm/<dir>/...
+    # and dangles.  Every scoped package in either flat view was broken that
+    # way, and tsc is the first thing to notice: TypeScript resolves
+    # compilerOptions `types: ["node"]' by walking for a node_modules/@types
+    # directory, and the entry it finds is a dead symlink, so the build dies
+    # with TS2688 "Cannot find type definition file for 'node'".  CI run
+    # 37302102392 failed exactly there, in
+    # apps/zcode-cli/packages/contracts, whose tsconfig names "node" and does
+    # not extend the base config.
     for name, key in sorted(hoisted.items()):
-        node_links.append(("node_modules/.pnpm/node_modules/%s" % name,
-                           "../%s/node_modules/%s" % (dir_name(key), name)))
-        node_links.append(("node_modules/%s" % name,
-                           ".pnpm/%s/node_modules/%s" % (dir_name(key), name)))
+        for link in ("node_modules/.pnpm/node_modules/%s" % name,
+                     "node_modules/%s" % name):
+            node_links.append(
+                (link, os.path.relpath(package_dir[key], os.path.dirname(link))))
 
     # Rows: node_modules/.bin entries, the executables a build script calls.
     bin_links, workspace_links = [], []
@@ -416,7 +431,6 @@ def main():
                               "../../%s/node_modules/%s/%s" % (dir_name(key), name, rel)))
     for directory in order:
         entry = as_dict(importers.get(directory))
-        rows = []
         for kind in ("dependencies", "devDependencies", "optionalDependencies"):
             for name, spec in as_dict(entry.get(kind)).items():
                 version = spec.get("version", "") if isinstance(spec, dict) else spec
@@ -431,7 +445,16 @@ def main():
                 key = snapshot_key(name, version, snapshots)
                 if key is None or not fits(key, packages) or key not in seen:
                     continue
-                rows.append((name, "npm", package_dir[key]))
+                # One symlink per declared dependency in the workspace's own
+                # node_modules -- pnpm's isolated layout, and the thing that row
+                # used to compute and then throw away into a `rows' local that
+                # nothing ever read.  Without it a workspace can only reach the
+                # flat root view, which is a different set of versions than the
+                # lockfile pinned for it, so `tsc' in a workspace can silently
+                # type-check against the wrong @types.
+                link = "%s/node_modules/%s" % (directory, name)
+                workspace_links.append(
+                    (link, os.path.relpath(package_dir[key], os.path.dirname(link))))
                 n, v = name_version(key)
                 # relpath from the .bin directory itself, not from
                 # <workspace>/node_modules: the link is created *inside*
@@ -570,7 +593,7 @@ def emit(modules, node_links, bin_links, workspace_links, patches, order, build_
                % rows_table(node_links))
     out.append("\n(define %%zcode-node-bin-links\n  ;; (link target) for node_modules/.bin entries -- the\n  ;; executables a build script may call by name.\n  (list\n%s))\n"
                % rows_table(bin_links))
-    out.append("\n(define %%zcode-workspace-links\n  ;; @zcode/* packages are source directories, not tarballs: pnpm\n  ;; symlinks them into node_modules like any other dependency.\n  (list\n%s))\n"
+    out.append("\n(define %%zcode-workspace-links\n  ;; One symlink per dependency each workspace declares: the @zcode/*\n  ;; ones point at sibling source directories (a lockfile `link:'\n  ;; specifier), the rest at this workspace's own .pnpm snapshot.\n  ;; Both are needed -- pnpm gives every workspace its own node_modules\n  ;; rather than making it read the flat root view.\n  (list\n%s))\n"
                % rows_table(workspace_links))
     out.append("\n(define %%zcode-node-patches\n  ;; lockfile patchedDependencies: (install-path patch-file).  The\n  ;; patch files come from the source tree, so they are already there.\n  (list\n%s))\n"
                % rows_table(patches))
