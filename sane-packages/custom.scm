@@ -424,6 +424,157 @@ loader, so no FHS emulation is required.")
     (home-page "https://opencode.ai")
     (license license:expat)))
 
+;;; ---------------------------------------------------------------------------
+;;; OpenCode v2 (`opencode2-bin`).
+;;;
+;;; V2 is a *different* distribution channel from v1, and this is worth stating
+;;; plainly because it is the opposite of what the version numbers suggest.
+;;; V1 publishes GitHub release assets (opencode-linux-x64{,-baseline}.tar.gz);
+;;; V2 publishes no release assets at all -- .github/workflows/publish.yml on
+;;; the v2.0.23 tag says so in a comment: "Unlike dev, V2 publishes a tag rather
+;;; than a GitHub Release event."  `GET /repos/anomalyco/opencode/releases/tags/
+;;; v2.0.23' answers 404, and the v1 asset URLs under /download/v2.0.23/ are 404
+;;; as well, so there is nothing to point an `origin' at on the release side.
+;;;
+;;; What V2 does publish is npm: `@opencode/cli' is a thin dispatcher whose
+;;; twelve `optionalDependencies' are the per-platform Bun builds, including
+;;; `@opencode/cli-linux-x64' and `@opencode/cli-linux-x64-baseline'.  Those two
+;;; tarballs are just `package/bin/opencode' plus a package.json, so they unpack
+;;; directly here with no Node.js and no postinstall -- which matters, because
+;;; the dispatcher's own postinstall is a Node script and `npm install' of the
+;;; wrapper would drag in a Node we would then have to wire in by hand.
+;;;
+;;; Both variants are needed for the same reason as in v1: this machine's CPU
+;;; (an Intel Celeron N2815) reports no avx2 flag, so the AVX2 build dies with
+;;; SIGILL.  The runtime /proc/cpuinfo dispatch is copied from opencode-bin
+;;; above, since the two binaries are built by the same Bun pipeline and need
+;;; the same store loader invocation.
+;;;
+;;; `readelf -d' reports only libc, ld-linux, libpthread, libdl and libm, so
+;;; like v1 this is a plain glibc binary with no C++ runtime to satisfy.  It is
+;;; still exec'd through the store loader rather than patchelf'd: the kernel
+;;; resolves PT_INTERP=/lib64/ld-linux-x86-64.so.2 by literal path before ld.so
+;;; runs, so an interpreter rewrite is the only thing that makes it startable.
+;;; ---------------------------------------------------------------------------
+(define %opencode2-version
+  "2.0.23")
+
+(define opencode2-avx2-source
+  (origin
+    (method url-fetch)
+    (uri (string-append
+          "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-"
+          %opencode2-version ".tgz"))
+    (sha256 (base32 "0j62cpy9i57p71ysa4pbnrajq4kza030dw1fiywhd81iq033k9zi"))))
+
+(define opencode2-baseline-source
+  (origin
+    (method url-fetch)
+    (uri (string-append
+          "https://registry.npmjs.org/@opencode/cli-linux-x64-baseline/-/"
+          "cli-linux-x64-baseline-" %opencode2-version ".tgz"))
+    (sha256 (base32 "0a416pbbya9j7jwki80vr3rq77ma8cymrk6w9nw96k0rfnqmrcn4"))))
+
+(define-public opencode2-bin
+  (package
+    (name "opencode2-bin")
+    (version %opencode2-version)
+    (source
+     #f)
+    (build-system copy-build-system)
+    (supported-systems '("x86_64-linux"))
+    (arguments
+     (list
+      #:validate-runpath? #f
+      #:strip-binaries? #f
+      #:install-plan
+      ;; The leading quote is load-bearing: copy-build-system only runs
+      ;; `sexp->gexp' over install-plan when it is a literal list, so an unquoted
+      ;; #~(...) is handed to the builder as *code* and evaluated as a procedure
+      ;; call on the first string.
+      #~'(("opencode2-avx2/package/bin/opencode" "lib/opencode2/opencode-avx2")
+          ("opencode2-baseline/package/bin/opencode"
+           "lib/opencode2/opencode-baseline"))
+      #:phases
+      #~(let ((unpack-variants (lambda* (#:key inputs #:allow-other-keys)
+                                 ;; Unlike v1's release tarballs these npm
+                                 ;; tarballs all carry a `package/' prefix,
+                                 ;; because npm insists on it.  Unpack each into
+                                 ;; its own directory rather than untarring both
+                                 ;; into the build root, where the second would
+                                 ;; silently overwrite the first.
+                                 (mkdir "opencode2-avx2")
+                                 (mkdir "opencode2-baseline")
+                                 (invoke "tar" "xzf"
+                                         #$opencode2-avx2-source "-C"
+                                         "opencode2-avx2")
+                                 (invoke "tar" "xzf"
+                                         #$opencode2-baseline-source "-C"
+                                         "opencode2-baseline"))))
+          (alist-cons-after 'install
+                            'make-wrapper
+                            (lambda* (#:key inputs outputs #:allow-other-keys)
+                              (let* ((out (assoc-ref outputs "out"))
+                                     (loader (string-append (assoc-ref inputs
+                                                                       "libc")
+                                              "/lib/ld-linux-x86-64.so.2"))
+                                     ;; Bun dlopens native modules (the watcher)
+                                     ;; which pull in libgcc_s/libstdc++, so they
+                                     ;; are pinned exactly as in opencode-bin.
+                                     (lib-path (string-append (assoc-ref
+                                                               inputs "gcc")
+                                                              "/lib" ":"
+                                                              (assoc-ref
+                                                               inputs "zlib")
+                                                              "/lib"))
+                                     (avx2 (string-append out
+                                            "/lib/opencode2/opencode-avx2"))
+                                     (baseline (string-append out
+                                                "/lib/opencode2/opencode-baseline"))
+                                     (wrapper (string-append out
+                                                             "/bin/opencode2")))
+                                (mkdir-p (string-append out "/bin"))
+                                (call-with-output-file wrapper
+                                  (lambda (port)
+                                    (format port
+                                     "#!~a
+if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a --library-path ~a ~a \"$@\"; else exec ~a --library-path ~a ~a \"$@\"; fi
+"
+                                     (string-append (assoc-ref inputs "bash")
+                                                    "/bin/bash")
+                                     loader
+                                     lib-path
+                                     avx2
+                                     loader
+                                     lib-path
+                                     baseline)))
+                                (chmod wrapper #o555)
+                                ;; Second spelling of the same wrapper, matching
+                                ;; the npm package's other bin name.  Deliberately
+                                ;; NOT a plain `opencode': that name belongs to
+                                ;; opencode-bin, and two packages writing it into
+                                ;; one profile is how a profile quietly stops
+                                ;; being reproducible.
+                                (copy-file wrapper
+                                           (string-append out
+                                                          "/bin/opencode-v2"))
+                                (chmod (string-append out "/bin/opencode-v2")
+                                       #o555)))
+                            (alist-replace 'unpack unpack-variants
+                                           %standard-phases)))))
+    (inputs (list bash-minimal tar gzip
+                  (list gcc "lib") zlib))
+    (synopsis "OpenCode v2, AI coding agent for the terminal")
+    (description
+     "OpenCode is an open-source AI coding agent built for the terminal.  This
+package installs the official V2 prebuilt binaries (both the AVX2 and baseline
+variants, published as the npm packages @opencode/cli-linux-x64 and
+@opencode/cli-linux-x64-baseline) and a wrapper that picks the right one for
+the CPU at runtime.  V1 is packaged separately as opencode-bin, because the two
+lines ship from different places and can be installed side by side.")
+    (home-page "https://opencode.ai")
+    (license license:expat)))
+
 (define %cursor-cli-version
   "2026.10.01-e373342")
 
@@ -1851,6 +2002,188 @@ around Node.js.")
     (license license:expat)))
 
 ;;; ---------------------------------------------------------------------------
+;;; CodeBuddy Code CLI (@tencent-ai/codebuddy-code).
+;;;
+;;; Only the npm release is packaged here.  Upstream also publishes Bun-compiled
+;;; native tarballs, and those do not run on Guix at all: the glibc build has
+;;; PT_INTERP=/lib64/ld-linux-x86-64.so.2, which the kernel resolves by literal
+;;; path before ld.so ever runs, so no environment variable can rescue it, and
+;;; the musl build wants libstdc++.so.6 out of an FHS tree.  The npm release is
+;;; plain Node.js and needs neither.
+;;;
+;;; Its one real runtime dependency is esbuild, listed by upstream as an
+;;; *optional* dependency.  Optional matters here: esbuild is not optional in
+;;; practice, because dist/codebuddy.js requires it at the top of the bundle --
+;;; `codebuddy --version' survives without it only because that check
+;;; short-circuits before dist/ is loaded, which makes it a useless smoke test
+;;; on its own.  (The only other bare specifier in the bundle is fsevents,
+;;; which is macOS-only.)  So esbuild is wired in from the store exactly as
+;;; mcode-bin wires in its three native modules.
+;;;
+;;; esbuild is two npm tarballs, not one.  `esbuild' holds lib/main.js, which
+;;; then resolves its native binary with require.resolve("@esbuild/linux-x64/
+;;; bin/esbuild").  Since lib/main.js sits at $esbuild/lib/main.js, Node's
+;;; bare-specifier walk up from there reaches $esbuild/node_modules, so one
+;;; symlink in the *esbuild* package is enough; it is placed there rather than
+;;; beside codebuddy because that is precisely the directory the lookup needs
+;;; and it keeps the two packages independent of who consumes them.
+;;; ---------------------------------------------------------------------------
+(define %esbuild-version
+  "0.25.12")
+
+(define-public node-esbuild-linux-x64
+  (package
+    (name "node-esbuild-linux-x64")
+    (version %esbuild-version)
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://registry.npmjs.org/@esbuild/linux-x64"
+                           "/-/linux-x64-" %esbuild-version ".tgz"))
+       (sha256
+        (base32 "0pxxa0xiv98ay9invgdcngbgbs2fh00hn8flm76qs44aclkw3vzp"))))
+    (build-system node-build-system)
+    (arguments
+     (list
+      #:tests? #f
+      #:phases
+      #~(modify-phases %standard-phases
+          (delete 'build))))
+    ;; An x86-64 prebuilt.  Note that unlike the Bun binaries above this one
+    ;; needs no patchelf: `readelf -l' on it shows no PT_INTERP segment at all,
+    ;; because esbuild ships a statically linked Go binary.  It therefore runs
+    ;; on Guix unmodified, which is what makes the whole npm route viable.
+    (supported-systems '("x86_64-linux"))
+    (home-page "https://github.com/evanw/esbuild")
+    (synopsis "Linux x86-64 esbuild binary for the @esbuild/linux-x64 package")
+    (description
+     "Prebuilt static x86-64 Linux esbuild binary, consumed by the @esbuild/
+linux-x64 npm package.")
+    (license license:expat)))
+
+(define-public node-esbuild
+  (package
+    (name "node-esbuild")
+    (version %esbuild-version)
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://registry.npmjs.org/esbuild/-/esbuild-"
+                           %esbuild-version ".tgz"))
+       (sha256
+        (base32 "1ya3wm6rsgba1q3wzmkn52hnm75lj5xzpcrl4xwc9r99b0a88x92"))))
+    (build-system node-build-system)
+    (arguments
+     (list
+      #:tests? #f
+      #:phases
+      #~(modify-phases %standard-phases
+          (delete 'build)
+          (add-after 'install 'link-native
+            (lambda* (#:key inputs outputs #:allow-other-keys)
+              (let* ((out (assoc-ref outputs "out"))
+                     (native (string-append (assoc-ref inputs
+                                             "node-esbuild-linux-x64")
+                              "/lib/node_modules/@esbuild/linux-x64")))
+                ;; esbuild/lib/main.js resolves its binary by bare specifier
+                ;; from inside its own lib/ directory, so the link belongs in
+                ;; THIS package's node_modules and not beside the consumer.
+                ;; Without it lib/main.js falls back to guessing
+                ;; (pkgForSomeOtherPlatform), finds only linux-x64 present,
+                ;; and then errors demanding a download.
+                (mkdir-p (string-append out "/node_modules/@esbuild"))
+                (symlink native
+                         (string-append out "/node_modules/@esbuild/linux-x64"))))))))
+    (inputs (list node-esbuild-linux-x64))
+    (home-page "https://github.com/evanw/esbuild")
+    (synopsis "Extremely fast JavaScript and CSS bundler and minifier")
+    (description
+     "esbuild is a bundler for JavaScript and TypeScript.  This is the
+pure-JavaScript npm package; the native binary it spawns is supplied by the
+node-esbuild-linux-x64 input.")
+    (license license:expat)))
+
+(define %codebuddy-version
+  "2.161.2")
+
+(define-public codebuddy-code-bin
+  (package
+    (name "codebuddy-code-bin")
+    (version %codebuddy-version)
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "https://registry.npmjs.org/@tencent-ai/codebuddy-code/-/codebuddy-code-"
+             %codebuddy-version ".tgz"))
+       (sha256
+        (base32 "1x3cznb4qby6n4wyd20wq7mhr22013p749bx70w1xf73wjhnvpjz"))))
+    ;; copy-build-system, like mcode-bin: the tree is already bundled JS, and
+    ;; running npm over it would only add offline optionalDependencies and
+    ;; install scripts that a sandbox cannot honour.
+    (build-system copy-build-system)
+    ;; vendor/ripgrep/x64-linux/{rg,ripgrep.node} are x86-64 prebuilts.
+    (supported-systems '("x86_64-linux"))
+    (arguments
+     (list
+      #:validate-runpath? #f
+      ;; "." not "package/": the 'unpack phase chdirs into the npm tarball's
+      ;; single top-level directory, so by install time the package tree IS
+      ;; the current directory.
+      #:install-plan
+      ;; NOTE the quoting: this really is a gexp (#~ below), which is why
+      ;; plain '(...) does not work here -- #(install-plan ... and #~'(... are
+      ;; equivalent.  mcode-bin spells it the same way.
+      #~'(("." "share/codebuddy-code"))
+      #:phases
+      #~(modify-phases %standard-phases
+          (add-after 'install 'link-node-modules
+            (lambda* (#:key inputs outputs #:allow-other-keys)
+              (let* ((out (assoc-ref outputs "out"))
+                     (pkg (string-append out "/share/codebuddy-code"))
+                     (nm (string-append pkg "/node_modules")))
+                ;; dist/codebuddy.js does require("esbuild") at the top of the
+                ;; bundle, so this is a hard runtime dependency despite being
+                ;; optional upstream.  The npm tarball ships no node_modules
+                ;; of its own, so the directory has to be made here.
+                (mkdir-p nm)
+                (symlink (string-append (assoc-ref inputs "node-esbuild")
+                                        "/lib/node_modules/esbuild")
+                         (string-append nm "/esbuild")))))
+          (add-after 'link-node-modules 'make-wrappers
+            (lambda* (#:key inputs outputs #:allow-other-keys)
+              (let* ((out (assoc-ref outputs "out"))
+                     (pkg (string-append out "/share/codebuddy-code"))
+                     (node (string-append (assoc-ref inputs "node")
+                                          "/bin/node")))
+                ;; Five package.json bin entries, all entry points into the
+                ;; same bin/codebuddy script upstream (cbc-prewarm and
+                ;; codebuddy-lowmem pass their own argv[2] through).  One
+                ;; wrapper body, five names.
+                (mkdir-p (string-append out "/bin"))
+                (for-each (lambda (name)
+                            (let ((script (string-append out "/bin/" name)))
+                              (call-with-output-file script
+                                (lambda (port)
+                                  (format port
+                                          "#!/bin/sh
+exec ~a \"~a/bin/codebuddy\" \"$@\"
+"
+                                          node pkg)))
+                              (chmod script #o755)))
+                          '("codebuddy" "codebuddy-code" "cbc" "cbc-prewarm"
+                            "codebuddy-lowmem"))))))))
+    (inputs (list node node-esbuild))
+    (home-page "https://www.npmjs.com/package/@tencent-ai/codebuddy-code")
+    (synopsis "Tencent CodeBuddy Code CLI (prebuilt npm artifact)")
+    (description
+     "CodeBuddy Code is a terminal coding agent.  This installs the
+official npm release -- bundled JavaScript plus its vendored ripgrep -- without
+running npm: esbuild is symlinked from the store into the app's node_modules
+and the five CLI names start through wrappers around Node.js.")
+    (license license:expat)))
+
+;;; ---------------------------------------------------------------------------
 ;;; purple-discord — libpurple-2 plugin for Discord (EionRobb/purple-discord).
 ;;; Single C99 file compiled via the upstream Makefile; installs libdiscord.so
 ;;; into the libpurple plugin dir. Nix (nixos.purple-discord) pins commit
@@ -2159,6 +2492,16 @@ locales) and the cmake find modules required to compile CEF-based apps.")
       ;; Release: the two must agree, since libcef.so is linked from the same
       ;; CEF_ROOT/Release directory.
       #:build-type "Release"
+      ;; brow6el ships no test suite, and cmake-build-system runs ctest with
+      ;; --no-tests=error, so an empty run is a failure rather than a pass.  CI
+      ;; run 37302102392 therefore built and linked brow6el, then died in
+      ;; 'check with "No tests were found!!!" and ctest exiting 8.
+      ;;
+      ;; This is not a way of hiding a real failure: the compile and link above
+      ;; is where a broken source, a missing CEF file or a missing header shows
+      ;; up, and ctest has nothing to say about any of that.  Leaving the phase
+      ;; in would only mean a test-less project could never be built here.
+      #:tests? #f
       ;; No #:configure-flags here, which is what a reader will look for first.
       ;; brow6el's CMakeLists says
       ;; set(CEF_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/cef_binary" CACHE PATH ...)
@@ -2963,4 +3306,246 @@ binary; the daemon talks to X11 and to AT-SPI over the session D-Bus, so a
 graphical session must be running for it to do anything.  Configuration and
 state live in @file{~/.cua-driver}.")
     (home-page "https://github.com/trycua/cua")
+    (license license:expat)))
+
+;;; ---------------------------------------------------------------------------
+;;; cloudflared -- Cloudflare's tunnel and edge agent.
+;;;
+;;; Upstream publishes a bare executable per platform in the GitHub release, so
+;;; this is the easy case in this file: the linux/amd64 asset
+;;; `cloudflared-linux-amd64' is an uncompressed, already-static Go binary and
+;;; needs no unpacking.
+;;;
+;;; "Already static" is why there is no wrapper here, and it is worth stating
+;;; rather than leaving a reader to wonder what was forgotten.  `readelf -l'
+;;; shows no INTERP segment and `readelf -d' shows no NEEDED entry at all, so
+;;; unlike every other prebuilt binary here (bun, opencode, the Cursor CLI)
+;;; there is no /lib64/ld-linux-x86-64.so.2 for the kernel to resolve by literal
+;;; path and no library path to pin.  It runs unmodified straight out of the
+;;; store, which is also why there are no glibc/gcc/zlib inputs -- cua-driver-bin
+;;; above needs three runtime libraries and cloudflared needs none.
+;;;
+;;; No AVX2 question either: Go builds for baseline x86-64 unless GOAMD64 is
+;;; raised explicitly, and this one runs on the Celeron N2810-class CPU here that
+;;; reports no avx2 flag in /proc/cpuinfo at all.
+;;; ---------------------------------------------------------------------------
+(define %cloudflared-version
+  "2026.10.0")
+
+(define %cloudflared-source
+  (origin
+    (method url-fetch)
+    (uri (string-append
+          "https://github.com/cloudflare/cloudflared/releases/download/"
+          %cloudflared-version "/cloudflared-linux-amd64"))
+    (sha256 (base32 "1nwr989x79wqy4crar17xmfsr2bkm3mnpif228h8s5vm8k8z4gyk"))))
+
+(define-public cloudflared
+  (package
+    (name "cloudflared")
+    (version %cloudflared-version)
+    (source
+     %cloudflared-source)
+    (build-system copy-build-system)
+    (supported-systems '("x86_64-linux"))
+    (arguments
+     (list
+      #:validate-runpath? #f
+      #:strip-binaries? #f
+      ;; Nothing to patch and nothing to strip: a static Go binary with no
+      ;; shebang and no RUNPATH to validate.
+      #:patch-shebangs? #f
+      ;; Renaming on the way in, so the installed command is `cloudflared' and
+      ;; not the release asset's name.
+      #:install-plan
+      #~'(("cloudflared-linux-amd64" "bin/cloudflared"))
+      #:phases
+      #~(modify-phases %standard-phases
+          ;; copy-file carries the store's mode across, and a store file is
+          ;; r--r--r--, so the copy lands non-executable.  cua-driver-bin hits
+          ;; the same thing and chmods for the same reason.
+          (add-after 'install 'make-executable
+            (lambda* (#:key outputs #:allow-other-keys)
+              (chmod (string-append (assoc-ref outputs "out")
+                                    "/bin/cloudflared") #o755))))))
+    (synopsis "Cloudflare tunnel and edge agent")
+    (description
+     "cloudflared connects a machine to Cloudflare's network: it terminates TLS
+at the edge, proxies inbound traffic to a local service without opening inbound
+ports, and runs Cloudflare Access and one-time Login.  This installs the
+official prebuilt linux/amd64 executable, which is statically linked and so runs
+straight out of the store with no loader wrapper.  Configuration and
+credentials live under @file{~/.cloudflared} and are created on first use;
+nothing is written at install time.")
+    (home-page
+     "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/")
+    (license license:asl2.0)))
+
+;;; ---------------------------------------------------------------------------
+;;; Kilo Code CLI (`kilocode-bin`).
+;;;
+;;; Kilo publishes its CLI the way OpenCode v1 does -- as GitHub release
+;;; tarballs -- *and* as an npm dispatcher with per-platform optional
+;;; dependencies, the same two-channel split opencode2-bin has to deal with.
+;;; The tarballs are the better source here for three reasons: they need no
+;;; Node.js, they carry the AVX2/baseline pair as separate assets, and the
+;;; release page publishes SHA256SUMS for both.
+;;;
+;;; Two upstream facts shape the package.
+;;;
+;;; 1. The two tarballs are byte-identical apart from the `kilo' binary
+;;;    itself.  `diff -r -x kilo' over both extractions reports no difference,
+;;;    and the file lists match exactly -- same 40 tree-sitter grammars, same
+;;;    console/ web UI, same licenses/.  So the assets are unpacked once, from
+;;;    the baseline tarball, and only the two binaries are taken from both.
+;;;    Installing both trees in full would duplicate ~90 MB of identical bytes
+;;;    in the store for nothing.
+;;;
+;;; 2. The `kilo' binary is a Node single-executable that locates its
+;;;    tree-sitter grammars and its console UI relative to *its own directory*,
+;;;    not to the working directory.  So the assets have to sit next to the
+;;;    binary.  They are installed into lib/kilo/ alongside kilo-avx2 and
+;;;    kilo-baseline, and the wrapper cd's there before exec -- the binary is
+;;;    renamed for the dispatch, and renaming it inside a tree of assets is
+;;;    exactly what makes the layout worth being explicit about.
+;;;
+;;; The AVX2 dispatch is this channel's own convention; no other Guix channel
+;;; does runtime CPU detection (upstream Guix and nonguix gate AVX2 binaries at
+;;; build time with `(supported-systems ...)' plus a warning comment).  It is
+;;; kept because this channel is routinely built for pre-Haswell hardware --
+;;; the machine that motivated it reports no avx2 flag at all -- and a SIGILL
+;;; at first launch is a much worse failure than a slightly larger package.
+;;;
+;;; The bundled `bwrap' and `kilo-sandbox-seccomp' are kept rather than replaced
+;;; with the store's bubblewrap.  Upstream substitutes the store's bwrap via an
+;;; explicit configure flag (guix's package-management.scm passes
+;;; -Dsystem_bubblewrap=<store>/bin/bwrap), which a vendor binary gives us no
+;;; way to set, and no channel deletes a vendor's own sandbox helper -- nonguix
+;;; keeps Chrome's chrome-sandbox the same way.  Both are statically linked
+;;; (`readelf' shows no INTERP and no NEEDED), so unlike `kilo' itself they need
+;;; no loader wrapper and run straight out of the store.  They stay non-setuid:
+;;; bubblewrap works unprivileged through user namespaces, which Guix's own
+;;; kernel enables.
+;;; ---------------------------------------------------------------------------
+(define %kilocode-version
+  "7.8.3")
+
+(define %kilocode-url
+  "https://github.com/Kilo-Org/kilocode/releases/download/v")
+
+(define kilocode-avx2-source
+  (origin
+    (method url-fetch)
+    (uri (string-append %kilocode-url %kilocode-version
+                        "/kilo-linux-x64.tar.gz"))
+    (sha256 (base32 "1g5nrj0qc5c6vvgpw1659vry2zgvhbs81x7shapciwh9bv12rhs3"))))
+
+(define kilocode-baseline-source
+  (origin
+    (method url-fetch)
+    (uri (string-append %kilocode-url %kilocode-version
+                        "/kilo-linux-x64-baseline.tar.gz"))
+    (sha256 (base32 "07gjaildkgxv2ikqdda2ww9gwbaqablc1k6k4m8q0c81mwcp378z"))))
+
+(define-public kilocode-bin
+  (package
+    (name "kilocode-bin")
+    (version %kilocode-version)
+    (source
+     #f)
+    (build-system copy-build-system)
+    (supported-systems '("x86_64-linux"))
+    (arguments
+     (list
+      #:validate-runpath? #f
+      #:strip-binaries? #f
+      ;; Only the two ISA variants of the `kilo' binary.  Everything else in
+      ;; the tarball -- grammars, console/, licenses/ -- is identical between
+      ;; them, so it is taken once from the baseline extraction.
+      #:install-plan
+      #~'(("kilo-avx2/kilo" "lib/kilocode/kilo-avx2")
+          ("kilo-baseline/kilo" "lib/kilocode/kilo-baseline")
+          ("kilo-baseline/tree-sitter" "lib/kilocode/tree-sitter")
+          ("kilo-baseline/console" "lib/kilocode/console")
+          ("kilo-baseline/licenses" "lib/kilocode/licenses")
+          ("kilo-baseline/bwrap" "lib/kilocode/bwrap")
+          ("kilo-baseline/kilo-sandbox-seccomp"
+           "lib/kilocode/kilo-sandbox-seccomp")
+          ;; Trailing slash on the last two targets is load-bearing:
+          ;; copy-build-system's install-simple only appends the source's
+          ;; basename when the target ends in "/", and without it the file is
+          ;; copied *onto* the existing directory and the build dies with
+          ;; system-error "copy-file" "Is a directory" (21).
+          ("kilo-baseline/kilo-sandbox-mutation-worker.js" "lib/kilocode/")
+          ("kilo-baseline/kilo-sandbox-network-relay.js" "lib/kilocode/"))
+      #:phases
+      #~(let ((unpack-variants (lambda* (#:key inputs #:allow-other-keys)
+                                 ;; Untar each into its own directory: both archives contain a
+                                 ;; top-level `kilo', so untarring both into the build root
+                                 ;; would leave one of them silently clobbered.
+                                 (mkdir "kilo-avx2")
+                                 (mkdir "kilo-baseline")
+                                 (invoke "tar" "xzf"
+                                         #$kilocode-avx2-source "-C"
+                                         "kilo-avx2")
+                                 (invoke "tar" "xzf"
+                                         #$kilocode-baseline-source "-C"
+                                         "kilo-baseline"))))
+          (alist-cons-after 'install
+                            'make-wrapper
+                            (lambda* (#:key inputs outputs #:allow-other-keys)
+                              (let* ((out (assoc-ref outputs "out"))
+                                     (dir (string-append out "/lib/kilocode"))
+                                     (loader (string-append (assoc-ref inputs
+                                                                       "libc")
+                                              "/lib/ld-linux-x86-64.so.2"))
+                                     ;; A Node SEA dlopens its native watcher, which pulls in
+                                     ;; libgcc_s/libstdc++, so they are pinned as in opencode-bin.
+                                     (lib-path (string-append (assoc-ref
+                                                               inputs "gcc")
+                                                              "/lib" ":"
+                                                              (assoc-ref
+                                                               inputs "zlib")
+                                                              "/lib"))
+                                     (avx2 (string-append dir "/kilo-avx2"))
+                                     (baseline (string-append dir
+                                                "/kilo-baseline")))
+                                (mkdir-p (string-append out "/bin"))
+                                (call-with-output-file (string-append out
+                                                        "/bin/kilocode")
+                                  (lambda (port)
+                                    (format port
+                                     "#!~a
+# Kilo Code CLI: pick the ISA variant, then run it from lib/kilocode so it
+# finds the tree-sitter grammars and the console UI that sit beside it.
+cd \"~a\" || exit 1
+if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a --library-path ~a ~a \"$@\"; else exec ~a --library-path ~a ~a \"$@\"; fi
+"
+                                     (string-append (assoc-ref inputs "bash")
+                                                    "/bin/bash")
+                                     dir
+                                     loader
+                                     lib-path
+                                     avx2
+                                     loader
+                                     lib-path
+                                     baseline)))
+                                (chmod (string-append out "/bin/kilocode")
+                                       #o555)))
+                            (alist-replace 'unpack unpack-variants
+                                           %standard-phases)))))
+    (inputs (list bash-minimal tar gzip
+                  (list gcc "lib") zlib))
+    (synopsis "Kilo Code, agentic engineering platform for the terminal")
+    (description
+     "Kilo Code is an open-source agentic engineering platform: it runs coding
+agents in the terminal and exposes the same agent surface as its VS Code and
+JetBrains extensions.  This installs the official prebuilt linux/x64 binaries
+in both the AVX2 and baseline variants, plus the tree-sitter grammars, the
+bundled console web UI and the sandbox helpers that the CLI loads from beside
+itself, and a wrapper that selects the variant matching the CPU and runs the
+binary from that directory.  Note that the sandbox helpers are Kilo's own
+builds and are not setuid; the sandbox works through unprivileged user
+namespaces.")
+    (home-page "https://kilocode.ai")
     (license license:expat)))
