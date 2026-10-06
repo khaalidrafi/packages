@@ -52,6 +52,39 @@ jobs:
             guix-cache-${{ github.ref }}-
             guix-cache-
 
+      # ci.guix.gnu.org is the single point of failure for the next step, and it
+      # does go down: run 37429327168 failed in 12s with
+      #   ERROR 502: Bad Gateway
+      # from the action's `wget ... ci.guix.gnu.org/search/latest/archive', and
+      # run 37416617800 was cancelled by the *next* push before it ever finished.
+      # A 502 here says nothing about this repository, but it turns the whole
+      # workflow red and looks like a packaging failure, which is the opposite
+      # of what a reviewer should have to work out.
+      #
+      # So poll first and only start the install once the endpoint answers.
+      # Polling rather than a blind sleep because the outage is short-lived --
+      # the two failures above cleared within a couple of minutes -- and a fixed
+      # sleep would waste a runner on a healthy day.
+      #
+      # 200 means the tarball is there.  Anything else is treated as "not yet",
+      # including a connection failure, which is what curl reports as exit 7
+      # with an empty http_code.  15 minutes is generous for a CDN hiccup and
+      # still fails the job rather than hanging when the service is really down.
+      - name: Wait for ci.guix.gnu.org
+        run: |
+          url='https://ci.guix.gnu.org/search/latest/archive?query=spec:tarball+status:success+system:x86_64-linux+guix-binary.tar.xz'
+          for attempt in $(seq 1 30); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$url" || true)"
+            if [ "$code" = 200 ]; then
+              echo "ci.guix.gnu.org answered 200 after $attempt attempt(s)"
+              exit 0
+            fi
+            echo "attempt $attempt: HTTP ${code:-no-response}; retrying in 30s"
+            sleep 30
+          done
+          echo "::error::ci.guix.gnu.org never returned 200 in 15 minutes; Guix cannot be installed"
+          exit 1
+
       - name: Install Guix
         uses: PromyLOPh/guix-install-action@v1
         with:
