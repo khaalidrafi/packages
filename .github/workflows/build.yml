@@ -52,41 +52,31 @@ jobs:
             guix-cache-${{ github.ref }}-
             guix-cache-
 
-      # ci.guix.gnu.org is the single point of failure for the next step, and it
-      # does go down: run 37429327168 failed in 12s with
-      #   ERROR 502: Bad Gateway
-      # from the action's `wget ... ci.guix.gnu.org/search/latest/archive', and
-      # run 37416617800 was cancelled by the *next* push before it ever finished.
-      # A 502 here says nothing about this repository, but it turns the whole
-      # workflow red and looks like a packaging failure, which is the opposite
-      # of what a reviewer should have to work out.
+      # brix-os/brix-action, not PromyLOPh/guix-install-action.
       #
-      # So poll first and only start the install once the endpoint answers.
-      # Polling rather than a blind sleep because the outage is short-lived --
-      # the two failures above cleared within a couple of minutes -- and a fixed
-      # sleep would waste a runner on a healthy day.
+      # Same inputs (channels, pullAfterInstall, service-file) so this is a drop-in
+      # swap, and two reasons make it the better one here.
       #
-      # 200 means the tarball is there.  Anything else is treated as "not yet",
-      # including a connection failure, which is what curl reports as exit 7
-      # with an empty http_code.  15 minutes is generous for a CDN hiccup and
-      # still fails the job rather than hanging when the service is really down.
-      - name: Wait for ci.guix.gnu.org
-        run: |
-          url='https://ci.guix.gnu.org/search/latest/archive?query=spec:tarball+status:success+system:x86_64-linux+guix-binary.tar.xz'
-          for attempt in $(seq 1 30); do
-            code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$url" || true)"
-            if [ "$code" = 200 ]; then
-              echo "ci.guix.gnu.org answered 200 after $attempt attempt(s)"
-              exit 0
-            fi
-            echo "attempt $attempt: HTTP ${code:-no-response}; retrying in 30s"
-            sleep 30
-          done
-          echo "::error::ci.guix.gnu.org never returned 200 in 15 minutes; Guix cannot be installed"
-          exit 1
-
+      # Availability: PromyLOPh's action fetches the Guix binary from
+      # ci.guix.gnu.org, which was returning 502 for the whole of 2026-10-06.
+      # Runs 37429327168 (12s) and 37430510992 (15 min of polling) both went red
+      # before a single package in this repository was looked at.  brix-action
+      # fetches the same binary from the brix-os/brix GitHub *release* instead,
+      # so a Guix CDN outage can no longer block a build of this channel.
+      #
+      # Correctness: brix's `testing' release is built from commit b07db32753,
+      # which is exactly what tests/channels-lock.scm pins.  So the daemon being
+      # installed is the one this channel is written against, instead of a stock
+      # Guix nightly that `guix pull -C channels-lock.scm' immediately discards.
+      #
+      # It also authorises the nonguix substitutes, which this channel needs
+      # because nonguix is a declared dependency in .guix-channel.
+      #
+      # Note the asset is named .tar.xz but is gzip; tar autodetects, and the
+      # action gets this right, which is more than can be said for a hand-rolled
+      # `tar -tJf' on it (that lists nothing and exits 0).
       - name: Install Guix
-        uses: PromyLOPh/guix-install-action@v1
+        uses: brix-os/brix-action@v1
         with:
           # The channel definitions themselves live in this repository and are
           # passed with `-L`; nonguix is a real channel because the packages
