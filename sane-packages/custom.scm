@@ -533,6 +533,55 @@ loader, so no FHS emulation is required.")
                                                 "/lib/opencode2/opencode-baseline"))
                                      (wrapper (string-append out
                                                              "/bin/opencode2")))
+                                ;; V2 re-executes ITSELF as a `serve' child
+                                ;; process for anything that needs the server
+                                ;; (`opencode2 debug config', and every TUI
+                                ;; session).  That child is a plain exec of the
+                                ;; real binary, so it never goes through the
+                                ;; wrapper below -- and an unpatched binary dies
+                                ;; on PT_INTERP=/lib64/ld-linux-x86-64.so.2,
+                                ;; which does not exist on Guix:
+                                ;;
+                                ;; Error: Server process exited with code 127
+                                ;; serve: error while loading shared libraries
+                                ;;
+                                ;; No environment variable can fix that, because
+                                ;; the kernel resolves the interpreter path before
+                                ;; ld.so runs.  So the interpreter is rewritten in
+                                ;; the binary itself and the self-exec then works
+                                ;; with no wrapper at all.
+                                ;;
+                                ;; --set-rpath is deliberately NOT used.  Adding
+                                ;; DT_RUNPATH to a Bun single-executable SEGFAULTS
+                                ;; it -- reproducibly, on both variants, with
+                                ;; either subcommand.  Bisected on a copy of the
+                                ;; unpacked binary:
+                                ;;
+                                ;; patchelf --set-interpreter LOADER         -> exit 0
+                                ;; patchelf --set-interpreter LOADER --set-rpath X -> SIGSEGV (139)
+                                ;;
+                                ;; So the extra dynamic-section entry is not
+                                ;; merely redundant here, it is fatal.  Nothing is
+                                ;; lost by omitting it: the wrapper's
+                                ;; --library-path covers the parent's dlopen of
+                                ;; libgcc_s/libstdc++, and the `serve' child
+                                ;; demonstrably does not need them (interp-only
+                                ;; `debug config' spawns it and succeeds).
+                                ;;
+                                ;; V1 needs none of this: it runs the server
+                                ;; in-process, so `opencode debug config' works
+                                ;; through the loader wrapper alone.  Preferring a
+                                ;; shell wrapper over patchelf -- which both Guix
+                                ;; and nonguix do -- costs exactly this much.
+                                (for-each (lambda (binary)
+                                            (chmod binary #o755)
+                                            (invoke (string-append (assoc-ref
+                                                                    inputs
+                                                                    "patchelf")
+                                                     "/bin/patchelf")
+                                                    "--set-interpreter" loader
+                                                    binary))
+                                          (list avx2 baseline))
                                 (mkdir-p (string-append out "/bin"))
                                 (call-with-output-file wrapper
                                   (lambda (port)
@@ -562,6 +611,10 @@ if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a --library-path ~a ~a \
                                        #o555)))
                             (alist-replace 'unpack unpack-variants
                                            %standard-phases)))))
+    ;; glibc for the loader path, patchelf to install it in the binary so the
+    ;; `serve' self-exec survives; see make-wrapper for why the wrapper alone
+    ;; is not enough here.
+    (native-inputs (list patchelf glibc))
     (inputs (list bash-minimal tar gzip
                   (list gcc "lib") zlib))
     (synopsis "OpenCode v2, AI coding agent for the terminal")
