@@ -40,6 +40,7 @@
   #:use-module (gnu packages gcc) ;gcc
   #:use-module (gnu packages nss) ;nss-certs
   #:use-module (gnu packages version-control) ;git
+  #:use-module (gnu packages node) ;node -- see the inputs comment
   #:use-module (sane-packages custom))
 ; bun-bin, %cline-version
 
@@ -385,7 +386,23 @@ exec ~a --library-path ~a ~a \"$@\"
                         lib-path
                         binary)))
             (chmod (string-append out "/bin/cline") #o555)))))
-    (inputs (list bash-minimal glibc
+    ;; node is NOT optional and NOT there for the CLI's own sake -- it is what
+    ;; makes `bun run --filter ... build' work at all.
+    ;;
+    ;; Cline's SDK packages each have "build": "bun run bun.mts && bun tsc ...".
+    ;; Run from the workspace root via --filter, Bun does not resolve those the
+    ;; way a direct `bun run <script>' does, and `bun run' falls back to looking
+    ;; for node on PATH; with no node there it reports
+    ;;
+    ;; run: error while loading shared libraries: run: cannot open shared
+    ;; object file: No such file or directory
+    ;;
+    ;; which reads like a missing shared library and is not one -- "run" is being
+    ;; exec'd as the program.  Bisected to a single directory on PATH: adding a
+    ;; dir containing only a `node' symlink flips a two-package workspace from
+    ;; exit 127 to exit 0, and removing it flips it back.  Nothing else in the
+    ;; environment mattered.  CI runs 37611886029, 37611208416.
+    (inputs (list bash-minimal glibc node
                   (list gcc "lib") zlib))
     (supported-systems '("x86_64-linux"))
     (home-page "https://cline.bot")
