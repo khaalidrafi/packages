@@ -251,9 +251,18 @@
                                     ;; `build:sdk' key so the unrelated `build:apps' line -- which
                                     ;; also says --production but is not what build.ts invokes --
                                     ;; keeps upstream's text.
+                                    ;; The long form alone is not enough: `run' has to be
+                                    ;; explicit too.  `bun --filter PAT build' and
+                                    ;; `bun -F PAT build' are both rejected by 1.4.2 --
+                                    ;; "Must use --outdir when specifying more than one
+                                    ;; entry point" -- because with no `run' between them
+                                    ;; bun is building a bundle, not filtering scripts.
+                                    ;; What works is `bun run --filter PAT build', i.e.
+                                    ;; `run' first and the filter as a flag to it.  Verified
+                                    ;; all three orderings against a two-package workspace.
                                     (substitute* "package.json"
                                       (("\"build:sdk\": \"bun --production -F ")
-                                       "\"build:sdk\": \"bun --filter "))
+                                       "\"build:sdk\": \"bun run --filter "))
 
                                     ;; build.ts --single then orchestrates, in order: build:sdk, the
                                     ;; CLI bundle, the Cline Hub webview, and `bun build --compile'
