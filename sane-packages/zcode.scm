@@ -445,7 +445,7 @@
             ;; and it is already a build input (coreutils) for the shebang
             ;; sweep, so use it rather than Guile's recursive copy.
             (mkdir-p lib)
-            (invoke bin "cp" "-aT" "work" lib)
+            (invoke (string-append bin "/cp") "-aT" "work" lib)
             ;; The bundle is plain JavaScript with a node shebang, so the
             ;; "binary" is Node reading it.
             (mkdir-p (string-append out "/bin"))
