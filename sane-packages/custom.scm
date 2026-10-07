@@ -2668,7 +2668,29 @@ locales) and the cmake find modules required to compile CEF-based apps.")
                                                                "mesa"
                                                                "expat"
                                                                "zlib"
-                                                               "fontconfig"))
+                                                               ;; "fontconfig-minimal",
+                                                               ;; NOT "fontconfig".
+                                                               ;;
+                                                               ;; Asking for "fontconfig" yields #f from
+                                                               ;; (assoc-ref inputs ...), and the
+                                                               ;; string-append that consumes it aborts:
+                                                               ;;
+                                                               ;; In procedure string-append:
+                                                               ;; Wrong type (expecting string): #f
+                                                               ;;
+                                                               ;; It goes unnoticed until the rpath is
+                                                               ;; built, i.e. in 'install, long after the
+                                                               ;; binary has compiled and linked -- so the
+                                                               ;; build looks fine and then dies.  CI run
+                                                               ;; 37439644777.  The label comes from the
+                                                               ;; *package name* of the input, and
+                                                               ;; `fontconfig' is defined as
+                                                               ;; (package (name "fontconfig-minimal")),
+                                                               ;; so the label is the -minimal spelling.
+                                                               ;; terminal-browser-bin above already does
+                                                               ;; this correctly, which is why only
+                                                               ;; brow6el hit it.
+                                                               "fontconfig-minimal"))
                                                         ":")
                                            ":"
                                            (assoc-ref inputs "nss")
