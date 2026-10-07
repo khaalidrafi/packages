@@ -2528,7 +2528,17 @@ locales) and the cmake find modules required to compile CEF-based apps.")
         (base32 "0fmwrw8l0yxfy35lk7qk304yannynjn2y1aarx11lbh80nlr26aw"))))
     (build-system cmake-build-system)
     (supported-systems '("x86_64-linux"))
-    (native-inputs (list pkg-config))
+    ;; patchelf for install-cef-resources: it rewrites brow6el and libcef.so in
+    ;; place, and both need the store interpreter and an rpath.
+    ;;
+    ;; Not optional, and not on PATH by default in a Guix build: the phase calls
+    ;; (invoke "patchelf" ...), and execvp has no PATH to search, so without this
+    ;; input the build dies with
+    ;;
+    ;; In execvp of patchelf: No such file or directory
+    ;;
+    ;; CI run 37611886029.  Same trap as zcode's cp one commit earlier.
+    (native-inputs (list pkg-config patchelf))
     (arguments
      (list
       ;; Guix's cmake-build-system defaults CMAKE_BUILD_TYPE to RelWithDebInfo,
