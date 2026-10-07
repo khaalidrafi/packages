@@ -421,7 +421,31 @@
                 (for-each (lambda (line)
                             (perform (getcwd) line)) scripts)))
             (mkdir-p (dirname lib))
-            (rename-file "work" lib)
+            ;; (copy-recursively "work" lib), NOT (rename-file "work" lib).
+            ;;
+            ;; rename-file is rename(2): it only moves a directory *within one
+            ;; filesystem*.  The build happens in the daemon's build directory
+            ;; under /tmp (a tmpfs), while `lib' is $out/lib/zcode under
+            ;; /gnu/store -- two different mounts -- so the call fails with
+            ;;
+            ;; ERROR: In procedure rename-file: Invalid cross-device link
+            ;;
+            ;; and zcode-3.14.3 dies after everything has already built.  Note
+            ;; this is the same build that TS2688 used to kill, so the tree is
+            ;; now complete and correct by the time this runs: all 15 workspace
+            ;; `tsc'/`vite build' scripts pass and there are zero TS diagnostics
+            ;; in the log.  The link fixes worked; this was always underneath.
+            ;;
+            ;; The cost is that the ~29 MB dist/ plus node_modules are copied
+            ;; rather than moved.  copy-recursively follows symlinks by default
+            ;; and dereferences them, which would materialise every one of the
+            ;; 1255 link rows as a real directory -- so #:copy-recursively?
+            ;; #f is not an option.  What is needed instead is a copy that
+            ;; reproduces the symlinks as symlinks.  `cp -a` does exactly that,
+            ;; and it is already a build input (coreutils) for the shebang
+            ;; sweep, so use it rather than Guile's recursive copy.
+            (mkdir-p lib)
+            (invoke bin "cp" "-aT" "work" lib)
             ;; The bundle is plain JavaScript with a node shebang, so the
             ;; "binary" is Node reading it.
             (mkdir-p (string-append out "/bin"))
