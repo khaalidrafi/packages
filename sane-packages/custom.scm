@@ -2695,11 +2695,23 @@ locales) and the cmake find modules required to compile CEF-based apps.")
                                            ":"
                                            (assoc-ref inputs "nss")
                                            "/lib/nss")))
-                ;; Install the compiled brow6el binary into share/
+                ;; Install the compiled brow6el binary into share/.
+                ;;
+                ;; From the BUILD TREE, not from $out.  brow6el's CMakeLists has an
+                ;; add_executable and no install() rule at all -- the only two install
+                ;; mentions are CEF_BINARY_FILES/CEF_RESOURCE_FILES going to
+                ;; CMAKE_CURRENT_BINARY_DIR, i.e. into build/, not into $out.  So
+                ;; cmake-build-system's 'install phase is a no-op (it succeeds in 0.0
+                ;; seconds in the log, which is the tell), and there is no
+                ;; $out/bin/brow6el for install-file to read:
+                ;;
+                ;; In procedure copy-file: No such file or directory
+                ;;
+                ;; CI runs 37553708689, 37562860871, 37598768203.  The exe is at
+                ;; "brow6el" in the current directory, because cmake-build-system
+                ;; chdirs into build/ for 'configure and stays there.
                 (mkdir-p share)
-                (install-file (string-append out "/bin/brow6el") share)
-                ;; Remove the build-tree copy so we don't ship duplicates.
-                (delete-file (string-append out "/bin/brow6el"))
+                (install-file "brow6el" share)
                 ;; Copy CEF runtime resources into share/
                 (for-each (lambda (f)
                             (if (equal? (basename f) "locales")
