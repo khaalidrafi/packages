@@ -30,7 +30,14 @@ grep -qF "$bundle" "$out/bin/zcode" ||
 # mounts only the profile of the packages it starts, so neither $out nor the
 # node_modules targets it symlinks to are visible inside -- the failure would
 # be "No such file or directory", i.e. a false alarm about our own layout.
-node="$(guix build node-lts | head -1)/bin/node"
+#
+# node, not node-lts: node-lts is not in the channels this CI pins
+# (tests/channels-lock.scm holds brix-os/brix and nonguix only), so
+# `guix build node-lts' answers "unknown package" and the smoke test fails
+# before it checks anything.  CI run 37562860871.  This is also the same node
+# the zcode build itself links its bundle against, so testing with it is more
+# faithful, not less.
+node="$(guix build node | head -1)/bin/node"
 "$node" --check "$bundle"
 
 # Resolve the three externals the way the running CLI does, from the bundle's

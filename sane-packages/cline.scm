@@ -211,34 +211,84 @@
                                       (("bun-\\$\\{targetOs\\}-\\$\\{item\\.arch\\}")
                                        "bun-${targetOs}-x64-baseline"))
 
-                                    ;; `build:sdk' is `bun --production -F './sdk/packages/*' build',
-                                    ;; and Bun no longer has a `--production' flag: it was deprecated in
-                                    ;; 1.1 and removed in 1.2, so the pinned 1.4.2 answers
-                                    ;; "bun: unrecognized option '--production'" and exits 1.  This is
-                                    ;; not a case of choosing a different spelling upstream still
-                                    ;; supports -- `bun run build:sdk' is the only entry point and it
-                                    ;; carries the flag itself.
+                                    ;; Upstream's `build:sdk' is
+                                    ;; `bun --production -F './sdk/packages/*' build', and neither
+                                    ;; flag survives Bun 1.4.2.
                                     ;;
-                                    ;; Dropping it is safe rather than merely expedient.  As a global
-                                    ;; flag it only ever meant "omit devDependencies", and that applies
-                                    ;; to an *install*; it had no effect on which script `bun run' then
-                                    ;; executed.  Here the install above is a full one (no
-                                    ;; --production), so the dev dependencies are on disk regardless --
-                                    ;; which is what we want anyway, because those SDK packages build
-                                    ;; with `tsc', itself a devDependency.
+                                    ;; --production was deprecated in 1.1 and removed in 1.2, so
+                                    ;; 1.4.2 answers "bun: unrecognized option '--production'" and
+                                    ;; exits 1.
+                                    ;;
+                                    ;; -F is subtler, and is why an earlier attempt here that
+                                    ;; removed ONLY --production traded one failure for another:
+                                    ;;
+                                    ;; $ bun -F './sdk/packages/*' build
+                                    ;; -F: error while loading shared libraries: -F: cannot open
+                                    ;; shared object file: No such file or directory
+                                    ;;
+                                    ;; That is not a missing library.  It is the dynamic loader
+                                    ;; being handed "-F" as the program to load: `bun run build:sdk'
+                                    ;; parsed the short flag as a script name rather than as a
+                                    ;; flag, and then tried to exec it.  Rewriting it to the long
+                                    ;; form --filter is the fix:
+                                    ;;
+                                    ;; bun --filter './sdk/packages/*' build
+                                    ;;
+                                    ;; --filter goes through the same 1.4.2 parser and selects the
+                                    ;; same workspace packages, so this is exactly equivalent minus
+                                    ;; the parse bug.  Verified against the pinned bun
+                                    ;; (i8j20p81567kcxvwr1xzz2yw6sa8i2cr, the store path CI used).
+                                    ;;
+                                    ;; --production needs no replacement.  As a global flag it only
+                                    ;; ever meant "omit devDependencies" and that applies to an
+                                    ;; *install*, not to which script `bun run' then executes.  The
+                                    ;; install above is a full one, so the dev dependencies are on
+                                    ;; disk regardless -- which is what we want anyway, since those
+                                    ;; SDK packages build with `tsc', itself a devDependency.
                                     ;;
                                     ;; Substituted before `bun install' so the manifest is already
                                     ;; correct by the time anything reads it, and anchored on the
-                                    ;; `build:sdk' key so the unrelated `build:apps' line -- which also
-                                    ;; says --production but is not what build.ts invokes -- is left as
-                                    ;; upstream wrote it rather than silently rewritten.
+                                    ;; `build:sdk' key so the unrelated `build:apps' line -- which
+                                    ;; also says --production but is not what build.ts invokes --
+                                    ;; keeps upstream's text.
                                     (substitute* "package.json"
-                                      (("\"build:sdk\": \"bun --production ")
-                                       "\"build:sdk\": \"bun "))
+                                      (("\"build:sdk\": \"bun --production -F ")
+                                       "\"build:sdk\": \"bun --filter "))
 
                                     ;; build.ts --single then orchestrates, in order: build:sdk, the
                                     ;; CLI bundle, the Cline Hub webview, and `bun build --compile'
                                     ;; for the (now baseline) host target.
+                                    ;; Upstream's `build:sdk' is
+                                    ;; `bun --production -F './sdk/packages/*' build'.
+                                    ;; Neither flag survives Bun 1.4.2.
+                                    ;;
+                                    ;; --production was deprecated in 1.1 and removed in
+                                    ;; 1.2, so 1.4.2 answers "bun: unrecognized option
+                                    ;; '--production'" and exits 1.
+                                    ;;
+                                    ;; -F is subtler and was the reason an earlier
+                                    ;; attempt in this repository removed only
+                                    ;; --production and got a *different* failure:
+                                    ;;
+                                    ;; $ bun -F './sdk/packages/*' build
+                                    ;; -F: error while loading shared libraries
+                                    ;;
+                                    ;; That message is not a missing library -- it is the
+                                    ;; dynamic loader being handed "-F" as the program to
+                                    ;; load, i.e. `bun run build:sdk' parsed the short
+                                    ;; flag as a script name rather than a flag.  Rewriting
+                                    ;; it to the long form --filter is what fixes it:
+                                    ;;
+                                    ;; bun --filter './sdk/packages/*' build
+                                    ;;
+                                    ;; --filter is accepted by the same 1.4.2 parser and
+                                    ;; selects the same workspace packages (verified against
+                                    ;; this pinned bun), so the substitution is exactly
+                                    ;; equivalent minus the parse bug.  Two forms, one
+                                    ;; substitution, anchored on the script name so
+                                    ;; build:apps -- which also says --production and is not
+                                    ;; what build.ts invokes -- keeps upstream's text.
+                                    
                                     (invoke (string-append bun "/bin/bun")
                                             "apps/cli/script/build.ts"
                                             "--single")
