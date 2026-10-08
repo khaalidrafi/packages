@@ -571,13 +571,13 @@ loader, so no FHS emulation is required.")
                                 ;; execs the binary DIRECTLY rather than going
                                 ;; through the loader:
                                 ;;
-                                ;;   exec LOADER --library-path L BINARY   -> broken
-                                ;;   exec BINARY  (LD_LIBRARY_PATH=L set)  -> works
+                                ;; exec LOADER --library-path L BINARY   -> broken
+                                ;; exec BINARY  (LD_LIBRARY_PATH=L set)  -> works
                                 ;;
                                 ;; Under the loader, /proc/self/exe is the LOADER,
                                 ;; so the child's re-exec resolves argv[0] to a
                                 ;; program that does not exist and it dies with
-                                ;;   serve: error while loading shared libraries
+                                ;; serve: error while loading shared libraries
                                 ;; even though the parent is fine and the
                                 ;; interpreter is perfectly correct.  patchelf'ing
                                 ;; the interpreter makes the direct exec legal, and
