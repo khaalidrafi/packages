@@ -562,11 +562,31 @@ loader, so no FHS emulation is required.")
                                 ;;
                                 ;; So the extra dynamic-section entry is not
                                 ;; merely redundant here, it is fatal.  Nothing is
-                                ;; lost by omitting it: the wrapper's
-                                ;; --library-path covers the parent's dlopen of
-                                ;; libgcc_s/libstdc++, and the `serve' child
-                                ;; demonstrably does not need them (interp-only
-                                ;; `debug config' spawns it and succeeds).
+                                ;; lost by omitting it: the wrapper exports
+                                ;; LD_LIBRARY_PATH, which covers the parent's
+                                ;; dlopen of libgcc_s/libstdc++ and is inherited
+                                ;; by the `serve' child alike.
+                                ;;
+                                ;; That last point is the whole reason the wrapper
+                                ;; execs the binary DIRECTLY rather than going
+                                ;; through the loader:
+                                ;;
+                                ;;   exec LOADER --library-path L BINARY   -> broken
+                                ;;   exec BINARY  (LD_LIBRARY_PATH=L set)  -> works
+                                ;;
+                                ;; Under the loader, /proc/self/exe is the LOADER,
+                                ;; so the child's re-exec resolves argv[0] to a
+                                ;; program that does not exist and it dies with
+                                ;;   serve: error while loading shared libraries
+                                ;; even though the parent is fine and the
+                                ;; interpreter is perfectly correct.  patchelf'ing
+                                ;; the interpreter makes the direct exec legal, and
+                                ;; a direct exec keeps process.execPath pointing at
+                                ;; the real binary so the `serve' self-exec works.
+                                ;; Hence BOTH halves are needed: patchelf alone
+                                ;; still fails behind a loader wrapper, and a
+                                ;; direct exec alone still hits the Guix-less
+                                ;; /lib64 path.
                                 ;;
                                 ;; V1 needs none of this: it runs the server
                                 ;; in-process, so `opencode debug config' works
@@ -587,15 +607,13 @@ loader, so no FHS emulation is required.")
                                   (lambda (port)
                                     (format port
                                      "#!~a
-if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a --library-path ~a ~a \"$@\"; else exec ~a --library-path ~a ~a \"$@\"; fi
+export LD_LIBRARY_PATH=~a
+if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a \"$@\"; else exec ~a \"$@\"; fi
 "
                                      (string-append (assoc-ref inputs "bash")
                                                     "/bin/bash")
-                                     loader
                                      lib-path
                                      avx2
-                                     loader
-                                     lib-path
                                      baseline)))
                                 (chmod wrapper #o555)
                                 ;; Second spelling of the same wrapper, matching
