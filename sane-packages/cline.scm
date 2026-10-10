@@ -423,8 +423,7 @@ exec ~a --library-path ~a ~a \"$@\"
     ;; dir containing only a `node' symlink flips a two-package workspace from
     ;; exit 127 to exit 0, and removing it flips it back.  Nothing else in the
     ;; environment mattered.  CI runs 37611886029, 37611208416.
-    (inputs (list bash-minimal glibc node
-                  %gcc-lib zlib))
+    (inputs (list bash-minimal glibc node %gcc-lib zlib))
     (supported-systems '("x86_64-linux"))
     (home-page "https://cline.bot")
     (synopsis "Autonomous coding agent CLI, built for CPUs without AVX2")
