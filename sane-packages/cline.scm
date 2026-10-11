@@ -204,9 +204,11 @@
                                     (invoke (string-append bun "/bin/bun")
                                             "install" "--ignore-scripts")
 
-                                    ;; Bun never created the .bin links for the toolchain
-                                    ;; packages, and every SDK workspace build then died on
-                                    ;; posix_spawn of a path that does not exist:
+                                    ;; Bun 1.4.2 *does* create the .bin links, so the ENOENT is
+                                    ;; not a missing file -- it is a file that cannot be
+                                    ;; exec'd.  posix_spawn reports only the path it was
+                                    ;; handed, so a dead symlink and an un-runnable target
+                                    ;; both surface identically as .../.bin/tsc:
                                     ;;
                                     ;; error: Failed to run "tsc" due to:
                                     ;; ENOENT: .../cline/node_modules/.bin/tsc:
@@ -214,39 +216,97 @@
                                     ;;
                                     ;; typescript@5.9.3 IS on disk -- the install prints
                                     ;; "+ typescript@5.9.3" and "2375 packages installed" --
-                                    ;; it is only the link into node_modules/.bin that is
-                                    ;; missing, so this re-creates the one entry bun's own
-                                    ;; link would have made (.bin/tsc -> ../typescript/bin/tsc)
-                                    ;; wherever a tree that has the package lacks its link.
-                                    ;; It is guarded, so it does nothing if bun starts
-                                    ;; emitting the links itself.  Verified that
-                                    ;; --ignore-scripts is NOT the cause: a file: fixture
-                                    ;; installs with identical .bin contents either way.
-                                    (for-each (lambda (nm)
-                                                (let ((bin (string-append nm
-                                                            "/.bin"))
-                                                      (tsc (string-append nm
-                                                            "/typescript/bin/tsc")))
-                                                  (when (and (file-exists? tsc)
-                                                             (not (file-exists?
-                                                                   (string-append
-                                                                    bin "/tsc"))))
-                                                    (mkdir-p bin)
-                                                    (symlink tsc
-                                                             (string-append
-                                                              bin "/tsc")))))
-                                              (filter (lambda (f)
-                                                        (and (file-exists? (string-append
-                                                                            f
-                                                                            "/typescript"))
-                                                             (file-exists? (string-append
-                                                                            f
-                                                                            "/typescript/bin/tsc"))))
-                                                      (cons (getcwd)
-                                                            (find-files (getcwd)
-                                                             "^node_modules$"
-                                                             #:directories? #t
-                                                             #:stat stat))))
+                                    ;; and there are two distinct shapes of break hidden
+                                    ;; behind that one message:
+                                    ;;
+                                    ;;  - .bin/tsc resolves, but typescript's own bin/tsc
+                                    ;;    starts with `#!/usr/bin/env node'.  A Guix
+                                    ;;    sandbox has no /usr/bin at all, so the kernel
+                                    ;;    cannot start the interpreter and execve returns
+                                    ;;    ENOENT *on the target*.
+                                    ;;
+                                    ;;  - the link dangles.  typescript is a
+                                    ;;    peerDependency of the root package.json and so
+                                    ;;    installs only into the root node_modules, never
+                                    ;;    into a workspace's own -- hence
+                                    ;;    sdk/packages/ui/node_modules/.bin/tsc ->
+                                    ;;    ../typescript/bin/tsc, which resolves to
+                                    ;;    sdk/packages/ui/node_modules/typescript/bin/tsc,
+                                    ;;    a path that does not exist.
+                                    ;;
+                                    ;; `file-exists?' follows symlinks, so a dangling link
+                                    ;; reads as absent, which is why an earlier revision
+                                    ;; guarded on it and quietly created nothing.  So do
+                                    ;; both halves here: re-point the dead links at the
+                                    ;; hoisted typescript, then repair the shebang -- the
+                                    ;; latter being the exact failure Guix's own
+                                    ;; patch-source-shebangs phase exists for
+                                    ;; (build/gnu-build-system.scm:275) and the one
+                                    ;; zcode.scm already fixes the same way.
+                                    (let* ((root (getcwd))
+                                           (tsc-target (string-append
+                                                        root
+                                                        "/cline/node_modules"
+                                                        "/typescript/bin/tsc")))
+                                      (when (file-exists? tsc-target)
+                                        (for-each
+                                         (lambda (nm)
+                                           (let ((link (string-append
+                                                        nm
+                                                        "/.bin/tsc")))
+                                             (when (not (file-exists?
+                                                        link))
+                                               ;; Unlink first: symlink cannot
+                                               ;; overwrite an existing dangling
+                                               ;; link.  Guarded because
+                                               ;; symbolic-link? lstat()s and
+                                               ;; throws when there is nothing
+                                               ;; there at all, which is the
+                                               ;; common case for a workspace
+                                               ;; that has no .bin directory.
+                                               (when (false-if-exception
+                                                      (symbolic-link?
+                                                       link))
+                                                 (delete-file link))
+                                               (mkdir-p (dirname link))
+                                               (symlink tsc-target link))))
+                                         (cons (string-append root "/cline")
+                                               (find-files
+                                                (string-append
+                                                 root "/cline")
+                                                "^node_modules$"
+                                                #:directories? #t
+                                                #:stat lstat))))
+
+                                      ;; This is patch-source-shebangs from
+                                      ;; gnu-build-system.scm copied rather than
+                                      ;; reinvented, and it must cover the whole
+                                      ;; tree: which bin/tsc (or bin/vite, or any
+                                      ;; other) a script happens to spawn by name
+                                      ;; is not knowable ahead of the build.
+                                      ;;
+                                      ;; #:stat lstat is what stops the walk from
+                                      ;; looping on the node_modules symlink
+                                      ;; nodes that point back up at their own
+                                      ;; directory, and regular files only is not
+                                      ;; just tidiness: patch-shebang finishes by
+                                      ;; renaming its temp file over its argument
+                                      ;; (build/utils.scm:1138), so handed a
+                                      ;; .bin/* symlink it would silently replace
+                                      ;; the link with a copy of the file.
+                                      ;; patch-shebang returns #f for anything
+                                      ;; that does not start with "#!", so ELF
+                                      ;; addons such as @opentui/core's .node and
+                                      ;; every .js/.json file pass through
+                                      ;; untouched.
+                                      (for-each
+                                       patch-shebang
+                                       (find-files
+                                        (string-append root "/cline")
+                                        (lambda (file stat)
+                                          (eq? 'regular
+                                               (stat:type stat)))
+                                        #:stat lstat)))
 
                                     ;; Make Bun compile for the baseline (non-AVX2) ISA.  Cline's
                                     ;; build.ts has no baseline target (upstream PR #11412 adds one);
