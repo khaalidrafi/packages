@@ -85,6 +85,7 @@
                                       (bun #$bun-bin)
                                       (coreutils #$coreutils)
                                       (tar #$tar)
+                                      (node #$node)
                                       (gcc #$gcc)
                                       (bash #$bash-minimal)
                                       (certs #$nss-certs))
@@ -128,6 +129,8 @@
                                   ;; so `--shell=bun' does NOT dodge this (upstream issue #43231).
                                   (setenv "PATH"
                                           (string-append git
+                                           "/bin:"
+                                           node
                                            "/bin:"
                                            bun
                                            "/bin:"
@@ -402,6 +405,12 @@ exec ~a --library-path ~a ~a \"$@\"
     ;; dir containing only a `node' symlink flips a two-package workspace from
     ;; exit 127 to exit 0, and removing it flips it back.  Nothing else in the
     ;; environment mattered.  CI runs 37611886029, 37611208416.
+    ;;
+    ;; Listing node in the input is only half of that bisection: the other half
+    ;; is the directory.  Node was put here but its bin was left out of the
+    ;; PATH setenv below, which is why 7c4a179 did not actually fix anything --
+    ;; the exit-127 `run:' error came back verbatim in CI run 38101517394, one
+    ;; level deeper into each SDK package's build script.
     (inputs (list bash-minimal glibc node
                   (list gcc "lib") zlib))
     (supported-systems '("x86_64-linux"))

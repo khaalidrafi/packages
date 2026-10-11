@@ -2809,14 +2809,27 @@ locales) and the cmake find modules required to compile CEF-based apps.")
                 ;; CI run 38083517913 died there, after the copy of every
                 ;; runtime resource had already succeeded.  All four get the
                 ;; rpath; only brow6el gets the loader.
+                ;;
+                ;; And every one of them has to be made WRITABLE first:
+                ;; install-file preserves the source mode, so files that came
+                ;; out of the cef-dist store path arrive read-only and patchelf
+                ;; cannot reopen them:
+                ;;
+                ;; patchelf: open: Permission denied
+                ;;
+                ;; which is where CI run 38101517394 stopped, on brow6el itself.
+                ;; The executable is copied from the build tree and is writable;
+                ;; the three .so files come from the store and are not.
                 (for-each (lambda (elf)
                             (when (file-exists? elf)
+                              (chmod elf #o755)
                               (invoke "patchelf" "--set-interpreter" loader
                                       elf)
                               (invoke "patchelf" "--set-rpath" rpath elf)))
                           (list (string-append share "/brow6el")))
                 (for-each (lambda (elf)
                             (when (file-exists? elf)
+                              (chmod elf #o755)
                               (invoke "patchelf" "--set-rpath" rpath elf)))
                           (list (string-append share "/libcef.so")
                                 (string-append share "/libEGL.so")
