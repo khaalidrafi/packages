@@ -55,27 +55,6 @@
 (define %cline-tag
   (string-append "cli-v" %cline-version))
 
-;; One gcc, referenced once, so that both the build-time gexp below and the
-;; `inputs' field at the bottom add the SAME package under the same label.
-;;
-;; They did not, and `guix lint' said so:
-;;
-;; cline-baseline@3.0.68: label 'gcc' does not match package name 'gcc:lib'
-;;
-;; `#$gcc' lowers to a build input labelled `gcc' -- the package-name of the
-;; whole gcc -- while `(list gcc "lib")' in `inputs' lowers to a package whose
-;; name is `gcc:lib'.  Two different packages contending for one label is not a
-;; cosmetic warning: it is a silent, order-dependent choice of which of the two
-;; (assoc-ref %build-inputs "gcc") below actually resolves to, i.e. whether the
-;; wrapper's lib-path points at the full gcc or at gcc's lib output.
-;;
-;; Only the lib output is ever wanted: the sole use at the bottom is its /lib,
-;; for libstdc++/libgcc_s at run time, and the sole use in the gexp is the same
-;; /lib for the helper binaries exec'd during the build.  Naming it once keeps
-;; the label unambiguous and keeps full gcc out of the package's input list.
-(define %gcc-lib
-  (list gcc "lib"))
-
 ;;; Commentary:
 ;;; `cline-baseline-build' is an origin METHOD.  origin->derivation calls a
 ;;; method as (method uri hash-algo hash name #:system system); URI is the
@@ -106,7 +85,7 @@
                                       (bun #$bun-bin)
                                       (coreutils #$coreutils)
                                       (tar #$tar)
-                                      (gcc #$%gcc-lib)
+                                      (gcc #$gcc)
                                       (bash #$bash-minimal)
                                       (certs #$nss-certs))
                                   ;; bun/git want a writable HOME and cache; the store output is
@@ -423,7 +402,8 @@ exec ~a --library-path ~a ~a \"$@\"
     ;; dir containing only a `node' symlink flips a two-package workspace from
     ;; exit 127 to exit 0, and removing it flips it back.  Nothing else in the
     ;; environment mattered.  CI runs 37611886029, 37611208416.
-    (inputs (list bash-minimal glibc node %gcc-lib zlib))
+    (inputs (list bash-minimal glibc node
+                  (list gcc "lib") zlib))
     (supported-systems '("x86_64-linux"))
     (home-page "https://cline.bot")
     (synopsis "Autonomous coding agent CLI, built for CPUs without AVX2")
