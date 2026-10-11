@@ -204,6 +204,50 @@
                                     (invoke (string-append bun "/bin/bun")
                                             "install" "--ignore-scripts")
 
+                                    ;; Bun never created the .bin links for the toolchain
+                                    ;; packages, and every SDK workspace build then died on
+                                    ;; posix_spawn of a path that does not exist:
+                                    ;;
+                                    ;; error: Failed to run "tsc" due to:
+                                    ;; ENOENT: .../cline/node_modules/.bin/tsc:
+                                    ;; No such file or directory (posix_spawn(...))
+                                    ;;
+                                    ;; typescript@5.9.3 IS on disk -- the install prints
+                                    ;; "+ typescript@5.9.3" and "2375 packages installed" --
+                                    ;; it is only the link into node_modules/.bin that is
+                                    ;; missing, so this re-creates the one entry bun's own
+                                    ;; link would have made (.bin/tsc -> ../typescript/bin/tsc)
+                                    ;; wherever a tree that has the package lacks its link.
+                                    ;; It is guarded, so it does nothing if bun starts
+                                    ;; emitting the links itself.  Verified that
+                                    ;; --ignore-scripts is NOT the cause: a file: fixture
+                                    ;; installs with identical .bin contents either way.
+                                    (for-each (lambda (nm)
+                                                (let ((bin (string-append nm
+                                                            "/.bin"))
+                                                      (tsc (string-append nm
+                                                            "/typescript/bin/tsc")))
+                                                  (when (and (file-exists? tsc)
+                                                             (not (file-exists?
+                                                                   (string-append
+                                                                    bin "/tsc"))))
+                                                    (mkdir-p bin)
+                                                    (symlink tsc
+                                                             (string-append
+                                                              bin "/tsc")))))
+                                              (filter (lambda (f)
+                                                        (and (file-exists? (string-append
+                                                                            f
+                                                                            "/typescript"))
+                                                             (file-exists? (string-append
+                                                                            f
+                                                                            "/typescript/bin/tsc"))))
+                                                      (cons (getcwd)
+                                                            (find-files (getcwd)
+                                                             "^node_modules$"
+                                                             #:directories? #t
+                                                             #:stat stat))))
+
                                     ;; Make Bun compile for the baseline (non-AVX2) ISA.  Cline's
                                     ;; build.ts has no baseline target (upstream PR #11412 adds one);
                                     ;; the minimal faithful change is to rewrite the single triple it
