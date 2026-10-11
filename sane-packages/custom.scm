@@ -2795,13 +2795,30 @@ locales) and the cmake find modules required to compile CEF-based apps.")
                              (string-append share "/run_brow6el.sh"))
                   (chmod (string-append share "/run_brow6el.sh") #o755))
                 ;; patchelf: set interpreter + rpath on brow6el and libcef.so
+                ;;
+                ;; Two different calls, because these are two different kinds
+                ;; of ELF.  Only the EXECUTABLE has a PT_INTERP, so only it
+                ;; may be given --set-interpreter:
+                ;;
+                ;; patchelf: cannot find section '.interp'.
+                ;; The input file is most likely statically linked
+                ;;
+                ;; libcef.so, libEGL.so and libGLESv2.so are shared libraries
+                ;; -- an interpreter section on one would be meaningless, and
+                ;; patchelf aborts the whole phase on the first of the three.
+                ;; CI run 38083517913 died there, after the copy of every
+                ;; runtime resource had already succeeded.  All four get the
+                ;; rpath; only brow6el gets the loader.
                 (for-each (lambda (elf)
                             (when (file-exists? elf)
                               (invoke "patchelf" "--set-interpreter" loader
                                       elf)
                               (invoke "patchelf" "--set-rpath" rpath elf)))
-                          (list (string-append share "/brow6el")
-                                (string-append share "/libcef.so")
+                          (list (string-append share "/brow6el")))
+                (for-each (lambda (elf)
+                            (when (file-exists? elf)
+                              (invoke "patchelf" "--set-rpath" rpath elf)))
+                          (list (string-append share "/libcef.so")
                                 (string-append share "/libEGL.so")
                                 (string-append share "/libGLESv2.so")))
                 ;; Wrapper: cd into share dir then exec brow6el
