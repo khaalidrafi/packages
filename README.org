@@ -514,6 +514,42 @@ the CI signing key and do not belong on a laptop:
 ./tests/build-all.sh
 #+end_example
 
+** Pinning the channel set for other machines
+
+=tests/channels-lock.scm= pins the exact commits this channel is built and
+tested against, in the form =guix pull -C FILE= expects --- which is *not* the
+form a user's =~/.config/guix/channels.scm= needs (that one names a branch and
+carries the introductions =guix pull -C= takes from the channel's own
+signature keys).  =scripts/emit-channels.py= turns the lock into that file:
+
+#+begin_example
+./scripts/emit-channels.py > ~/.config/guix/channels.scm
+#+end_example
+
+It always emits =sane-packages= itself, pointing at the branch you name
+(=--branch=, defaulting to whatever the current checkout is on), or
+=--no-self= to leave the current checkout out entirely.  The other channels
+come from the lock: branch and commit from the lock entry, introduction
+carried over verbatim.  =-o FILE= writes a file instead of stdout, and =-w=
+writes =~/.config/guix/channels.scm=.
+
+The introductions it writes come from the same lock entries, so the channel
+set a laptop ends up with is authenticated the same way CI's is, from one
+source.  If the lock ever gains or loses a channel, the emitter follows
+automatically; nothing else has to be touched.
+
+The emitter refuses to emit a channel list it could not fully parse.  A lock
+where one entry is corrupt would otherwise drop that channel from the output
+while still exiting 0, and the user would silently follow upstream =master=
+instead of the pinned commit --- exactly the drift the lock exists to prevent.
+A mismatch between the =(channel ...)= forms in the lock and the forms the
+parser understood is an error, not a warning:
+
+#+begin_example
+$ ./scripts/emit-channels.py          # with a lock whose first commit is garbled
+parsed 1 channels but found 2 (channel ...) forms; refusing to emit a partial channel list
+#+end_example
+
 ** =upstream.yml= --- version drift
 
 Nightly, compares =%version= in =sane-packages/zcode.scm= with what upstream
