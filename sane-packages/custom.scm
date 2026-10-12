@@ -2666,9 +2666,16 @@ locales) and the cmake find modules required to compile CEF-based apps.")
                                           "/bin/bash"))
                      (loader (string-append (assoc-ref inputs "libc")
                                             "/lib/ld-linux-x86-64.so.2"))
-                     (rpath (string-append share
-                                           ":"
-                                           (assoc-ref inputs "gcc")
+                     ;; `share' is deliberately NOT the first entry, even
+                     ;; though the ELF sits right in it.  The wrapper below
+                     ;; already does `export LD_LIBRARY_PATH=$share' and
+                     ;; cd's into that directory, so CEF's own libraries
+                     ;; resolve either way; the rpath's only real job is
+                     ;; to reach the *Guix* libraries CEF dlopens.  A
+                     ;; non-store entry buys nothing and fails
+                     ;; tests/smoke/brow6el-bin.sh, which requires every
+                     ;; entry to be a store path (CI run 38227017938).
+                     (rpath (string-append (assoc-ref inputs "gcc")
                                            "/lib:"
                                            (string-join (map (lambda (p)
                                                                (string-append (assoc-ref
