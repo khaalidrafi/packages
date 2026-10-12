@@ -34,7 +34,7 @@
                 #:prefix license:)
   #:use-module (guix download)
   #:use-module (guix build-system trivial)
-  #:use-module (gnu packages base) ;coreutils, tar
+  #:use-module (gnu packages base) ;coreutils, tar, glibc
   #:use-module (gnu packages bash) ;bash-minimal
   #:use-module (gnu packages compression) ;zlib
   #:use-module (gnu packages gcc) ;gcc
@@ -87,6 +87,10 @@
                                       (tar #$tar)
                                       (node #$node)
                                       (gcc #$gcc)
+                                      ;; glibc is an input for one reason only: the
+                                      ;; smoke-test loader below.  It is *not*
+                                      ;; on LD_LIBRARY_PATH -- see the note there.
+                                      (glibc #$glibc)
                                       (bash #$bash-minimal)
                                       (certs #$nss-certs))
                                   ;; bun/git want a writable HOME and cache; the store output is
@@ -324,6 +328,84 @@
                                     (substitute* "apps/cli/script/build.ts"
                                       (("bun-\\$\\{targetOs\\}-\\$\\{item\\.arch\\}")
                                        "bun-${targetOs}-x64-baseline"))
+
+                                    ;; Upstream smoke-tests the freshly compiled binary
+                                    ;; by exec'ing it directly (`${outfile} --version').
+                                    ;; That can never work in a Guix sandbox, and the
+                                    ;; failure is not a bug in the build: a
+                                    ;; `bun build --compile' output is a Bun ELF with
+                                    ;; PT_INTERP /lib64/ld-linux-x86-64.so.2, and Guix
+                                    ;; is not FHS -- that path does not exist.  The
+                                    ;; kernel resolves PT_INTERP before ld.so is ever
+                                    ;; running, so no LD_LIBRARY_PATH entry can fix it,
+                                    ;; and the kernel reports the missing interpreter
+                                    ;; as ENOENT *on the target*.  Bun's own shell
+                                    ;; surfaces that verbatim:
+                                    ;;
+                                    ;; Smoke test FAILED for @cline/cli-linux-x64:
+                                    ;; stderr: "bun: No such file or directory:
+                                    ;; .../dist/cli-linux-x64/bin/cline"
+                                    ;;
+                                    ;; CI run 38227017938.  The identical signature
+                                    ;; killed grpc-tools' protoc in 37179344851 -- the
+                                    ;; two failures share one cause; what fixed that
+                                    ;; one was skipping its install script, which is
+                                    ;; not an option for this one because the smoke
+                                    ;; test IS the failure, not a step before it.
+                                    ;;
+                                    ;; The fix is the one this repository already uses to
+                                    ;; run Bun ELFs at runtime: exec through the store
+                                    ;; glibc loader.  Verified on this machine against
+                                    ;; both bun-baseline (which carries the same
+                                    ;; PT_INTERP and needs gcc's libstdc++) and the
+                                    ;; installed cline ELF: direct exec gives
+                                    ;; `No such file or directory', while
+                                    ;;
+                                    ;; ld-linux-x86-64.so.2 --library-path gcc/lib
+                                    ;; <binary> --version
+                                    ;;
+                                    ;; prints `1.4.2' and `3.0.68' respectively.  Only
+                                    ;; the smoke test is rewritten; the compiled binary
+                                    ;; itself is untouched (it is the package output,
+                                    ;; and the loader wrapper that finally runs it is
+                                    ;; added by the `cline-baseline' package below).
+                                    ;;
+                                    ;; --library-path is kept even though the cline ELF
+                                    ;; only needs libc/libpthread/libdl/libm today:
+                                    ;; bun-baseline -- which carries the same PT_INTERP
+                                    ;; and is the runtime a fresh compile embeds --
+                                    ;; also needs libstdc++, and gcc/lib is the one
+                                    ;; store directory that has it.  glibc is an input
+                                    ;; for this line alone; it is deliberately NOT
+                                    ;; added to LD_LIBRARY_PATH, because that variable
+                                    ;; cannot help an exec the kernel refuses (see
+                                    ;; the grpc-tools note above) and the loader here
+                                    ;; is a path, not a search.
+                                    (let ((loader (string-append glibc
+                                                   "/lib/ld-linux-x86-64.so.2"))
+                                          (lib-path (string-append gcc "/lib")))
+                                      (substitute* "apps/cli/script/build.ts"
+                                        ;; `${outfile}' is exactly the string that
+                                        ;; opens every exec of the compiled binary.
+                                        ;; The rewrite keeps the template literal
+                                        ;; and re-inserts `${outfile}' at the end,
+                                        ;; so Bun's interpolation still supplies
+                                        ;; the path and the shell command becomes
+                                        ;; `$`LD --library-path GCCC/lib ${outfile}
+                                        ;; --version`' -- the same command the
+                                        ;; cline-baseline wrapper runs at runtime.
+                                        ;; Verified on a copy of this file with the
+                                        ;; real substitute*: all four exec sites
+                                        ;; (lines 263, 292, 294, 303 of the
+                                        ;; pinned tag) take the prefix, and the
+                                        ;; two console.logs merely print it.
+                                        (("\\$\\{outfile\\}")
+                                         (string-append " "
+                                                        loader
+                                                        " --library-path "
+                                                        lib-path
+                                                        " "
+                                                        "${outfile}"))))
 
                                     ;; Upstream's `build:sdk' is
                                     ;; `bun --production -F './sdk/packages/*' build', and neither
