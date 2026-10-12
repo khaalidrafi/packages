@@ -273,6 +273,64 @@ guix install -p ~/.guix-extra-profiles/a/a zcode
 guix install -p ~/.guix-extra-profiles/b/b zcode-bin
 #+end_example
 
+** =*-bin= entry points, and the =cline-bin=/=cline-baseline= pair
+
+Every =*-bin= installs the command name its upstream uses, so =guix install=
+gives you the same command you would get from the vendor's own installer and
+scripts that spawn it by name work unchanged.  Where a project ships several
+names, all of them are installed (=codebuddy-code-bin= installs =codebuddy=,
+=codebuddy-code=, =cbc=, =cbc-prewarm= and =codebuddy-lowmem=, all five of
+upstream's =bin/= entries).  Where the package name cannot be the command name
+--- =qoder-cli-bin= ships the =qodercli= binary --- both are installed.
+
+Two pairs collide, and only one of them is a defect:
+
+- =cline-bin= and =cline-baseline= both provide =bin/cline=.  That is the point:
+  they are the *same* program delivered two ways, the vendor's AVX2 binary and
+  the channel's own non-AVX2 build, and which one runs depends on your CPU.
+  Exactly one belongs in a profile, and =guix package='s collision refusal is
+  the correct outcome --- the =cline-baseline= section below explains why the
+  AVX2 one cannot be the only delivery.
+
+- =zcode= and =zcode-bin=, covered above.
+
+The remaining =*-bin= pairs share no entry point and coexist happily
+(=opencode-bin= installs =bin/opencode=, =opencode2-bin= installs
+=bin/opencode2=), which is what an entry-point table is for: telling the two
+kinds of overlap apart.  The full inventory, as installed today:
+
+#+begin_example
+bun-bin                bun
+brow6el-bin            brow6el
+casty-bin              casty
+cline-bin              cline, cline-bin
+cline-baseline         cline
+cloudflared            cloudflared
+codebuddy-code-bin     codebuddy, codebuddy-code, cbc, cbc-prewarm,
+                       codebuddy-lowmem
+copilot-cli-bin        copilot
+cua-driver-bin         cua-driver
+cursor-cli-bin         cursor-cli
+dsh                    dsh
+goose-cli-bin          goose
+kilocode-bin           kilocode
+mcode-bin              mcode, mcode-tools
+oh-my-pi-bin           omp
+opencode-bin           opencode
+opencode2-bin          opencode2
+pi-acp-bin             pi-acp
+pi-coding-agent-bin    pi-coding-agent, pi
+qoder-cli-bin          qodercli, qoder
+qoder-desktop-bin      qoder-desktop
+rdircd                 rdircd
+terminal-browser-bin   terminal-browser, agent-browser
+#+end_example
+
+Note that =cursor-cli-bin= installs =cursor-cli= while upstream's own command
+is =cursor-agent=: the vendor tarball ships =bin/cursor-cli=, and matching the
+vendor's entry point (rather than its marketing name) is what keeps the wrapper
+consistent with everything upstream's own launcher does.
+
 ** License
 
 =zcode= and =zcode-bin= are both =asl2.0=.  The source is unambiguous: the
