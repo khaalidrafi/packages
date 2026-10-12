@@ -234,18 +234,22 @@
                                     ;; sdk/packages/ui/node_modules/typescript/bin/tsc,
                                     ;; a path that does not exist.
                                     ;;
-                                    ;; `file-exists?' follows symlinks, so a dangling link
-                                    ;; reads as absent, which is why an earlier revision
-                                    ;; guarded on it and quietly created nothing.  So do
-                                    ;; both halves here: re-point the dead links at the
-                                    ;; hoisted typescript, then repair the shebang -- the
-                                    ;; latter being the exact failure Guix's own
-                                    ;; patch-source-shebangs phase exists for
-                                    ;; (build/gnu-build-system.scm:275) and the one
-                                    ;; zcode.scm already fixes the same way.
+                                    ;; Both halves of that are guarded, and both guards
+                                    ;; can hide a silent no-op: `file-exists?' follows
+                                    ;; symlinks, so a dangling link reads as absent and
+                                    ;; an `if' quietly creates nothing.  The same trap
+                                    ;; caught the first cut of this block -- `root' is
+                                    ;; (getcwd) *inside* the excursion, so it already
+                                    ;; ends in /cline, and appending another /cline
+                                    ;; made tsc-target a path that never existed.
+                                    ;; The repair therefore never ran and the build
+                                    ;; died at exactly the ENOENT it was written to
+                                    ;; fix (CI run 38145306251).  Note that
+                                    ;; (getcwd)'s value is a symlinked path, not the
+                                    ;; canonicalised one.
                                     (let* ((root (getcwd))
                                            (tsc-target (string-append root
-                                                        "/cline/node_modules"
+                                                        "/node_modules"
                                                         "/typescript/bin/tsc")))
                                       (when (file-exists? tsc-target)
                                         (for-each (lambda (nm)
@@ -269,11 +273,14 @@
                                                         (mkdir-p (dirname link))
                                                         (symlink tsc-target
                                                                  link))))
-                                                  (cons (string-append root
-                                                         "/cline")
-                                                        (find-files (string-append
-                                                                     root
-                                                                     "/cline")
+                                                  ;; root is the workspace root itself, so
+                                                  ;; it is the first element and also the
+                                                  ;; find-files starting point: every
+                                                  ;; nested node_modules found under it is
+                                                  ;; a workspace whose own .bin the install
+                                                  ;; may have left dangling.
+                                                  (cons root
+                                                        (find-files root
                                                          "^node_modules$"
                                                          #:directories? #t
                                                          #:stat lstat))))
@@ -300,8 +307,7 @@
                                       ;; every .js/.json file pass through
                                       ;; untouched.
                                       (for-each patch-shebang
-                                                (find-files (string-append
-                                                             root "/cline")
+                                                (find-files root
                                                             (lambda (file stat)
                                                               (eq? 'regular
                                                                    (stat:type
