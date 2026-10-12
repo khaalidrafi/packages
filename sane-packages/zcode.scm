@@ -82,11 +82,11 @@
   "3.14.3")
 
 ;; The vendor .deb lives in its own version space: Z.ai ships desktop builds on
-;; its CDN faster than it tags the repository, and 3.14.4 is on the CDN while
+;; its CDN faster than it tags the repository, and 3.14.5 is on the CDN while
 ;; the newest tag is still v3.14.3.  Keeping one variable per delivery means
 ;; bumping the desktop app cannot drag the source package's git tag along.
 (define %bin-version
-  "3.14.4")
+  "3.14.5")
 
 ;;; Tag v3.14.3.  Pinned by commit rather than tag: a tag can be moved, and
 ;;; git-fetch has to resolve the object name anyway.
@@ -506,7 +506,7 @@ plugin, MCP and search tooling.")
 ;;; is not cross-compilation: binary-build systems of this kind want the
 ;;; matching .deb on the matching machine.
 (define %zcode-bin-builds
-  `(("x86_64-linux" "linux-x64" . "1gp4d6x1caad1xm7vvyyan9xkj5411y93hybkk15gq758n462lyp")
+  `(("x86_64-linux" "linux-x64" . "1ksvzk16nh184sm9y5mskjr427dshk0fb8a8y4851n2vlv5qs6mc")
     ;; Declared because upstream serves the arm64 .deb, and the URL and payload
     ;; layout are the same; no runner here can verify it, since binary packages
     ;; of this kind do not cross-compile.
