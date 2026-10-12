@@ -244,7 +244,7 @@
 ")))
 
 (define %bun-version
-  "1.4.2")
+  "1.4.3")
 (define %bun-github
   "https://github.com/oven-sh/bun/releases/download/bun-v")
 
@@ -252,13 +252,13 @@
   (origin
     (method url-fetch)
     (uri (string-append %bun-github %bun-version "/bun-linux-x64.zip"))
-    (sha256 (base32 "04x94ba6hh6nin521diym3r425q2936m6bm5zzapay2jyyp8ydin"))))
+    (sha256 (base32 "063fh4iwnadqwx9g5wrp1afhkx2dgiw0cp7hhwzz0xcpv0l0awry"))))
 
 (define bun-baseline-source
   (origin
     (method url-fetch)
     (uri (string-append %bun-github %bun-version "/bun-linux-x64-baseline.zip"))
-    (sha256 (base32 "13vjpyvam9p6gp4nm03jv8r1l1acrv8cndwxhgml017y2h7h8y66"))))
+    (sha256 (base32 "0yrric7zwkqz4f47xrkly0f0giich3cxiq8v7ag900iihjnfvhhz"))))
 
 (define-public bun-bin
   (package
@@ -329,7 +329,7 @@ release binaries are used instead.")
     (license license:expat)))
 
 (define %opencode-version
-  "1.18.34")
+  "1.19.0")
 (define %opencode-url
   "https://github.com/anomalyco/opencode/releases/download/v")
 
@@ -338,14 +338,14 @@ release binaries are used instead.")
     (method url-fetch)
     (uri (string-append %opencode-url %opencode-version
                         "/opencode-linux-x64.tar.gz"))
-    (sha256 (base32 "16ky3nkw3vs11flwcbdnf0wdlyzfh80d55cmv4nisv928yb4f8hg"))))
+    (sha256 (base32 "1v3a0w31iwqhf7ya22xm1cif8g8fhk0s59hhkklg5b7ysqdfdfbv"))))
 
 (define opencode-baseline-source
   (origin
     (method url-fetch)
     (uri (string-append %opencode-url %opencode-version
                         "/opencode-linux-x64-baseline.tar.gz"))
-    (sha256 (base32 "09qvv23azpvqmdv4iys9n12ljzygxwyk0ri1fnr4ix8ys9cd9c14"))))
+    (sha256 (base32 "0f4402vzzjsjknpnjxxd4ianij3k4p7yjms38pm221wrnc6xfd33"))))
 
 (define-public opencode-bin
   (package
@@ -457,7 +457,7 @@ loader, so no FHS emulation is required.")
 ;;; runs, so an interpreter rewrite is the only thing that makes it startable.
 ;;; ---------------------------------------------------------------------------
 (define %opencode2-version
-  "2.0.23")
+  "2.0.27")
 
 (define opencode2-avx2-source
   (origin
@@ -465,7 +465,7 @@ loader, so no FHS emulation is required.")
     (uri (string-append
           "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-"
           %opencode2-version ".tgz"))
-    (sha256 (base32 "0j62cpy9i57p71ysa4pbnrajq4kza030dw1fiywhd81iq033k9zi"))))
+    (sha256 (base32 "0fc1km18bzcybvyhhcpzgdpqcykj3p095xfmy6545ckvg8i18dbn"))))
 
 (define opencode2-baseline-source
   (origin
@@ -473,7 +473,7 @@ loader, so no FHS emulation is required.")
     (uri (string-append
           "https://registry.npmjs.org/@opencode/cli-linux-x64-baseline/-/"
           "cli-linux-x64-baseline-" %opencode2-version ".tgz"))
-    (sha256 (base32 "0a416pbbya9j7jwki80vr3rq77ma8cymrk6w9nw96k0rfnqmrcn4"))))
+    (sha256 (base32 "0mvjpy6xis8laxfwcxril42aja9bk8h0jfv8w5pxc9p1p9pc5c5c"))))
 
 (define-public opencode2-bin
   (package
@@ -759,14 +759,14 @@ its library path, so no FHS emulation is needed.")
               "Proprietary Cursor license — unfree, non-redistributable."))))
 
 (define %copilot-version
-  "1.0.91")
+  "1.0.95")
 
 (define copilot-loader-source
   (origin
     (method url-fetch)
     (uri (string-append "https://registry.npmjs.org/@github/copilot/-/"
                         "copilot-" %copilot-version ".tgz"))
-    (sha256 (base32 "109pv3cng77zsl01s2ggg7xkpdiyi1qgbl16x6abjv0yi9qmsc2g"))))
+    (sha256 (base32 "0ya7hlfcivxj4cygzhzjkhj5kd8afxim0m9fgiy0zgdqgm9yb2w3"))))
 
 (define copilot-platform-source
   (origin
@@ -774,7 +774,7 @@ its library path, so no FHS emulation is needed.")
     (uri (string-append
           "https://registry.npmjs.org/@github/copilot-linux-x64/-/"
           "copilot-linux-x64-" %copilot-version ".tgz"))
-    (sha256 (base32 "0141f3fmpcv2zlqxmxx2kyjqk2zwg3mfxrh1n9qb4n8dlgaxrl8i"))))
+    (sha256 (base32 "1fhzlx1i3kxm6z965iq0s1216bsilnl4mhsld9js6mjxmgh38zpf"))))
 
 (define-public copilot-cli-bin
   (package
@@ -882,7 +882,7 @@ FHS emulation is needed.  Requires a GitHub account to authenticate.")
               "Proprietary GitHub/Microsoft license - unfree."))))
 
 (define %goose-version
-  "1.53.0")
+  "1.54.0")
 
 (define goose-source
   (origin
@@ -890,7 +890,7 @@ FHS emulation is needed.  Requires a GitHub account to authenticate.")
     (uri (string-append
           "https://github.com/aaif-goose/goose/releases/download/v"
           %goose-version "/goose-x86_64-unknown-linux-gnu.tar.gz"))
-    (sha256 (base32 "1p0mm5wd7s12hvydzxd2iz6gk8jycm95rz1j0aic1b3mdcd1kcny"))))
+    (sha256 (base32 "1qappv4ihiky616b5k77jq6fm8ylx15j6xf1716qplmvmsanqfdb"))))
 
 (define-public goose-cli-bin
   (package
@@ -1173,7 +1173,7 @@ remote server while rendering locally.")
 ;;; FHS emulation, no patchelf.
 
 (define %pi-version
-  "1.0.2")
+  "1.1.0")
 
 (define %pi-source
   (origin
@@ -1181,7 +1181,7 @@ remote server while rendering locally.")
     (uri (string-append
           "https://github.com/earendil-works/pi/releases/download/v"
           %pi-version "/pi-linux-x64.tar.gz"))
-    (sha256 (base32 "062x52daww4anigbacc908zfxs9wd0l6pjv4ys7sifpwm6k8fxhd"))))
+    (sha256 (base32 "12g221p8cc3yr0hg954vgaq720kx814zf3rjmwvrv16kdik99aiz"))))
 
 (define-public pi-coding-agent-bin
   (package
@@ -1424,7 +1424,7 @@ vendored into node_modules.")
     (license license:expat)))
 
 (define %oh-my-pi-version
-  "18.6.0")
+  "18.10.1")
 
 (define %oh-my-pi-source
   (origin
@@ -1432,7 +1432,7 @@ vendored into node_modules.")
     (uri (string-append
           "https://github.com/can1357/oh-my-pi/releases/download/v"
           %oh-my-pi-version "/omp-linux-x64"))
-    (sha256 (base32 "0mdddqd9hanzkfypg7hflmfj0qzr95h77cz4md9c3i0fc8668k44"))))
+    (sha256 (base32 "06sgmlk4pc3icpf2m0y1avkhkvvnn9r7dxdd9hmk88wba4nx564p"))))
 
 (define-public oh-my-pi-bin
   (package
@@ -1903,7 +1903,7 @@ own SQLite build.")
     (license license:expat)))
 
 (define %mcode-version
-  "0.6.2")
+  "0.6.8")
 
 ;;; The npm tarball IS the prebuilt artifact (bundled JS + wasm + native
 ;;; helpers); both `mcode' (node-build-system install) and `mcode-bin'
@@ -1913,7 +1913,7 @@ own SQLite build.")
     (method url-fetch)
     (uri (string-append "https://registry.npmjs.org/@minimax-ai/code"
                         "/-/code-" %mcode-version ".tgz"))
-    (sha256 (base32 "1iscvgxazl54jdp324mbgxmicih2yfajaby6s91f6anl8wa03lfy"))))
+    (sha256 (base32 "0xdl4h2kzj4qr5gbm1dhqrprx8wwspgv7k6qwb9c8zjnd8ppnkrr"))))
 
 (define-public mcode
   (package
@@ -2175,7 +2175,7 @@ node-esbuild-linux-x64 input.")
     (license license:expat)))
 
 (define %codebuddy-version
-  "2.161.2")
+  "2.164.0")
 
 (define-public codebuddy-code-bin
   (package
@@ -2188,7 +2188,7 @@ node-esbuild-linux-x64 input.")
              "https://registry.npmjs.org/@tencent-ai/codebuddy-code/-/codebuddy-code-"
              %codebuddy-version ".tgz"))
        (sha256
-        (base32 "1x3cznb4qby6n4wyd20wq7mhr22013p749bx70w1xf73wjhnvpjz"))))
+        (base32 "1vc10amwn5x1cmr3lw4nlwwy10lywwkhw49myv43qlqai575jvvd"))))
     ;; copy-build-system, like mcode-bin: the tree is already bundled JS, and
     ;; running npm over it would only add offline optionalDependencies and
     ;; install scripts that a sandbox cannot honour.
@@ -2898,7 +2898,7 @@ kitty, ghostty, mlterm, xterm, etc.).")
 ;; cline.scm would otherwise see an unbound variable.  Importing the other way
 ;; would have made the dependency between the two modules circular.
 (define %cline-version
-  "3.0.68")
+  "3.0.70")
 
 (define-public cline-bin
   (package
@@ -2911,7 +2911,7 @@ kitty, ghostty, mlterm, xterm, etc.).")
              "https://registry.npmjs.org/@cline/cli-linux-x64/-/cli-linux-x64-"
              version ".tgz"))
        (sha256
-        (base32 "1ccav6m9rj2gvgb7jq796mm4v5k8jd8wzqh7755r76pbj2894yd9"))))
+        (base32 "18x6cl1wbi22gzjl960anqbmhbv7lr5djfk6dslhbpm2ss0m51js"))))
     (build-system trivial-build-system)
     (arguments
      (list
@@ -3373,7 +3373,7 @@ and is not endorsed by Guix upstream.")
 ;;; cua-cursor-theme helper relative to its own executable.
 
 (define %cua-driver-version
-  "0.32.0")
+  "0.34.1")
 
 (define %cua-driver-source
   (origin
@@ -3386,7 +3386,7 @@ and is not endorsed by Guix upstream.")
           "https://github.com/trycua/cua/releases/download/cua-driver-rs-v"
           %cua-driver-version "/cua-driver-rs-" %cua-driver-version
           "-linux-x86_64.tar.gz"))
-    (sha256 (base32 "12gqs7mafif3q1fim1kcsxiic32gn95pzl525ml6mdrq5i2n73lr"))))
+    (sha256 (base32 "0d0qvjj9g4ylxqfq8ijcq6i9ga3k79y6lxngw1y57jy6rzsq254i"))))
 
 (define-public cua-driver-bin
   (package
@@ -3573,7 +3573,7 @@ nothing is written at install time.")
 ;;; kernel enables.
 ;;; ---------------------------------------------------------------------------
 (define %kilocode-version
-  "7.8.3")
+  "7.8.8")
 
 (define %kilocode-url
   "https://github.com/Kilo-Org/kilocode/releases/download/v")
@@ -3583,14 +3583,14 @@ nothing is written at install time.")
     (method url-fetch)
     (uri (string-append %kilocode-url %kilocode-version
                         "/kilo-linux-x64.tar.gz"))
-    (sha256 (base32 "1g5nrj0qc5c6vvgpw1659vry2zgvhbs81x7shapciwh9bv12rhs3"))))
+    (sha256 (base32 "16s2qrv3bg89hf10hzkbsymsgdskad32frgpmhf00kymm1x9jwhh"))))
 
 (define kilocode-baseline-source
   (origin
     (method url-fetch)
     (uri (string-append %kilocode-url %kilocode-version
                         "/kilo-linux-x64-baseline.tar.gz"))
-    (sha256 (base32 "07gjaildkgxv2ikqdda2ww9gwbaqablc1k6k4m8q0c81mwcp378z"))))
+    (sha256 (base32 "0sbsqcswzmbinvg40zs7pa4i69b6l99chz4br6i4bdh7jfp7b5bx"))))
 
 (define-public kilocode-bin
   (package
