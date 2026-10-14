@@ -96,8 +96,9 @@
 (define %zcode-source
   (origin
     (method git-fetch)
-    (uri (git-reference (url "https://github.com/zai-org/ZCode")
-                        (commit %zcode-commit)))
+    (uri (git-reference
+          (url "https://github.com/zai-org/ZCode")
+          (commit %zcode-commit)))
     (file-name (string-append "zcode-" %version "-checkout"))
     (sha256 (base32 "13y4k09cbxng011s805zxw0hk6kk99nvn7vgdwk1fsqzmablidp0"))))
 
