@@ -12,6 +12,7 @@ built by CI instead of by hand on a 4 GB laptop.
 | zcode            | =(sane-packages zcode)=  | terminal agent, built from source |
 | zcode-bin        | =(sane-packages zcode)=  | vendor Electron .deb and its CLI  |
 | cline-baseline   | =(sane-packages cline)=  | Bun CLI, built for non-AVX2 CPUs  |
+| autoclaw-bin     | =(sane-packages autoclaw)= | vendor Electron AppImage         |
 | mcode, mcode-bin | =(sane-packages custom)= | Minimax Code CLI (npm artifact)   |
 | dsh, qoder-*, …  | =(sane-packages custom)= | everything predating this layout  |
 
@@ -302,6 +303,7 @@ kinds of overlap apart.  The full inventory, as installed today:
 #+begin_example
 bun-bin                bun
 brow6el-bin            brow6el
+autoclaw-bin           autoclaw
 casty-bin              casty
 cline-bin              cline, cline-bin
 cline-baseline         cline
@@ -450,6 +452,61 @@ package is reproducible.  Never run that build on this laptop --- =bun install=
 of ~468 deps plus a baseline compile will freeze it.  Here, only
 =guix build -L . --dry-run cline-baseline= (evaluation) is run;
 =tests/smoke/cline-baseline.sh= then drives the real binary once a build exists.
+
+* AutoClaw
+
+AutoClaw (https://autoclaw.z.ai) is Z.ai's local desktop client for its
+OpenClaw agent gateway, distributed for Linux as an Electron AppImage on
+Z.ai's own CDN (a .deb stream exists but is an older 1.18 build, so the
+AppImage is what this channel packages).  Like =signal-desktop= or
+=bitwarden-desktop= in nonguix, this is a repackage of the vendor binary
+under the name =autoclaw-bin=.
+
+** Why the build has to extract, not mount
+
+An AppImage of type 2 is not an archive: it is a small ELF runtime with a
+squashfs filesystem appended to it.  The vendor runtime mounts that payload
+with FUSE at run time, which a Guix build sandbox cannot do, and executing
+the runtime is not an option either.  So the build extracts the payload
+with =unsquashfs= at an offset computed from the file itself: a type-2
+payload starts immediately after the runtime ELF's section header table,
+whose position and size the ELF header carries.  The offset therefore
+follows the file (it differs between x64 and ARM64, and moves with every
+upstream rebuild) instead of being pinned, and =unsquashfs -s= validates
+the computed superblock before extraction so a wrong offset fails the build
+rather than unpacking into a wrong tree.
+
+Everything else is the same wrapping work as =zcode-bin=, which the
+comments in =sane-packages/autoclaw.scm= follow: install-plan copies the
+payload into =lib/AutoClaw= (so the bundle's own helpers stay reachable
+through =$ORIGIN=), the three executables get the store interpreter and a
+RUNPATH over the same Electron/GTK closure, =wrap-program= supplies
+@code{XDG_DATA_DIRS} and @code{PATH} defaults, and the payload's own
+.desktop entry is rewritten from =Exec=AppRun= (the vendor runtime script)
+to =$out/bin/autoclaw=, keeping upstream's MimeType (=zwork:= scheme
+handler), StartupWMClass and icon.  =tests/smoke/autoclaw-bin.sh= checks
+the layout, the wrapper, the patched interpreter and runpath, and that the
+payload's two version stamps (=resources/app/package.json= and the entry's
+X-AppImage-Version) agree.
+
+=chrome-sandbox= cannot be setuid inside the store, as with every Electron
+repackaging here, so the app relies on unprivileged user namespaces or on
+being passed =--no-sandbox= (see the sandbox caveat under =zcode-bin=).
+
+** Updating
+
+#+begin_example
+curl -s https://autoglm-public-oss.z.ai/zwork/updates/production/official/linux-x64/latest-linux.yml
+#+end_example
+
+=latest-linux.yml= names the current version and carries a sha512 of the
+payload, which is how a hash can be confirmed before downloading the whole
+file: bump =%version= in =sane-packages/autoclaw.scm=, download both
+architectures' AppImages from the =linux-x64= and =linux-arm64=
+directories, and refresh the two hashes in =%autoclaw-builds= with
+=guix hash= (nix-base32, the default output).  =.github/workflows=
+=upstream.yml= tracks only =zcode-bin=, so this channel has no nightly
+reminder for AutoClaw; check =latest-linux.yml= by hand.
 
 * CI
 ** =build.yml= --- build everything, publish, deploy
