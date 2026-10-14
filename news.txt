@@ -3,11 +3,25 @@
 ;; time they pull past it.  Because a commit cannot name its own hash, add the
 ;; entry in a FOLLOWING commit that cites the change's hash -- the convention
 ;; nonguix follows.  Bodies use Texinfo markup, not Markdown.
-;;
-;; Until a real entry is added, keep the entry list empty but well-formed, so a
-;; missing file never breaks the pull.  The first genuine entry will cite the
-;; hash of the commit that added cline-baseline, in the follow-up commit, per the
-;; convention above.
 
 (channel-news
- (version 0))
+ (version 0)
+ (entry (commit "7c26726671f50aae990807f0ac0b664883ecf7d1")
+        (title (en "New package: autoclaw-bin"))
+        (body (en "The new @code{sane-packages autoclaw} module provides
+ @code{autoclaw-bin}, a repackage of Z.ai's AutoClaw desktop client for
+ its OpenClaw gateway from the AppImage upstream publishes for Linux.  The
+ payload is extracted from the AppImage at build time, so
+ @code{guix install autoclaw-bin} works without FUSE or the vendor
+ runtime; the desktop entry registers the @code{zwork:} URL scheme.")))
+ (entry (commit "be517be23e45465491c3565546894e4bfad3d533")
+        (title (en "zcode-bin bumped to 3.15.3"))
+        (body (en "The @code{zcode-bin} package now repackages the 3.15.3
+ .deb of ZCode's desktop app instead of 3.14.5.  Both architecture hashes
+ were refreshed; reinstall with @code{guix install zcode-bin} after
+ @code{guix pull}.")))
+ (entry (commit "1a1721424679920a988c0536dd3c3cfebf6e5b4c")
+        (title (en "cline-baseline now builds with the pinned Bun"))
+        (body (en "The hub-daemon rewrite in @code{cline-baseline}'s
+ build no longer emits the parenthesized void operator, which Bun 1.4.3's
+ parser rejects; the fixed-output derivation can now finish its bundle."))))
