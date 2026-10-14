@@ -1,0 +1,169 @@
+#+TITLE: Sane-packages handoff — state as of 2026-10-14 (commit e35aefe)
+#+AUTHOR: StepFun Step-5 Preview <step-5-preview@stepfun.com>
+#+STARTUP: overview
+
+* TL;DR
+
+Everything is committed and pushed.  The local branch =ai/packages= and
+=origin/ai/packages= are both at =e35aefe=; no local-only work remains.
+
+=ai/main=, =main= and the =origin/ai/main= / =origin/main= refs do not exist as
+git revisions in this checkout — the only real branches are =ai/packages=,
+=gh-pages= and their origins.  =gh-pages= diverges by one commit each way
+(=696d726= local placeholder vs =6ba448a= CI's force-orphan deploy) and is
+owned by CI; do not force-push it.
+
+* Working agreement (do not violate these)
+
+- NEVER build a source package on this machine.  Absolute.  Only
+  =guix build -L . --dry-run PKG= is allowed locally, and only to check
+  evaluation (typos, unbound variables, bad hashes, unresolvable inputs).
+  CI is what builds source packages.
+- No source-build workarounds either — no cloning a repo and running
+  =bun install= / =pnpm install= / =npm install= / compiling.  A dependency
+  install of a real project is a heavy build on this 4 GB machine.
+- NEVER =guix install= a source package.  Only prebuilt =*-bin= channel
+  packages may be installed here.
+- After installing a =*-bin=, run the real binary (not just =--help=) and
+  watch for "file not found" / missing-shared-library errors: Guix is not FHS.
+- Search with =rg= / =fd=, never =grep -r= / =find= from =/=.  Never let a scan
+  near =/gnu/store=, =~/.guix-home=, =~/.cache=.
+- =-j1= for anything parallel.  BEWARE OF FREEZING THIS MACHINE.
+- Never commit =.agent-org/= (it is untracked, sits one level above the repo).
+- Never commit to =main=; =ai/main= is the conceptual trunk, =ai/<topic= for
+  multi-step work.
+- Commit author must be the model identity, e.g.
+  =StepFun Step-5 Preview <step-5-preview@stepfun.com>=, with trailers:
+  #+begin_example
+  Co-authored-by: Qoder <qoder@qoder.com>
+  Co-authored-by: Khalid Rafi <khaalidrafi@gmail.com>
+  #+end_example
+- DO NOT run =git remote prune origin= (the user rejected that call).
+- Commits must stay attributable to one model.  Do not sweep another
+  session's uncommitted work into your commit — ask first.
+
+* Repo map
+
+- Repo: /home/khalid/sane-packages (git).  Packages live in
+  =sane-packages/*.scm=.  Branch =ai/packages=.
+- Channel source of truth: the repo itself, consumed via =-L .=.
+- Tests: =tests/= directory, one smoke test per =*-bin= package plus CI
+  static checks (style + derivation validity).
+- Substitutes are published on =gh-pages= by CI (force-orphan deploy).
+
+* Just shipped: e35aefe — the hub status rewrite fix
+
+Bug: the =substitute*= for =hub status= in =sane-packages/cline.scm= never
+applied, so CI's smoke test kept upstream's TCP probe and failed.
+
+Root cause, now documented in the file: =substitute*= is strictly
+line-based.  =guix/build/utils.scm='s =substitute= loops on
+=read-line in 'concat= and applies every pattern to that single line, so a
+PATTERN containing a newline can NEVER match — however its spans are
+written.  The old pattern spanned two source lines and was therefore dead
+code.  Replacement strings, in contrast, may contain any number of
+newlines.
+
+Fix: three single-line anchors.
+
+  1. =const status = JSON\.parse\(= opens the promise and emits the entire
+     poll-the-discovery-file body as one multi-line replacement string.
+     Poll reads =readFileSync(smokeEnv.CLINE_HUB_DISCOVERY_PATH)= every 200 ms
+     for up to 30 s and resolves when =authToken= appears — the daemon writes
+     that record right after a successful bind (hub server.ts
+     =writeHubDiscovery=), so its presence proves bound state, which is the
+     same signal =hub start= waits for minus the socket.
+  2. the =await $`...hub status`.env(smokeEnv).text(),' line is emptied.
+  3. the closing =) as { running?: boolean; coreVersion?: string };-> becomes
+     =});' so the promise terminates and the following
+     =if (!status.running || !status.coreVersion)= consumes it unchanged.
+
+How it was verified (repeat this pattern, it works): the forms were lifted
+verbatim out of cline.scm by a paren-matching extractor — see
+/tmp/extract-buildts-forms.py from that session — and applied to a pristine
+copy of =apps/cli/script/build.ts= at tag =cli-v3.0.70= (/tmp/build.ts.orig
+is the saved copy; it may still exist).  Then asserted: promise opens, no
+leftover =hub status`= exec, no leftover type assertion, =poll()= present,
+consumer clause intact, =readFileSync= used, the loader rewrite and the
+0.0.0.0 rewrite from the other forms in the same file still applied, braces
+balanced 13/13 in the block and 128/128 file-wide.  =guix style -f= was
+idempotent and =guix build -L . --dry-run cline-baseline= exited 0.
+
+Watch for in the next CI run: a =channel: unbound variable= / =guix channels=
+warning appears on =guix build --dry-run= for every package in this checkout.
+It is pre-existing and harmless (same message on =dsh=), not caused by this
+change.
+
+* Open risks — check these first
+
+** 1. Placeholder output hash blocks the cline-baseline network build
+
+=%cline-baseline-source= in =sane-packages/cline.scm= still carries
+=sha256 (base32 "0000...0000")=.  =cline-baseline-build= is a custom origin
+METHOD that forwards =#:hash= / =#:hash-algo= to =gexp->derivation=, which is
+what makes it a fixed-output derivation — and a fixed-output derivation
+fails the build on hash mismatch.  So the moment CI actually runs the
+network build it will fail until the real hash is substituted in.
+
+Next action: read the hash out of the failed CI run's log (or recompute the
+build locally IF AND ONLY IF it is a =*-bin= style repack, which it is not —
+so: CI log only), then edit =%cline-baseline-source= to the real value.
+
+** 2. Unverified daemon env var name
+
+The generated TS spawns the daemon with =CLINE_RUN_AS_HUB_DAEMON= in the
+environment, but the real constant appears to be =CLINE_RUN_AS_HUB_DAEMON_ENV=,
+re-exported from =@cline/shared= → =./runtime/hub-daemon-env=, whose source
+was never saved locally, so its literal string value was never confirmed.
+If it differs, =isHubDaemonProcess()= (daemon.ts:451 and :496) returns false
+and the spawned process runs the normal interactive CLI personality instead
+of the daemon one.
+
+Next action: find the literal string value of =CLINE_RUN_AS_HUB_DAEMON_ENV= in
+the installed package's compiled output under =sdk/packages/shared/= (a
+=grep -r= inside the installed store path, bounded, is fine — that is a local
+read, not a build), and correct the env var name in the generated TS if it
+differs.
+
+** 3. zcode-bin is behind upstream
+
+3.14.5 installed vs 3.15.3 upstream.  The scheduled =upstream versions= CI job
+will keep failing until the bump lands.  Treat it as a normal =*-bin= bump:
+update the version, refresh the deb hash, build/install/run locally, commit.
+
+* Other open work
+
+- Task #20: /home/khalid/home-config/system/khalid-custom/khalid-custom.scm
+  carries a stale copy of every package definition.  It needs a refresh from
+  the channel or a switch to consuming the channel directly.
+- Task #27: zcode generator dropping per-workspace npm links — DISPROVEN
+  earlier, do not re-investigate without new evidence.
+- Mirror housekeeping: the dsh nar is ~133 MB against the 95 MB mirror limit;
+  the mirror signing key still needs persisting via =substitute-public-key=.
+
+* Environment notes
+
+- Guix master on an ASUS X451MA (Intel Celeron, 4 GB RAM).  Nix is the
+  fallback for anything missing.
+- Sandbox network facts learned the hard way and worth keeping: the Guix
+  build sandbox runs a fresh network namespace with =lo= DOWN and no
+  address.  Binding 0.0.0.0 succeeds; binding 127.0.0.1 fails EADDRNOTAVAIL
+  (errno 99); no local TCP connect works at all.  =unshare -n= is not
+  permitted locally, so the CI log is the only authority on sandbox
+  networking.  This is why =findFreePort='s 127.0.0.1 literal was rewritten
+  to 0.0.0.0 and why =hub start= had to be replaced by a direct detached
+  daemon spawn.
+- =$DOTFILES= is the Guix-managed dotfiles tree at ~/home-config/dotfiles;
+  edit files there, never the live ~/ copies.  Afterwards remind the user to
+  run =guix home reconfigure= (never run it yourself without explicit
+  permission).
+- =guix system= / =guix home= recompile the local =brix= channel: never run two
+  instances in parallel, use =-v=, be patient.
+
+* Servers
+
+All of them were stopped and the ports verified closed at handoff:
+cloudflared, the cua-driver =serve= process, vite (5173), Django (8000).
+Deliberately still running (do not kill without asking): the guix-daemon,
+X/Xorg on =:0=, whatever owns =0.0.0.0:8080=, and a =codebuddy-code-bin --acp=
+process.
