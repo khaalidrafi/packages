@@ -117,12 +117,46 @@ done
 [ "${#entries[@]}" -gt 5 ] ||
   fail "runpath has too few Guix libraries (${#entries[@]}): $runpath"
 
-# The shared libraries get an rpath but no interpreter, and all three must have
-# survived the copy with their modes made writable for patchelf: a store file is
-# r--r--r--, and patchelf cannot reopen one, which is where run 38101517394 died.
+# The shared libraries get an rpath but no interpreter.  What is checkable
+# here is patchelf's postcondition on the final artifact, NOT the chmod that
+# made it possible: the chmod happens in the build tree, and the daemon
+# canonicalises every registered output to read-only (r--r--r--, or
+# r-xr-xr-x with any exec bit), so NO file under $share is ever writable and
+# a [ -w ] assertion here can never pass.  That is exactly what run 51
+# hit: the chmod before patchelf did its job during the build, the build
+# succeeded, and the smoke test still failed with "libcef.so is not
+# writable" because it was asserting a build-time property on a build
+# result.  The earlier chmod failures this file was written for (runs
+# 38101517394, "patchelf: open: Permission denied") die inside the phase
+# now, so the build surface already covers them.
+#
+# What survives into the store is the rpath, so that is what is asserted:
+# libcef.so is born with RUNPATH=$ORIGIN (see the link note in the phase),
+# so an unpatched library shows up here unambiguously.  The three libs get
+# the same rpath list as the executable above -- the Guix libraries CEF
+# dlopens -- so the entry rules are the same: store libs only, nss's lib/nss
+# tolerated, no $ORIGIN, and more than one entry.
 for lib in libcef.so libEGL.so libGLESv2.so; do
-  [ -w "$share/$lib" ] || fail "$share/$lib is not writable (patchelf cannot patch it)"
   head -c 4 "$share/$lib" | grep -q $'ELF' || fail "$share/$lib is not an ELF"
+  libpath="$("$patchelf" --print-rpath "$share/$lib")"
+  [ -n "$libpath" ] ||
+    fail "$share/$lib has no rpath; the phase's --set-rpath did not run"
+  case "$libpath" in
+    *'$ORIGIN'*) fail "$share/$lib is unpatched (rpath is \$ORIGIN): $libpath" ;;
+  esac
+  bad=""
+  IFS=':' read -ra libentries <<< "$libpath"
+  for e in "${libentries[@]}"; do
+    [ -n "$e" ] || continue
+    case "$e" in
+      /gnu/store/*/lib|/gnu/store/*/lib/nss) ;;
+      *) bad="$bad $e" ;;
+    esac
+  done
+  [ -z "$bad" ] ||
+    fail "$share/$lib rpath entries outside the store:$bad"
+  [ "${#libentries[@]}" -gt 1 ] ||
+    fail "$share/$lib rpath has no Guix libraries: $libpath"
 done
 
 # Exercise the wrapper for real: no --help (brow6el has none) but a nonexistent
