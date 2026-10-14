@@ -319,108 +319,118 @@
                                                             #:stat lstat)))
 
                                     ;; The wildcard bind above is necessary but not sufficient.  Upstream's
-     ;; smoke block then runs `hub start', which does not merely spawn the
-     ;; daemon -- it stays in the client and polls the daemon over TCP until
-     ;; it answers, for up to HUB_STARTUP_TIMEOUT_MS = 15s, and throws
-     ;;
-     ;; Timed out after 15000ms waiting for detached hub startup.
-     ;;
-     ;; if it never does.  A bind on 0.0.0.0 succeeds in the sandbox, but no
-     ;; loopback client can connect to anything, so every one of those probes
-     ;; fails and the command is doomed no matter which host literal it binds.
-     ;; `hub status' needs the same TCP for its probe, and only falls back to
-     ;; _reading_ the discovery record when there is none at all.
-     ;;
-     ;; So this substitution replaces the whole pair with the network-free
-     ;; equivalent, and it runs BEFORE the loader rewrite below: the loader
-     ;; rewrite rewrites `${outfile}' everywhere it appears, so an anchor
-     ;; written against the un-prefixed line would never match again.
-     ;;
-     ;; The daemon personality of the very same binary is invoked directly,
-     ;; exactly the way `hub start' spawns it (daemon.ts's resolveLaunchCommand:
-     ;; process.execPath, the --cline-hub-daemon marker flag, --host, --port,
-     ;; and CLINE_NO_INTERACTIVE + CLINE_RUN_AS_HUB_DAEMON in the environment),
-     ;; but spawned _detached_ so this script keeps control and can reap it.
-     ;; Readiness is then decided by the discovery file the daemon is
-     ;; contractually required to publish before it reports healthy -- the
-     ;; same signal `hub start' waits for, minus the socket: the WS server in
-     ;; sdk/packages/core/src/hub/server.ts writes it right after a successful
-     ;; bind (writeHubDiscovery) and dies if that write fails, so a complete
-     ;; record with an auth token proves the daemon reached its bound state.
-     ;;
-     ;; --host 0.0.0.0 is passed explicitly rather than left to the default
-     ;; 127.0.0.1 (resolveDefaultHubHost), because the default bind cannot
-     ;; succeed here for the same EADDRNOTAVAIL reason findFreePort could not;
-     ;; discovery.write's host/port/url fields are then recorded as the
-     ;; daemon's own, which is what any later client would connect to.
-     (substitute* "apps/cli/script/build.ts"
-       ;; build.ts never imports node:child_process -- its only runtime is
-       ;; Bun's own $ -- so add it to the file's single import list rather
-       ;; than top-level require()'ing in the middle of a function body.
-       (("import \\{ type AddressInfo, createServer \\} from \"node:net\";")
-        "import { spawn } from \"node:child_process\";
+                                    ;; smoke block then runs `hub start', which does not merely spawn the
+                                    ;; daemon -- it stays in the client and polls the daemon over TCP until
+                                    ;; it answers, for up to HUB_STARTUP_TIMEOUT_MS = 15s, and throws
+                                    ;;
+                                    ;; Timed out after 15000ms waiting for detached hub startup.
+                                    ;;
+                                    ;; if it never does.  A bind on 0.0.0.0 succeeds in the sandbox, but no
+                                    ;; loopback client can connect to anything, so every one of those probes
+                                    ;; fails and the command is doomed no matter which host literal it binds.
+                                    ;; `hub status' needs the same TCP for its probe, and only falls back to
+                                    ;; _reading_ the discovery record when there is none at all.
+                                    ;;
+                                    ;; So this substitution replaces the whole pair with the network-free
+                                    ;; equivalent, and it runs BEFORE the loader rewrite below: the loader
+                                    ;; rewrite rewrites `${outfile}' everywhere it appears, so an anchor
+                                    ;; written against the un-prefixed line would never match again.
+                                    ;;
+                                    ;; The daemon personality of the very same binary is invoked directly,
+                                    ;; exactly the way `hub start' spawns it (daemon.ts's resolveLaunchCommand:
+                                    ;; process.execPath, the --cline-hub-daemon marker flag, --host, --port,
+                                    ;; and CLINE_NO_INTERACTIVE + CLINE_RUN_AS_HUB_DAEMON in the environment),
+                                    ;; but spawned _detached_ so this script keeps control and can reap it.
+                                    ;; Readiness is then decided by the discovery file the daemon is
+                                    ;; contractually required to publish before it reports healthy -- the
+                                    ;; same signal `hub start' waits for, minus the socket: the WS server in
+                                    ;; sdk/packages/core/src/hub/server.ts writes it right after a successful
+                                    ;; bind (writeHubDiscovery) and dies if that write fails, so a complete
+                                    ;; record with an auth token proves the daemon reached its bound state.
+                                    ;;
+                                    ;; --host 0.0.0.0 is passed explicitly rather than left to the default
+                                    ;; 127.0.0.1 (resolveDefaultHubHost), because the default bind cannot
+                                    ;; succeed here for the same EADDRNOTAVAIL reason findFreePort could not;
+                                    ;; discovery.write's host/port/url fields are then recorded as the
+                                    ;; daemon's own, which is what any later client would connect to.
+                                    (substitute* "apps/cli/script/build.ts"
+                                      ;; build.ts never imports node:child_process -- its only runtime is
+                                      ;; Bun's own $ -- so add it to the file's single import list rather
+                                      ;; than top-level require()'ing in the middle of a function body.
+                                      (("import \\{ type AddressInfo, createServer \\} from \"node:net\";")
+                                       "import { spawn } from \"node:child_process\";
 import { type AddressInfo, createServer } from \"node:net\";"))
-     (substitute* "apps/cli/script/build.ts"
-       (("await \\$`\\$\\{outfile\\} hub start`\\.env\\(smokeEnv\\)\\.quiet\\(\\);")
-        "const hubDaemon = spawn(process.execPath, [`${outfile} --cline-hub-daemon --host 0.0.0.0 --port ${smokeEnv.CLINE_HUB_PORT}`], {
-\t\t\t\t\tcwd: process.cwd(),
-\t\t\t\t\tenv: { ...smokeEnv, CLINE_NO_INTERACTIVE: \"1\", CLINE_RUN_AS_HUB_DAEMON: \"1\" },
-\t\t\t\t\tdetached: true,
-\t\t\t\t\tstdio: \"ignore\",
-\t\t\t\t});
-\t\t\t\t\t(void) hubDaemon;"))
+                                    (substitute* "apps/cli/script/build.ts"
+                                      (("await \\$`\\$\\{outfile\\} hub start`\\.env\\(smokeEnv\\)\\.quiet\\(\\);")
+                                       "const hubDaemon = spawn(process.execPath, [`${outfile} --cline-hub-daemon --host 0.0.0.0 --port ${smokeEnv.CLINE_HUB_PORT}`], {
+					cwd: process.cwd(),
+					env: { ...smokeEnv, CLINE_NO_INTERACTIVE: \"1\", CLINE_RUN_AS_HUB_DAEMON: \"1\" },
+					detached: true,
+					stdio: \"ignore\",
+				});
+					(void) hubDaemon;"))
 
-     ;; `hub status' is replaced by a bounded poll of the discovery file the
-     ;; daemon writes.  It resolves to the same shape the next assertion
-     ;; expects -- { running, coreVersion } -- but sourced from the file rather
-     ;; than from an HTTP probe that cannot be served.  The credentials it
-     ;; waits for are the ones the daemon itself generated (hub.ts's status
-     ;; reports the discovered record when the probe fails, and a record with
-     ;; an authToken is a daemon that finished binding, not a leftover).
-     ;; NB: Guile's regexp is POSIX ERE, where \\t is NOT an escape for tab --
-     ;; it would match a literal 't'.  The anchors below are therefore written
-     ;; with either no leading whitespace or an explicit [ \\t] class.
-     (substitute* "apps/cli/script/build.ts"
-       (("const status = JSON\\.parse\\(\\s*await \\$`\\$\\{outfile\\} hub status`\\.env\\(smokeEnv\\)\\.text\\(\\),\\s*\\) as \\{ running\\?: boolean; coreVersion\\?: string \\};")
-        "\tconst status = await new Promise<{ running?: boolean; coreVersion?: string }>((resolve) => {
-\t\t\t\t\tconst deadline = Date.now() + 30_000;
-\t\t\t\t\tconst poll = () => {
-\t\t\t\t\t\ttry {
-\t\t\t\t\t\t\tconst parsed = JSON.parse(readFileSync(smokeEnv.CLINE_HUB_DISCOVERY_PATH, \"utf-8\")) as {
-\t\t\t\t\t\t\t\tauthToken?: string;
-\t\t\t\t\t\t\t\tcoreVersion?: string;
-\t\t\t\t\t\t\t\tpid?: number;
-\t\t\t\t\t\t\t};
-\t\t\t\t\t\t\tif (parsed.authToken) {
-\t\t\t\t\t\t\t\tresolve({ running: true, coreVersion: parsed.coreVersion });
-\t\t\t\t\t\t\t} else if (Date.now() >= deadline) {
-\t\t\t\t\t\t\t\tresolve({ running: false, coreVersion: undefined });
-\t\t\t\t\t\t\t}
-\t\t\t\t\t\t} catch {
-\t\t\t\t\t\t\t/* not written yet */
-\t\t\t\t\t\t}
-\t\t\t\t\t\tif (Date.now() >= deadline) {
-\t\t\t\t\t\t\tresolve({ running: false, coreVersion: undefined });
-\t\t\t\t\t\t} else {
-\t\t\t\t\t\t\tsetTimeout(poll, 200);
-\t\t\t\t\t\t}
-\t\t\t\t};
-\t\t\t\t\tpoll();
-\t\t\t\t});"))
+                                    ;; `hub status' is replaced by a bounded poll of the discovery file the
+                                    ;; daemon writes.  It resolves to the same shape the next assertion
+                                    ;; expects -- { running, coreVersion } -- but sourced from the file rather
+                                    ;; than from an HTTP probe that cannot be served.  The credentials it
+                                    ;; waits for are the ones the daemon itself generated (hub.ts's status
+                                    ;; reports the discovered record when the probe fails, and a record with
+                                    ;; an authToken is a daemon that finished binding, not a leftover).
+                                    ;;
+                                    ;; The three substitutions below are the *whole* replacement, split on
+                                    ;; single-line anchors on purpose: `substitute*' reads its input one line
+                                    ;; at a time (build/utils.scm's `substitute' loops on `read-line' and
+                                    ;; applies every pattern to that single line), so a PATTERN containing a
+                                    ;; newline can NEVER match, however its spans are written -- while a
+                                    ;; REPLACEMENT may span any number of lines.  Anchor 1 therefore emits
+                                    ;; the entire promise body as one string, and the other two anchors
+                                    ;; delete the lines it replaced.
+                                    ;;
+                                    ;; NB: Guile's regexp is POSIX ERE, where \t is NOT an escape for tab
+                                    ;; -- it would match a literal 't'.  The anchors below are therefore
+                                    ;; written with either no leading whitespace or an explicit [ \t] class.
+                                    (substitute* "apps/cli/script/build.ts"
+                                      (("const status = JSON\\.parse\\(")
+                                       (string-append
+                                        "const status = await new Promise<{ running?: boolean; coreVersion?: string }>((resolve) => {
+"
+                                        "					const deadline = Date.now() + 30_000;
+"
+                                        "\t\t\t\t\tconst poll = () => {\n"
+                                        "\t\t\t\t\t\ttry {\n"
+                                        "							const parsed = JSON.parse(readFileSync(smokeEnv.CLINE_HUB_DISCOVERY_PATH, \"utf-8\")) as { authToken?: string; coreVersion?: string; pid?: number };
+"
+                                        "							if (parsed.authToken) { resolve({ running: true, coreVersion: parsed.coreVersion }); }
+"
+                                        "							else if (Date.now() >= deadline) { resolve({ running: false, coreVersion: undefined }); }
+"
+                                        "\t\t\t\t\t\t} catch { /* not written yet */ }\n"
+                                        "						if (Date.now() >= deadline) { resolve({ running: false, coreVersion: undefined }); }
+"
+                                        "\t\t\t\t\t\telse { setTimeout(poll, 200); }\n"
+                                        "\t\t\t\t\t};\n"
+                                        "\t\t\t\t\tpoll();")))
+                                    (substitute* "apps/cli/script/build.ts"
+                                      (("await \\$`\\$\\{outfile\\} hub status`\\.env\\(smokeEnv\\)\\.text\\(\\),")
+                                       ""))
+                                    (substitute* "apps/cli/script/build.ts"
+                                      (("\\) as \\{ running\\?: boolean; coreVersion\\?: string \\};")
+                                       "});"))
 
-     ;; The teardown line is `hub stop', not the daemon PID, so it keeps
-     ;; working unchanged: with no reachable hub, stopLocalHubServerGracefully
-     ;; returns false and stopHubServer falls back to process.kill(pid,
-     ;; SIGTERM) from the same discovery record, then clears it.  It is
-     ;; already .nothrow(), so it cannot fail the build either.
-     ;;
-     ;; That leaves only the process group: the daemon was spawned detached,
-     ;; so it is not a child this script can wait on, and a SIGTERM that the
-     ;; daemon answers is enough -- its own shutdownCoordinator tears the
-     ;; listener down and exits.  Nothing is left listening on the port and
-     ;; smokeHome is deleted below regardless.
-
-     ;; Make Bun compile for the baseline (non-AVX2) ISA.  Cline's
+                                    ;; The teardown line is `hub stop', not the daemon PID, so it keeps
+                                    ;; working unchanged: with no reachable hub, stopLocalHubServerGracefully
+                                    ;; returns false and stopHubServer falls back to process.kill(pid,
+                                    ;; SIGTERM) from the same discovery record, then clears it.  It is
+                                    ;; already .nothrow(), so it cannot fail the build either.
+                                    ;;
+                                    ;; That leaves only the process group: the daemon was spawned detached,
+                                    ;; so it is not a child this script can wait on, and a SIGTERM that the
+                                    ;; daemon answers is enough -- its own shutdownCoordinator tears the
+                                    ;; listener down and exits.  Nothing is left listening on the port and
+                                    ;; smokeHome is deleted below regardless.
+                                    
+                                    ;; Make Bun compile for the baseline (non-AVX2) ISA.  Cline's
                                     ;; build.ts has no baseline target (upstream PR #11412 adds one);
                                     ;; the minimal faithful change is to rewrite the single triple it
                                     ;; hands to Bun.build's compile.target.  That string appears only
