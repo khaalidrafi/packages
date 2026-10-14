@@ -368,8 +368,18 @@ import { type AddressInfo, createServer } from \"node:net\";"))
 					detached: true,
 					stdio: \"ignore\",
 				});
-					(void) hubDaemon;"))
-
+					void hubDaemon;"))
+                                    ;; `void hubDaemon;', not
+                                    ;; `(void) hubDaemon;': Bun 1.4.3's parser
+                                    ;; rejects the parenthesized form outright
+                                    ;; ("Unexpected )"), which failed the whole
+                                    ;; build.ts before it could bundle anything
+                                    ;; -- CI run 38541038306, reproduced with the
+                                    ;; pinned bun on the patched file alone.  The
+                                    ;; two forms mean the same thing here (evaluate
+                                    ;; the binding, discard the result); the bare
+                                    ;; one parses.
+                                    
                                     ;; `hub status' is replaced by a bounded poll of the discovery file the
                                     ;; daemon writes.  It resolves to the same shape the next assertion
                                     ;; expects -- { running, coreVersion } -- but sourced from the file rather
