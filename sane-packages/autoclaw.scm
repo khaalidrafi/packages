@@ -131,6 +131,17 @@
       #:validate-runpath? #f ;the same bundled helpers zcode-bin carries:
       ;; libEGL.so and friends have no RUNPATH of their own and are loaded
       ;; by name through the main binary's $ORIGIN.
+      ;; (ice-9 binary-ports) is what provides get-bytevector-n for the
+      ;; unpack phase's ELF-header read.  copy-build-system's default
+      ;; modules are only ((guix build copy-build-system)
+      ;; (guix build utils)) -- see guix/build-system/copy.scm -- and
+      ;; bytevector-u8-ref is core (available anywhere), but
+      ;; get-bytevector-n is not: without this import the phase dies with
+      ;; "Unbound variable: get-bytevector-n" before it reads a single
+      ;; byte (CI run 38571771850).
+      #:modules '((guix build copy-build-system)
+                  (guix build utils)
+                  (ice-9 binary-ports))
       #:install-plan
       ;; The payload is the app directory, and everything in it is found
       ;; relative to the main binary ($ORIGIN) or to the resources/ tree,
