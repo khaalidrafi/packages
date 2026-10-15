@@ -24,4 +24,13 @@
         (title (en "cline-baseline now builds with the pinned Bun"))
         (body (en "The hub-daemon rewrite in @code{cline-baseline}'s
  build no longer emits the parenthesized void operator, which Bun 1.4.3's
- parser rejects; the fixed-output derivation can now finish its bundle."))))
+ parser rejects; the fixed-output derivation can now finish its bundle.")))
+ (entry (commit "c323f8a5c4aa860ba7f2852386f35eb793dd57dd")
+        (title (en "cline-baseline's smoke phase really starts the hub now"))
+        (body (en "The hub-daemon rewrite in @code{cline-baseline}'s build
+ handed the whole command line to the Bun runtime as a single argument and
+ exec'd the compiled artifact directly, so the daemon never started and the
+ readiness poll timed out.  The rewrite now launches the binary through the
+ store loader the same way the upstream @code{hub start} does for a compiled
+ entry.")))
+)
