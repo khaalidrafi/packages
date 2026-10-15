@@ -2703,6 +2703,27 @@ locales) and the cmake find modules required to compile CEF-based apps.")
                                                                "mesa"
                                                                "expat"
                                                                "zlib"
+                                                               ;; libsixel is here for the same reason
+                                                               ;; libx11 is: brow6el links it
+                                                               ;; directly.  CMakeLists.txt's
+                                                               ;; target_link_libraries takes
+                                                               ;; ${SIXEL_LIBRARIES} from
+                                                               ;; pkg_check_modules(SIXEL REQUIRED
+                                                               ;; libsixel), so libsixel.so.1 is a
+                                                               ;; DT_NEEDED entry of the executable
+                                                               ;; and its absence from the RUNPATH
+                                                               ;; kills the first exec with
+                                                               ;; "error while loading shared
+                                                               ;; libraries: libsixel.so.1" (exit
+                                                               ;; 127).  The wrapper's
+                                                               ;; LD_LIBRARY_PATH is $share only,
+                                                               ;; so nothing else can cover it.
+                                                               ;; CI run 38571771850 died exactly
+                                                               ;; there -- the wrapper exercise had
+                                                               ;; never been reached before, because
+                                                               ;; every earlier failure was an
+                                                               ;; assertion that fired first.
+                                                               "libsixel"
                                                                ;; "fontconfig-minimal",
                                                                ;; NOT "fontconfig".
                                                                ;;
