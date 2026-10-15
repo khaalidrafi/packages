@@ -336,11 +336,13 @@
                                     ;; rewrite rewrites `${outfile}' everywhere it appears, so an anchor
                                     ;; written against the un-prefixed line would never match again.
                                     ;;
-                                    ;; The daemon personality of the very same binary is invoked directly,
-                                    ;; exactly the way `hub start' spawns it (daemon.ts's resolveLaunchCommand:
-                                    ;; process.execPath, the --cline-hub-daemon marker flag, --host, --port,
-                                    ;; and CLINE_NO_INTERACTIVE + CLINE_RUN_AS_HUB_DAEMON in the environment),
-                                    ;; but spawned _detached_ so this script keeps control and can reap it.
+                                    ;; The daemon personality of the very same binary is invoked the
+                                    ;; way `hub start' spawns it for a compiled binary (daemon.ts's
+                                    ;; resolveLaunchCommand: the marker flag, --cwd, --host, --port, and
+                                    ;; CLINE_NO_INTERACTIVE + CLINE_RUN_AS_HUB_DAEMON in the environment;
+                                    ;; resolveDaemonEntryArgs returns just [--cline-hub-daemon] when the
+                                    ;; entry path is inside a compiled Bun artifact), but spawned
+                                    ;; _detached_ so this script keeps control and can reap it.
                                     ;; Readiness is then decided by the discovery file the daemon is
                                     ;; contractually required to publish before it reports healthy -- the
                                     ;; same signal `hub start' waits for, minus the socket: the WS server in
@@ -353,6 +355,33 @@
                                     ;; succeed here for the same EADDRNOTAVAIL reason findFreePort could not;
                                     ;; discovery.write's host/port/url fields are then recorded as the
                                     ;; daemon's own, which is what any later client would connect to.
+                                    ;;
+                                    ;; THE SPAWN IS THE STORE LOADER, NOT process.execPath, AND THE
+                                    ;; BINARY ARRIVES AS AN argv ENTRY, NOT INSIDE A TEMPLATE LITERAL.
+                                    ;; Two bugs lived in this one line and CI run 38571771850 hit both:
+                                    ;;
+                                    ;; 1. spawn(process.execPath, [`${outfile} --cline-hub-daemon ...`])
+                                    ;; hands the bun runtime ONE argument that is the whole command
+                                    ;; string.  node:child_process passes argv entries verbatim, so
+                                    ;; the runtime was asked to run a *script* literally named
+                                    ;; "/.../cline --cline-hub-daemon --host 0.0.0.0 ..." (ENOENT), the
+                                    ;; daemon never existed, and the poll below resolved
+                                    ;; {running:false} after its 30s deadline: "Expected a healthy
+                                    ;; hub, got {\"running\":false}" (build.ts:315), 31 seconds after
+                                    ;; the --version pass.
+                                    ;; 2. Even with correct argv, spawning the compiled ELF directly
+                                    ;; cannot work here: it is a `bun build --compile' artifact with
+                                    ;; PT_INTERP /lib64/ld-linux-x86-64.so.2, which does not exist in
+                                    ;; the sandbox (the same reason the --version exec below needs the
+                                    ;; loader prefix).  So the launcher IS the loader and the binary
+                                    ;; is its first argument.
+                                    ;;
+                                    ;; The replacement text therefore carries the identifier `outfile'
+                                    ;; and NOT the template literal `${outfile}': the loader rewrite
+                                    ;; further down this phase rewrites every literal `${outfile}' in
+                                    ;; the file, and a `${outfile}' here would be rewritten into the
+                                    ;; loader command INSIDE the argv array, resurrecting bug 1 in a
+                                    ;; second form.
                                     (substitute* "apps/cli/script/build.ts"
                                       ;; build.ts never imports node:child_process -- its only runtime is
                                       ;; Bun's own $ -- so add it to the file's single import list rather
@@ -362,13 +391,20 @@
 import { type AddressInfo, createServer } from \"node:net\";"))
                                     (substitute* "apps/cli/script/build.ts"
                                       (("await \\$`\\$\\{outfile\\} hub start`\\.env\\(smokeEnv\\)\\.quiet\\(\\);")
-                                       "const hubDaemon = spawn(process.execPath, [`${outfile} --cline-hub-daemon --host 0.0.0.0 --port ${smokeEnv.CLINE_HUB_PORT}`], {
-					cwd: process.cwd(),
-					env: { ...smokeEnv, CLINE_NO_INTERACTIVE: \"1\", CLINE_RUN_AS_HUB_DAEMON: \"1\" },
-					detached: true,
-					stdio: \"ignore\",
-				});
-					void hubDaemon;"))
+                                       (string-append
+                                        "const hubDaemon = spawn(\""
+                                        glibc
+                                        "/lib/ld-linux-x86-64.so.2\", [\"--library-path\", \""
+                                        gcc
+                                        "/lib\", outfile, \"--cline-hub-daemon\", \"--cwd\", process.cwd(), \"--host\", \"0.0.0.0\", \"--port\", String(smokeEnv.CLINE_HUB_PORT)], {
+"
+                                        "\t\t\t\t\t\tcwd: process.cwd(),\n"
+                                        "						env: { ...smokeEnv, CLINE_NO_INTERACTIVE: \"1\", CLINE_RUN_AS_HUB_DAEMON: \"1\" },
+"
+                                        "\t\t\t\t\t\tdetached: true,\n"
+                                        "\t\t\t\t\t\tstdio: \"ignore\",\n"
+                                        "\t\t\t\t\t});\n"
+                                        "\t\t\t\t\tvoid hubDaemon;")))
                                     ;; `void hubDaemon;', not
                                     ;; `(void) hubDaemon;': Bun 1.4.3's parser
                                     ;; rejects the parenthesized form outright
