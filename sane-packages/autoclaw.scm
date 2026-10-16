@@ -135,13 +135,30 @@
       ;; unpack phase's ELF-header read.  copy-build-system's default
       ;; modules are only ((guix build copy-build-system)
       ;; (guix build utils)) -- see guix/build-system/copy.scm -- and
-      ;; bytevector-u8-ref is core (available anywhere), but
-      ;; get-bytevector-n is not: without this import the phase dies with
-      ;; "Unbound variable: get-bytevector-n" before it reads a single
-      ;; byte (CI run 38571771850).
+      ;; get-bytevector-n is not among the default bindings: without
+      ;; this import the phase died with "Unbound variable:
+      ;; get-bytevector-n" (CI run 38571771850).
+      ;;
+      ;; (rnrs bytevectors) is the second half of the same fix, and the
+      ;; earlier claim that bytevector-u8-ref "is core and worked" was
+      ;; never exercised: evaluation reaches the field accessor only
+      ;; AFTER get-bytevector-n returns (the header read is the first
+      ;; let* binding), so run 38571771850 died before the accessor was
+      ;; ever touched.  Adding binary-ports alone moved the failure to
+      ;; the next unbound symbol:
+      ;;
+      ;; Unbound variable: bytevector-u8-ref
+      ;;
+      ;; (CI run 38705403478, still inside phase 'unpack', one field call
+      ;; in).  The bytevector accessors (bytevector-u8-ref and
+      ;; bytevector-length, both used by this phase) live in
+      ;; (rnrs bytevectors), the module Guix's own build-side code
+      ;; (guix/build/syscalls.scm among others) imports for the same
+      ;; family of procedures.
       #:modules '((guix build copy-build-system)
                   (guix build utils)
-                  (ice-9 binary-ports))
+                  (ice-9 binary-ports)
+                  (rnrs bytevectors))
       #:install-plan
       ;; The payload is the app directory, and everything in it is found
       ;; relative to the main binary ($ORIGIN) or to the resources/ tree,
