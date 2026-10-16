@@ -753,14 +753,25 @@ import { type AddressInfo, createServer } from \"node:net\";"))
 
 (define %cline-baseline-source
   ;; The fixed-output origin carrying the compiled baseline binary.  The hash
-  ;; below is a placeholder: build once (CI or a capable host) and replace it
-  ;; with the sha256 Guix reports for the produced output.  It cannot be known
-  ;; until the network build has run, which this machine must not do.
+  ;; is the one the one-time network build reported: CI run 38969043034 built
+  ;; the whole FOD (bun install, the build.ts substitution chain, the smoke
+  ;; phases inside it, the compile) with the #o644 output fix in place, and
+  ;; the daemon's hash comparison then failed against the all-zeros
+  ;; placeholder exactly as designed, printing
+  ;;
+  ;;     sha256 hash mismatch for /gnu/store/...-cline-baseline-3.0.70:
+  ;;       expected hash: 0000000000000000000000000000000000000000000000000000
+  ;;       actual hash:   0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g
+  ;;
+  ;; The actual value is pasted in below.  For this to converge, the next
+  ;; build of the FOD must produce a byte-identical file -- same pinned
+  ;; inputs, same bun, same substitutions -- which is what makes the
+  ;; declared hash a fixed output rather than a guess.
   (origin
     (method cline-baseline-build)
     (uri (list %cline-url %cline-tag))
     (file-name (string-append "cline-baseline-" %cline-version))
-    (sha256 (base32 "0000000000000000000000000000000000000000000000000000"))))
+    (sha256 (base32 "0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g"))))
 
 (define-public cline-baseline
   (package
