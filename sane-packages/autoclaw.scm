@@ -380,7 +380,19 @@
                                  (string-append "Exec="
                                                 #$output "/bin/autoclaw %U"))))
                             with-wrapper))))
-    (native-inputs (list squashfs-tools))
+    ;; patchelf has to be a native input: the patchelf-binaries phase
+    ;; invokes it BY NAME (execvp through PATH), and run 38969043034 got
+    ;; all the way there -- the unpack bytevector fix worked, the ELF
+    ;; interpreter lookup through ("libc" in the inputs alist) worked --
+    ;; and then died with
+    ;;
+    ;;     In execvp of patchelf: No such file or directory
+    ;;
+    ;; Every other patchelf-invoking package in this channel (zcode-bin,
+    ;; and the copy-build-system ones in custom.scm) already lists it;
+    ;; this one was written without it because its earlier failures all
+    ;; died in unpack, one phase earlier, so the omission never surfaced.
+    (native-inputs (list squashfs-tools patchelf))
     (inputs (list (list gcc "lib") ;libgcc_s.so.1
                   adwaita-icon-theme
                   alsa-lib
