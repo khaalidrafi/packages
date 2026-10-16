@@ -399,7 +399,7 @@ import { type AddressInfo, createServer } from \"node:net\";"))
                                         "/lib\", outfile, \"--cline-hub-daemon\", \"--cwd\", process.cwd(), \"--host\", \"0.0.0.0\", \"--port\", String(smokeEnv.CLINE_HUB_PORT)], {
 "
                                         "\t\t\t\t\t\tcwd: process.cwd(),\n"
-                                        "						env: { ...smokeEnv, CLINE_NO_INTERACTIVE: \"1\", CLINE_RUN_AS_HUB_DAEMON: \"1\" },
+                                        "                                               env: { ...smokeEnv, CLINE_NO_INTERACTIVE: \"1\", CLINE_RUN_AS_HUB_DAEMON: \"1\" },
 "
                                         "\t\t\t\t\t\tdetached: true,\n"
                                         "\t\t\t\t\t\tstdio: \"ignore\",\n"
@@ -441,18 +441,18 @@ import { type AddressInfo, createServer } from \"node:net\";"))
                                        (string-append
                                         "const status = await new Promise<{ running?: boolean; coreVersion?: string }>((resolve) => {
 "
-                                        "					const deadline = Date.now() + 30_000;
+                                        "                                       const deadline = Date.now() + 30_000;
 "
                                         "\t\t\t\t\tconst poll = () => {\n"
                                         "\t\t\t\t\t\ttry {\n"
-                                        "							const parsed = JSON.parse(readFileSync(smokeEnv.CLINE_HUB_DISCOVERY_PATH, \"utf-8\")) as { authToken?: string; coreVersion?: string; pid?: number };
+                                        "                                                       const parsed = JSON.parse(readFileSync(smokeEnv.CLINE_HUB_DISCOVERY_PATH, \"utf-8\")) as { authToken?: string; coreVersion?: string; pid?: number };
 "
-                                        "							if (parsed.authToken) { resolve({ running: true, coreVersion: parsed.coreVersion }); }
+                                        "                                                       if (parsed.authToken) { resolve({ running: true, coreVersion: parsed.coreVersion }); }
 "
-                                        "							else if (Date.now() >= deadline) { resolve({ running: false, coreVersion: undefined }); }
+                                        "                                                       else if (Date.now() >= deadline) { resolve({ running: false, coreVersion: undefined }); }
 "
                                         "\t\t\t\t\t\t} catch { /* not written yet */ }\n"
-                                        "						if (Date.now() >= deadline) { resolve({ running: false, coreVersion: undefined }); }
+                                        "                                               if (Date.now() >= deadline) { resolve({ running: false, coreVersion: undefined }); }
 "
                                         "\t\t\t\t\t\telse { setTimeout(poll, 200); }\n"
                                         "\t\t\t\t\t};\n"
@@ -706,7 +706,30 @@ import { type AddressInfo, createServer } from \"node:net\";"))
                                     (copy-file
                                      "apps/cli/dist/cli-linux-x64/bin/cline"
                                      #$output)
-                                    (chmod #$output #o555))))
+                                    ;; #o644, NOT #o555: this derivation is a
+                                    ;; fixed-output one with #:recursive? #f --
+                                    ;; the output is one file, not a tree -- and
+                                    ;; the daemon-side finalization of such an
+                                    ;; output requires a NON-EXECUTABLE regular
+                                    ;; file before it will hash the bytes:
+                                    ;;
+                                    ;; output path `...' should be a
+                                    ;; non-executable regular file
+                                    ;;
+                                    ;; (CI run 38705403478; the builder had
+                                    ;; already finished -- "Build complete.  1
+                                    ;; targets built" -- and every smoke step
+                                    ;; inside build.ts had passed).  Guile's
+                                    ;; copy-file also preserves the source's
+                                    ;; mode in newer Guile, so the exec bit the
+                                    ;; Bun compile artifact carries must be
+                                    ;; dropped explicitly, whatever the umask.
+                                    ;; The consumer package restores it:
+                                    ;; cline-baseline's builder does
+                                    ;; (chmod binary #o555) after copying this
+                                    ;; file to $out/lib/cline/cline, so the
+                                    ;; store item it installs is executable.
+                                    (chmod #$output #o644))))
                             #:system system
                             #:guile-for-build guile
                             ;; (guix build utils) has to be copied into the build
