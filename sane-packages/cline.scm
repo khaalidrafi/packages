@@ -759,14 +759,17 @@ import { type AddressInfo, createServer } from \"node:net\";"))
   ;; the daemon's hash comparison then failed against the all-zeros
   ;; placeholder exactly as designed, printing
   ;;
-  ;;     sha256 hash mismatch for /gnu/store/...-cline-baseline-3.0.70:
-  ;;       expected hash: 0000000000000000000000000000000000000000000000000000
-  ;;       actual hash:   0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g
+  ;; sha256 hash mismatch for /gnu/store/...-cline-baseline-3.0.70:
+  ;; expected hash: 0000000000000000000000000000000000000000000000000000
+  ;; actual hash: 0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g
   ;;
   ;; The actual value is pasted in below.  For this to converge, the next
   ;; build of the FOD must produce a byte-identical file -- same pinned
   ;; inputs, same bun, same substitutions -- which is what makes the
-  ;; declared hash a fixed output rather than a guess.
+  ;; declared hash a fixed output rather than a guess.  (Comment lines
+  ;; carry exactly one space after ';;': guix style's canonicalize-
+  ;; comment trims anything else, and the style gate in
+  ;; tests/check-static.sh diffs the result.)
   (origin
     (method cline-baseline-build)
     (uri (list %cline-url %cline-tag))
