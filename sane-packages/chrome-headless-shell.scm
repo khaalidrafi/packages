@@ -34,6 +34,7 @@
   #:use-module (guix download)
   #:use-module (guix packages)
   #:use-module (guix base32)
+  #:use-module (guix gexp)
   #:use-module (guix build-system copy)
   #:use-module ((guix licenses)
                 #:prefix license:)
