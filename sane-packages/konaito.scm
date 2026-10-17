@@ -70,7 +70,8 @@
   (plain-file "konaito-node-manifest"
               (apply string-append
                      (map (lambda (row)
-                            (string-append (car row) "\t" (cadr row) "\n"))
+                            (string-append (car row) "\t"
+                                           (cadr row) "\n"))
                           %konaito-node-install-plan))))
 
 (define-public konaito-terminal-browser-bin
@@ -95,8 +96,9 @@
           (add-after 'install 'unpack-node-modules
             (lambda* (#:key inputs outputs #:allow-other-keys)
               (define (read-rows port)
-                (let loop ((line (read-line port))
-                           (rows '()))
+                (let loop
+                  ((line (read-line port))
+                   (rows '()))
                   (if (eof-object? line)
                       (reverse rows)
                       (loop (read-line port)
@@ -133,8 +135,7 @@
                                       "-C"
                                       dest)
                               (invoke "chmod" "-R" "u+rwx" dest)))
-                          (call-with-input-file
-                              (assoc-ref inputs "manifest")
+                          (call-with-input-file (assoc-ref inputs "manifest")
                             read-rows)))))
           (add-after 'unpack-node-modules 'add-chrome-args-env
             (lambda* (#:key outputs #:allow-other-keys)
@@ -143,10 +144,8 @@
               ;; lives, and a stock chrome-headless-shell traps there (run
               ;; 38999604726's smoke).  Give the launch args an opt-in
               ;; escape hatch instead of patching the sandbox out.
-              (substitute*
-                  (string-append
-                   (assoc-ref outputs "out")
-                   "/share/konaito-terminal-browser-bin/dist/browser.js")
+              (substitute* (string-append (assoc-ref outputs "out")
+                            "/share/konaito-terminal-browser-bin/dist/browser.js")
                 (("args: \\[\"--no-first-run\"")
                  "args: [...(process.env.TERMINAL_BROWSER_CHROME_ARGS || \"\").split(\" \").filter(Boolean), \"--no-first-run\""))))
           (add-after 'add-chrome-args-env 'make-wrapper
