@@ -49,12 +49,16 @@ echo "mirror answers: $(echo "$info" | tr '\n' ' ')"
 # The daemon (root) checks narinfo signatures against /etc/guix/acl, so the
 # key has to be authorized for the daemon's user.  Idempotent: re-running
 # must not append a second copy.  A restart makes sure a daemon that read
-# the ACL before we touched it sees the new key.
+# the ACL before we touched it sees the new key.  The absolute path is not
+# pedantry: sudo's secure_path does not carry the runner's guix profile
+# (~/.config/guix/current/bin), so plain `sudo guix' is "command not
+# found" (run 39022788916).
+guix_bin="$(command -v guix)"
 key_hex="$(sed -n 's/.*(q #\([0-9A-F]*\)#.*/\1/p' .guix-substitutes.pub)"
 if sudo grep -q "$key_hex" /etc/guix/acl 2>/dev/null; then
   echo "signing key already authorized"
 else
-  sudo guix archive --authorize < .guix-substitutes.pub
+  sudo "$guix_bin" archive --authorize < .guix-substitutes.pub
   sudo systemctl restart guix-daemon
   echo "signing key authorized, daemon restarted"
 fi
