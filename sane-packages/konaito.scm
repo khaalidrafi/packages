@@ -41,7 +41,8 @@
   #:use-module (guix base32)
   #:use-module (guix gexp)
   #:use-module (guix build-system copy)
-  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module ((guix licenses)
+                #:prefix license:)
   #:use-module (gnu packages backup)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages node)
@@ -57,8 +58,7 @@
     (uri (string-append
           "https://registry.npmjs.org/@konaito/terminal-browser/-/terminal-browser-"
           %konaito-version ".tgz"))
-    (sha256
-     (base32 "10j55nl35xlrl4fiam1sj3kjzylz26jw5wjpcm73cg6hkf3rbh5l"))))
+    (sha256 (base32 "10j55nl35xlrl4fiam1sj3kjzylz26jw5wjpcm73cg6hkf3rbh5l"))))
 
 (define-public konaito-terminal-browser-bin
   (package
@@ -83,7 +83,7 @@
             (lambda* (#:key inputs outputs #:allow-other-keys)
               (let* ((out (assoc-ref outputs "out"))
                      (root (string-append out
-                                          "/share/konaito-terminal-browser-bin"))
+                            "/share/konaito-terminal-browser-bin"))
                      (nm (string-append root "/node_modules"))
                      (bsdtar (string-append (assoc-ref inputs "libarchive")
                                             "/bin/bsdtar")))
@@ -92,51 +92,61 @@
                 ;; the origin Guix fetched, the npm name is the directory
                 ;; Node's bare-specifier walk looks for.  Scoped packages
                 ;; install at node_modules/@scope/name like npm does.
-                (for-each
-                 (lambda (row)
-                   (let* ((name (car row))
-                          (label (cadr row))
-                          (dest (string-append nm "/" name)))
-                     ;; mkdir-p, not mkdir: a scoped package's parent
-                     ;; (@scope) does not exist yet either, and bsdtar -C
-                     ;; needs the destination itself present.
-                     (mkdir-p dest)
-                     ;; Every npm tarball has exactly one top-level
-                     ;; directory, so one strip-components fits all.  bsdtar,
-                     ;; not tar: some tarballs ship directories without the
-                     ;; execute bit and GNU tar dies writing into them
-                     ;; (zcode, CI run 37119444764), so the bits go back
-                     ;; after extraction for what Node needs to descend.
-                     (invoke bsdtar "xzf" (assoc-ref inputs label)
-                             "--strip-components=1" "-C" dest)
-                     (invoke "chmod" "-R" "u+rwx" dest)))
-                 #$%konaito-node-install-plan))))
+                (for-each (lambda (row)
+                            (let* ((name (car row))
+                                   (label (cadr row))
+                                   (dest (string-append nm "/" name)))
+                              ;; mkdir-p, not mkdir: a scoped package's parent
+                              ;; (@scope) does not exist yet either, and bsdtar -C
+                              ;; needs the destination itself present.
+                              (mkdir-p dest)
+                              ;; Every npm tarball has exactly one top-level
+                              ;; directory, so one strip-components fits all.  bsdtar,
+                              ;; not tar: some tarballs ship directories without the
+                              ;; execute bit and GNU tar dies writing into them
+                              ;; (zcode, CI run 37119444764), so the bits go back
+                              ;; after extraction for what Node needs to descend.
+                              (invoke bsdtar
+                                      "xzf"
+                                      (assoc-ref inputs label)
+                                      "--strip-components=1"
+                                      "-C"
+                                      dest)
+                              (invoke "chmod" "-R" "u+rwx" dest)))
+                          #$%konaito-node-install-plan))))
           (add-after 'unpack-node-modules 'make-wrapper
             (lambda* (#:key inputs outputs #:allow-other-keys)
               (let* ((out (assoc-ref outputs "out"))
                      (root (string-append out
-                                          "/share/konaito-terminal-browser-bin"))
+                            "/share/konaito-terminal-browser-bin"))
                      (bin (string-append out "/bin"))
                      (bash (string-append (assoc-ref inputs "bash-minimal")
                                           "/bin/bash"))
                      (node (string-append (assoc-ref inputs "node")
                                           "/bin/node"))
                      (shell (string-append (assoc-ref inputs
-                                                      "chrome-headless-shell-bin")
+                                            "chrome-headless-shell-bin")
                                            "/bin/chrome-headless-shell")))
                 (mkdir-p bin)
                 ;; The store paths written below are references the daemon
                 ;; discovers by scanning output contents, so node and the
                 ;; browser land in the closure without being propagated;
                 ;; grafting rewrites them on security updates.
-                (call-with-output-file (string-append bin
-                                                      "/terminal-browser")
+                (call-with-output-file (string-append bin "/terminal-browser")
                   (lambda (port)
-                    (format port "#!~a\n# Puppeteer reads this variable (its\n# getConfiguration.js) before touching its download cache; the default is\n# the store's chrome-headless-shell, the revision puppeteer pins.  Set it\n# to use any other Chromium.\nexport PUPPETEER_EXECUTABLE_PATH=\"${PUPPETEER_EXECUTABLE_PATH:-~a}\"\nexec \"~a\" \"~a/dist/main.js\" \"$@\"\n"
-                            bash
-                            shell
-                            node
-                            root)))
+                    (format port
+                     "#!~a
+# Puppeteer reads this variable (its
+# getConfiguration.js) before touching its download cache; the default is
+# the store's chrome-headless-shell, the revision puppeteer pins.  Set it
+# to use any other Chromium.
+export PUPPETEER_EXECUTABLE_PATH=\"${PUPPETEER_EXECUTABLE_PATH:-~a}\"
+exec \"~a\" \"~a/dist/main.js\" \"$@\"
+"
+                     bash
+                     shell
+                     node
+                     root)))
                 (chmod (string-append bin "/terminal-browser") #o555)
                 #t))))))
     (native-inputs
@@ -144,11 +154,10 @@
      ;; the labelled ones twice (the dsh trap, see zcode's native-inputs).
      ;; bsdtar for the tarballs, then one hash-verified origin per npm
      ;; dependency, labelled by the name it installs under.
-     (append (list (list "libarchive" libarchive))
-             %konaito-node-inputs))
-    (inputs
-     (list bash-minimal node chrome-headless-shell-bin))
-    (synopsis "Browser inside your terminal (kitty graphics + CDP, no Electron)")
+     (append (list (list "libarchive" libarchive)) %konaito-node-inputs))
+    (inputs (list bash-minimal node chrome-headless-shell-bin))
+    (synopsis
+     "Browser inside your terminal (kitty graphics + CDP, no Electron)")
     (description
      "Terminal-browser renders a real Chromium inside kitty, ghostty or
 WezTerm: pages are screenshotted over CDP and displayed with the kitty

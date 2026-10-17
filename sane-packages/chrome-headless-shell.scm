@@ -35,7 +35,8 @@
   #:use-module (guix packages)
   #:use-module (guix base32)
   #:use-module (guix build-system copy)
-  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module ((guix licenses)
+                #:prefix license:)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages elf)
   #:use-module (gnu packages gcc)
@@ -60,8 +61,7 @@
           "https://storage.googleapis.com/chrome-for-testing-public/"
           %chrome-headless-shell-version
           "/linux64/chrome-headless-shell-linux64.zip"))
-    (sha256
-     (base32 "0rq15dpl0c9y7sq1hrj61bd2zsv1nw6j40pvak4ibg8c59rgh8p1"))))
+    (sha256 (base32 "0rq15dpl0c9y7sq1hrj61bd2zsv1nw6j40pvak4ibg8c59rgh8p1"))))
 
 (define-public chrome-headless-shell-bin
   (package
@@ -102,50 +102,62 @@
                      ;; every direct DT_NEEDED's lib directory; the ones a
                      ;; Guix library would resolve for itself, a bare vendor
                      ;; binary needs spelled out.
-                     (rpath (string-append
-                             payload
-                             ":"
-                             (string-join
-                              (map (lambda (p)
-                                     (string-append (assoc-ref inputs p)
-                                                    "/lib"))
-                                   '("gcc" "glib" "nspr" "dbus"
-                                     "libx11" "libxcb" "libxcomposite"
-                                     "libxdamage" "libxext" "libxfixes"
-                                     "libxrandr" "mesa" "expat"
-                                     "libxkbcommon" "eudev" "alsa-lib"
-                                     "at-spi2-core"))
-                              ":")
-                             ":"
-                             (assoc-ref inputs "nss")
-                             "/lib/nss")))
+                     (rpath (string-append payload
+                                           ":"
+                                           (string-join (map (lambda (p)
+                                                               (string-append (assoc-ref
+                                                                               inputs
+                                                                               p)
+                                                                "/lib"))
+                                                             '("gcc" "glib"
+                                                               "nspr"
+                                                               "dbus"
+                                                               "libx11"
+                                                               "libxcb"
+                                                               "libxcomposite"
+                                                               "libxdamage"
+                                                               "libxext"
+                                                               "libxfixes"
+                                                               "libxrandr"
+                                                               "mesa"
+                                                               "expat"
+                                                               "libxkbcommon"
+                                                               "eudev"
+                                                               "alsa-lib"
+                                                               "at-spi2-core"))
+                                                        ":")
+                                           ":"
+                                           (assoc-ref inputs "nss")
+                                           "/lib/nss")))
                 ;; The executable gets a store loader and the rpath; the
                 ;; bundled libraries are ET_DYN with no PT_INTERP of their
                 ;; own, so they get the rpath only -- the same split the
                 ;; channel's Electron packages use between electron itself
                 ;; and its .node addons.
                 (invoke patchelf
-                        "--set-interpreter" loader
-                        "--set-rpath" rpath
+                        "--set-interpreter"
+                        loader
+                        "--set-rpath"
+                        rpath
                         shell)
-                (for-each
-                    (lambda (lib)
-                      (invoke patchelf "--set-rpath" rpath lib))
-                  (list (string-append payload "/libEGL.so")
-                        (string-append payload "/libGLESv2.so")
-                        (string-append payload "/libvulkan.so.1")
-                        (string-append payload
-                                       "/libvk_swiftshader.so")))))
-          (add-after 'patch-elf 'link-binary
-            (lambda* (#:key outputs #:allow-other-keys)
-              (let* ((out (assoc-ref outputs "out"))
-                     (bin (string-append out "/bin")))
-                (mkdir-p bin)
-                (symlink (string-append out
-                                        "/share/chrome-headless-shell"
-                                        "/chrome-headless-shell")
-                         (string-append bin "/chrome-headless-shell"))
-                #t)))))))
+                (for-each (lambda (lib)
+                            (invoke patchelf "--set-rpath" rpath lib))
+                          (list (string-append payload "/libEGL.so")
+                                (string-append payload "/libGLESv2.so")
+                                (string-append payload "/libvulkan.so.1")
+                                (string-append payload "/libvk_swiftshader.so")))))
+            (add-after 'patch-elf
+                       'link-binary
+                       (lambda* (#:key outputs #:allow-other-keys)
+                         (let* ((out (assoc-ref outputs "out"))
+                                (bin (string-append out "/bin")))
+                           (mkdir-p bin)
+                           (symlink (string-append out
+                                     "/share/chrome-headless-shell"
+                                     "/chrome-headless-shell")
+                                    (string-append bin
+                                                   "/chrome-headless-shell"))
+                           #t)))))))
     ;; gcc here is gcc:lib (libgcc_s.so.1); glib covers glib, gmodule,
     ;; gobject and gio; at-spi2-core covers atk, at-spi2-atk and atspi in
     ;; the merged upstream the pinned Guix carries.
@@ -177,6 +189,5 @@ choice for CDP screencasting.  The ELF interpreter and rpath are patched for
 the Guix store, so the binary runs on any system with this channel; point
 Puppeteer at it with @code{PUPPETEER_EXECUTABLE_PATH}, or install
 @code{konaito-terminal-browser-bin}, which wires it in by default.")
-    (home-page
-     "https://googlechromelabs.github.io/chrome-for-testing/")
+    (home-page "https://googlechromelabs.github.io/chrome-for-testing/")
     (license license:bsd-3)))
