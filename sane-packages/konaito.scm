@@ -86,6 +86,15 @@
     (supported-systems '("x86_64-linux"))
     (arguments
      (list
+      ;; read-line, which the manifest reader in 'unpack-node-modules
+      ;; loops on, lives in (ice-9 rdelim), and copy-build-system's
+      ;; default module set stops at its own two modules (CI run
+      ;; 39006190707, "Unbound variable: read-line" 0.0 seconds into
+      ;; the phase).  Same declaration as autoclaw-bin makes for the
+      ;; binary-ports family.
+      #:modules '((guix build copy-build-system)
+                  (guix build utils)
+                  (ice-9 rdelim))
       #:install-plan
       #~'(("dist" "share/konaito-terminal-browser-bin/dist")
           ("package.json" "share/konaito-terminal-browser-bin/package.json")
