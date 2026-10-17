@@ -147,7 +147,7 @@
                   (string-append
                    (assoc-ref outputs "out")
                    "/share/konaito-terminal-browser-bin/dist/browser.js")
-                (("args: \[\"--no-first-run\"")
+                (("args: \\[\"--no-first-run\"")
                  "args: [...(process.env.TERMINAL_BROWSER_CHROME_ARGS || \"\").split(\" \").filter(Boolean), \"--no-first-run\""))))
           (add-after 'add-chrome-args-env 'make-wrapper
             (lambda* (#:key inputs outputs #:allow-other-keys)
