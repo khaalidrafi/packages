@@ -30,8 +30,16 @@ cat > "$dir/page.html" <<'EOF'
 </html>
 EOF
 
+# --no-sandbox: this runs on CI runners, and Ubuntu 24.04 restricts
+# unprivileged user namespaces (apparmor), which is where Chromium's
+# namespace sandbox lives; a stock binary traps there.  On a normal
+# system the sandbox works -- this flag is the runner accommodation.
+log="$dir/chrome.log"
 timeout 120 "$shell" "--screenshot=$dir/frame.png" --window-size=800,600 \
-  --no-first-run "file://$dir/page.html" >/dev/null 2>&1
+  --no-first-run --no-sandbox "file://$dir/page.html" >"$log" 2>&1 || {
+  echo "chrome-headless-shell failed; its output:" >&2
+  cat "$log" >&2
+  exit 1; }
 
 [ -s "$dir/frame.png" ] || { echo "screenshot wrote no file" >&2; exit 1; }
 size="$(stat -c %s "$dir/frame.png")"

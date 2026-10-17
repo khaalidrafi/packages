@@ -47,7 +47,16 @@ cat > "$dir/page.html" <<'EOF'
 </html>
 EOF
 
-timeout 180 "$tb" --dump-frame "$dir/frame.png" "$dir/page.html"
+# TERMINAL_BROWSER_CHROME_ARGS="--no-sandbox" is the runner accommodation
+# (Ubuntu 24.04 restricts the unprivileged user namespaces Chromium's
+# namespace sandbox needs); the wrapper's env hook passes it through.
+log="$dir/tb.log"
+TERMINAL_BROWSER_CHROME_ARGS="--no-sandbox" \
+  timeout 180 "$tb" --dump-frame "$dir/frame.png" "$dir/page.html" \
+  >"$log" 2>&1 || {
+  echo "terminal-browser --dump-frame failed; its output:" >&2
+  cat "$log" >&2
+  exit 1; }
 
 [ -s "$dir/frame.png" ] || { echo "dump-frame wrote no file" >&2; exit 1; }
 size="$(stat -c %s "$dir/frame.png")"
