@@ -60,6 +60,19 @@
           %konaito-version ".tgz"))
     (sha256 (base32 "10j55nl35xlrl4fiam1sj3kjzylz26jw5wjpcm73cg6hkf3rbh5l"))))
 
+(define %konaito-node-manifest
+  ;; What the build unpacks, as a file rather than data spliced into the
+  ;; gexp: #$ on this table lands as a call form in the builder (run
+  ;; 38999604726 died with "Wrong type to apply" on the first npm name),
+  ;; and a couple hundred strings spliced into the .drv make it unreadable
+  ;; -- the same reasoning as zcode's build manifest, which this follows.
+  ;; One row per line: npm name TAB input label.
+  (plain-file "konaito-node-manifest"
+              (apply string-append
+                     (map (lambda (row)
+                            (string-append (car row) "\t" (cadr row) "\n"))
+                          %konaito-node-install-plan))))
+
 (define-public konaito-terminal-browser-bin
   (package
     (name "konaito-terminal-browser-bin")
@@ -81,6 +94,13 @@
       #~(modify-phases %standard-phases
           (add-after 'install 'unpack-node-modules
             (lambda* (#:key inputs outputs #:allow-other-keys)
+              (define (read-rows port)
+                (let loop ((line (read-line port))
+                           (rows '()))
+                  (if (eof-object? line)
+                      (reverse rows)
+                      (loop (read-line port)
+                            (cons (string-split line #\tab) rows)))))
               (let* ((out (assoc-ref outputs "out"))
                      (root (string-append out
                             "/share/konaito-terminal-browser-bin"))
@@ -113,8 +133,23 @@
                                       "-C"
                                       dest)
                               (invoke "chmod" "-R" "u+rwx" dest)))
-                          #$%konaito-node-install-plan))))
-          (add-after 'unpack-node-modules 'make-wrapper
+                          (call-with-input-file
+                              (assoc-ref inputs "manifest")
+                            read-rows)))))
+          (add-after 'unpack-node-modules 'add-chrome-args-env
+            (lambda* (#:key outputs #:allow-other-keys)
+              ;; Ubuntu 24.04-style runners restrict unprivileged user
+              ;; namespaces, which is where Chromium's namespace sandbox
+              ;; lives, and a stock chrome-headless-shell traps there (run
+              ;; 38999604726's smoke).  Give the launch args an opt-in
+              ;; escape hatch instead of patching the sandbox out.
+              (substitute*
+                  (string-append
+                   (assoc-ref outputs "out")
+                   "/share/konaito-terminal-browser-bin/dist/browser.js")
+                (("args: \[\"--no-first-run\"")
+                 "args: [...(process.env.TERMINAL_BROWSER_CHROME_ARGS || \"\").split(\" \").filter(Boolean), \"--no-first-run\""))))
+          (add-after 'add-chrome-args-env 'make-wrapper
             (lambda* (#:key inputs outputs #:allow-other-keys)
               (let* ((out (assoc-ref outputs "out"))
                      (root (string-append out
@@ -154,7 +189,9 @@ exec \"~a\" \"~a/dist/main.js\" \"$@\"
      ;; the labelled ones twice (the dsh trap, see zcode's native-inputs).
      ;; bsdtar for the tarballs, then one hash-verified origin per npm
      ;; dependency, labelled by the name it installs under.
-     (append (list (list "libarchive" libarchive)) %konaito-node-inputs))
+     (append (list (list "libarchive" libarchive)
+                   (list "manifest" %konaito-node-manifest))
+             %konaito-node-inputs))
     (inputs (list bash-minimal node chrome-headless-shell-bin))
     (synopsis
      "Browser inside your terminal (kitty graphics + CDP, no Electron)")
@@ -167,6 +204,8 @@ graphics protocol, and keyboard input is replayed into the browser.  A
 agents.  This package installs the upstream npm release with its whole
 puppeteer dependency tree, and launches the chrome-headless-shell build
 Puppeteer pins as the engine; override @code{PUPPETEER_EXECUTABLE_PATH} to
-point it at another Chromium.")
+point it at another Chromium, and @code{TERMINAL_BROWSER_CHROME_ARGS}
+adds extra Chromium flags (on systems that restrict unprivileged user
+namespaces, @code{--no-sandbox}).")
     (home-page "https://github.com/konaito/terminal-browser")
     (license license:expat)))
