@@ -512,18 +512,23 @@ directories, and refresh the two hashes in =%autoclaw-builds= with
 reminder for AutoClaw; check =latest-linux.yml= by hand.
 
 * CI
-** =build.yml= --- build everything, publish, deploy
+** =build.yml= --- build everything, publish, deploy, then install it back
 
-One job runs, in order: static checks, lint, build every package, publish
-substitutes, deploy the mirror, then a final gate.  It is deliberately not
-split across jobs: that would reinstall Guix and re-pull the channels once per
-job, and the freshly built store paths must travel from the build to the
-publisher, which a separate job could only do by uploading the whole cache.
+The pipeline has two jobs.  The =guix build= job runs, in order: static
+checks, lint, build every package, publish substitutes, deploy the mirror,
+then a final gate.  It is deliberately not split further: that would
+reinstall Guix and re-pull the channels once per job, and the freshly built
+store paths must travel from the build to the publisher, which a separate
+job could only do by uploading the whole cache.  The =substitute install=
+job after it is the one deliberate exception: it runs on a runner that
+built nothing, because its whole purpose is to prove a fresh machine gets
+the channel's packages from the mirror (see step 8).
 
-1. Install Guix (=PromyLOPh/guix-install-action@v1=) with the =nonguix= channel
-   pulled in; the =~/.cache/guix= download cache is restored between runs, the
-   store deliberately is not (a restored =/gnu/store= disagrees with the store
-   database).
+1. Install Guix (=brix-os/brix-action@v1=, fetching the daemon tarball from
+   a GitHub release after =ci.guix.gnu.org= 502s kept killing runs) with the
+   =nonguix= channel pulled in; the =~/.cache/guix= download cache is
+   restored between runs, the store deliberately is not (a restored
+   =/gnu/store= disagrees with the store database).
 2. =tests/check-static.sh= --- the channel contract first (every =.scm= is a
    module, =.guix-channel= parses), then =guix style= and
    =guix build --dry-run= for every package including the =*-bin= ones, so
@@ -557,6 +562,14 @@ publisher, which a separate job could only do by uploading the whole cache.
 7. Re-fail the workflow on step 4's recorded exit status, so a package that
    could not build keeps CI red even though publish and deploy already ran on
    whatever did build.
+8. =tests/check-substitutes.sh= (the =substitute install= job, push only) ---
+   the consumer-side test on a fresh runner: same Guix installer, same
+   channels pin, empty store.  It authorizes the mirror's signing key, proves
+   the test packages would be *built* without the mirror and *downloaded*
+   with it, installs them into a scratch profile through =guix package
+   --substitute-urls= exactly as the README instructs users, and runs their
+   smoke tests against what arrived.  A PR does not publish, so its mirror
+   would serve another commit's outputs and the job stays push-only.
 
 Enable GitHub Pages once, from the =gh-pages= branch (the deploy step pushes
 the branch, but Pages still has to be told to serve it):
