@@ -13,6 +13,8 @@ built by CI instead of by hand on a 4 GB laptop.
 | zcode-bin        | =(sane-packages zcode)=  | vendor Electron .deb and its CLI  |
 | cline-baseline   | =(sane-packages cline)=  | Bun CLI, built for non-AVX2 CPUs  |
 | autoclaw-bin     | =(sane-packages autoclaw)= | vendor Electron AppImage         |
+| konaito-terminal-browser-bin | =(sane-packages konaito)= | terminal browser over CDP, no Electron |
+| chrome-headless-shell-bin | =(sane-packages chrome-headless-shell)= | headless Chromium for Puppeteer |
 | mcode, mcode-bin | =(sane-packages custom)= | Minimax Code CLI (npm artifact)   |
 | dsh, qoder-*, …  | =(sane-packages custom)= | everything predating this layout  |
 
@@ -21,8 +23,9 @@ built by CI instead of by hand on a 4 GB laptop.
 One module per upstream project under =sane-packages/=, named after that
 project (=zcode.scm=).  A project whose dependency closure is generated gets a
 second file with the =-modules= suffix (=zcode-modules.scm=,
-=dsh-modules.scm=): tables of names, versions and hashes, marked =do not edit=,
-with the generator that writes them under =scripts/=.
+=dsh-modules.scm=, =konaito-modules.scm=): tables of names, versions and
+hashes, marked =do not edit=, with the generator that writes them under
+=scripts/=.
 
 =sane-packages/custom.scm= is the original single-file catch-all and still holds
 most packages; move a package out of it into its own module when you touch it.
