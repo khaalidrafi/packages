@@ -8,10 +8,12 @@
 # nothing was built, so every store item must arrive as a substitute.  Three
 # steps, each failing loudly:
 #
-#   1. dry-run WITHOUT the mirror: the test packages must be "would be
-#      built" -- they are this channel's own outputs, upstream Guix has no
-#      substitutes for them, so this proves the packages cannot be had
-#      without either building them or trusting our mirror.
+#   1. dry-run WITHOUT the mirror: the test packages' own derivations must
+#      be "would be built" -- they are this channel's own outputs, upstream
+#      Guix has no substitutes for them, so this proves the packages cannot
+#      be had without either building them or trusting our mirror.  Their
+#      dependencies still download from bordeaux/ci.guix, which is fine;
+#      only the packages themselves must not.
 #   2. dry-run WITH the mirror authorized: the same packages must flip to
 #      "would be downloaded" -- the mirror serves their exact output paths
 #      (same channels-lock pin, so same grafts and same hashes).
@@ -23,9 +25,9 @@
 #
 # The test packages are chosen small (the mirror's 95 MB GitHub Pages cap
 # skips big nars, so dsh and zcode are not on it) and one of them has a
-# smoke test.  Their store paths are derived from the current checkout, so
-# version bumps track themselves; the narinfo probe in step 2 is what fails
-# if a package fell off the mirror.
+# smoke test.  Their store paths are read off the step-1 dry-runs, so no
+# step builds anything and version bumps track themselves; the narinfo
+# probe in step 2 is what fails if a package fell off the mirror.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -63,35 +65,49 @@ else
   echo "signing key authorized, daemon restarted"
 fi
 
-# --- 2. store paths of the test packages (no builds yet) -------------------
+# --- 2. paths and the without-mirror proof, without building anything ------
 declare -A paths
 for pkg in $TEST_PKGS; do
+  # --dry-run computes and prints the output path without building: guix
+  # build always ends with show-derivation-outputs (guix/ui.scm), which
+  # prints the derivation's output paths after the would-be report, and
+  # the derivation is the grafted one because options->derivations runs
+  # under %graft?.  A plain `guix build' here would really build (run
+  # 39026484531: the fresh runner fetched 62.5 MB of deps and built the
+  # drvs), leave the outputs in the store, and make every later step --
+  # the without-mirror proof included -- vacuous.
+  #
   # No --no-grafts: the mirror publishes what build-all.sh built, which is
   # plain `guix build' with grafts.  The channels pin makes both runners
   # compute the same derivations, grafts included, so the paths agree.
-  out="$(guix build -L . "$pkg")"
-  [ -n "$out" ] || { echo "::error::no output for $pkg" >&2; exit 1; }
-  [ "$(wc -l <<<"$out")" -eq 1 ] || {
-    echo "::error::$pkg has several outputs; the test wants one" >&2; exit 1; }
-  paths[$pkg]="$out"
-  echo "$pkg -> $out"
-done
-
-# --- 3. without the mirror they would have to be built ---------------------
-for pkg in $TEST_PKGS; do
   dry="$(guix build -L . --dry-run \
            --substitute-urls="$UPSTREAMS" "$pkg" 2>&1 || true)"
-  if grep -q "would be downloaded" <<<"$dry"; then
+  # The package itself must not be substitutable upstream.  Dependencies
+  # downloading from bordeaux is expected (they are guix's own packages),
+  # so the would-be-built/downloaded HEADINGS cannot tell package from
+  # dependency; the lists can.  The package's drv ends in .drv, its output
+  # path does not, and only these two name it.
+  if grep -E "^ +/gnu/store/[0-9a-z]+-$pkg-[0-9]" <<<"$dry" | grep -qv '\.drv$'; then
     echo "::error::$pkg has an upstream substitute; it tests nothing" >&2
     exit 1
   fi
-  grep -q "would be built" <<<"$dry" || {
-    echo "::error::unexpected dry-run output for $pkg:" >&2
+  grep -qE -- "-$pkg-[0-9][^ ]*\.drv$" <<<"$dry" || {
+    echo "::error::upstreams alone would not build $pkg either:" >&2
     echo "$dry" >&2; exit 1; }
-  echo "without mirror: $pkg would be built (as it should be)"
+  # The package's own path is the LAST line naming it: the would-be lists
+  # come first, show-derivation-outputs last.  (Both test packages are
+  # single-output; a second line would mean that changed.)  The `|| true'
+  # keeps set -e from eating the empty-result case before the check below
+  # can name it.
+  out="$(grep -E -- "^/gnu/store/[0-9a-z]+-$pkg-[0-9]" <<<"$dry" | tail -n1 || true)"
+  [ -n "$out" ] || {
+    echo "::error::dry-run named no output path for $pkg:" >&2
+    echo "$dry" >&2; exit 1; }
+  paths[$pkg]="$out"
+  echo "$pkg -> $out (upstreams alone: would be built, as they should be)"
 done
 
-# --- 4. with the mirror they are downloads ---------------------------------
+# --- 3. with the mirror they are downloads ---------------------------------
 for pkg in $TEST_PKGS; do
   base="$(basename "${paths[$pkg]}")"
   hash="${base%%-*}"
@@ -100,13 +116,15 @@ for pkg in $TEST_PKGS; do
     exit 1; }
   dry="$(guix build -L . --dry-run \
            --substitute-urls="$URLS" "$pkg" 2>&1)"
-  grep -q "would be downloaded" <<<"$dry" || {
+  # The package's own output path must now be in a would-be-downloaded
+  # list (indented, no .drv); deps download too, which is fine.
+  grep -E "^ +/gnu/store/[0-9a-z]+-$pkg-[0-9]" <<<"$dry" | grep -qv '\.drv$' || {
     echo "::error::mirror does not substitute $pkg:" >&2
     echo "$dry" >&2; exit 1; }
   echo "with mirror: $pkg would be downloaded"
 done
 
-# --- 5. the real thing: install into a profile from the mirror -------------
+# --- 4. the real thing: install into a profile from the mirror -------------
 profile="$(mktemp -d)/profile"
 for pkg in $TEST_PKGS; do
   # GUIX_PACKAGE_PATH, not -L: `guix package' has no load-path flag; the
@@ -116,8 +134,10 @@ for pkg in $TEST_PKGS; do
     --substitute-urls="$URLS"
 done
 
-# --- 6. what was substituted must also run ---------------------------------
+# --- 5. what was substituted must also run ---------------------------------
 for pkg in $TEST_PKGS; do
+  # Plain `guix build' prints the store path; after the install above it is
+  # already in the store, so this resolves without building anything.
   out="$(guix build -L . "$pkg")"
   smoke="tests/smoke/$pkg.sh"
   if [ -x "$smoke" ]; then
