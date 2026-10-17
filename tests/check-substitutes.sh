@@ -25,9 +25,10 @@
 #
 # The test packages are chosen small (the mirror's 95 MB GitHub Pages cap
 # skips big nars, so dsh and zcode are not on it) and one of them has a
-# smoke test.  Their store paths are read off the step-1 dry-runs, so no
-# step builds anything and version bumps track themselves; the narinfo
-# probe in step 2 is what fails if a package fell off the mirror.
+# smoke test.  Their store paths come from the .drv files the step-1
+# dry-runs name, so no step builds anything and version bumps track
+# themselves; the narinfo probe in step 2 is what fails if a package fell
+# off the mirror.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -68,41 +69,44 @@ fi
 # --- 2. paths and the without-mirror proof, without building anything ------
 declare -A paths
 for pkg in $TEST_PKGS; do
-  # --dry-run computes and prints the output path without building: guix
-  # build always ends with show-derivation-outputs (guix/ui.scm), which
-  # prints the derivation's output paths after the would-be report, and
-  # the derivation is the grafted one because options->derivations runs
-  # under %graft?.  A plain `guix build' here would really build (run
-  # 39026484531: the fresh runner fetched 62.5 MB of deps and built the
-  # drvs), leave the outputs in the store, and make every later step --
-  # the without-mirror proof included -- vacuous.
+  # The path cannot come from building (run 39026484531: a plain
+  # `guix build' fetched 62.5 MB of deps and built the drvs, leaving the
+  # outputs in the store and making every later step vacuous), and it
+  # cannot come from --dry-run's tail either (run 39030479774: with work
+  # pending, build-notifier skips the daemon call, so
+  # show-derivation-outputs never runs and the output path is never
+  # printed).  But the would-be-BUILT list names the package's .drv, and
+  # the .drv file -- which computing the plan already wrote to the store
+  # -- names its output paths in Derive([("out","/gnu/store/...","")]).
+  # The drv is the grafted one, because options->derivations runs under
+  # %graft?, so the output path is the one a real `guix build' (and the
+  # mirror) would produce.
   #
-  # No --no-grafts: the mirror publishes what build-all.sh built, which is
-  # plain `guix build' with grafts.  The channels pin makes both runners
-  # compute the same derivations, grafts included, so the paths agree.
+  # No --no-grafts anywhere: the mirror publishes what build-all.sh
+  # built, which is plain `guix build' with grafts.  The channels pin
+  # makes both runners compute the same derivations, grafts included.
   dry="$(guix build -L . --dry-run \
            --substitute-urls="$UPSTREAMS" "$pkg" 2>&1 || true)"
   # The package itself must not be substitutable upstream.  Dependencies
-  # downloading from bordeaux is expected (they are guix's own packages),
-  # so the would-be-built/downloaded HEADINGS cannot tell package from
-  # dependency; the lists can.  The package's drv ends in .drv, its output
-  # path does not, and only these two name it.
+  # downloading from bordeaux is expected (they are guix's own
+  # packages), so the would-be-built/downloaded HEADINGS cannot tell
+  # package from dependency; the lists can.  The package's drv ends in
+  # .drv, its output path does not, and only these two name it.
   if grep -E "^ +/gnu/store/[0-9a-z]+-$pkg-[0-9]" <<<"$dry" | grep -qv '\.drv$'; then
     echo "::error::$pkg has an upstream substitute; it tests nothing" >&2
     exit 1
   fi
-  grep -qE -- "-$pkg-[0-9][^ ]*\.drv$" <<<"$dry" || {
+  drv="$(grep -E -- "/gnu/store/[0-9a-z]+-$pkg-[0-9][^ ]*\.drv$" <<<"$dry" | head -n1 | sed 's/^ *//' || true)"
+  [ -n "$drv" ] || {
     echo "::error::upstreams alone would not build $pkg either:" >&2
     echo "$dry" >&2; exit 1; }
-  # The package's own path is the LAST line naming it: the would-be lists
-  # come first, show-derivation-outputs last.  (Both test packages are
-  # single-output; a second line would mean that changed.)  The `|| true'
-  # keeps set -e from eating the empty-result case before the check below
-  # can name it.
-  out="$(grep -E -- "^/gnu/store/[0-9a-z]+-$pkg-[0-9]" <<<"$dry" | tail -n1 || true)"
+  # The first output tuple of the .drv names "out"; both test packages
+  # are single-output, so a ("out",...) that found nothing means that
+  # changed.
+  out="$(grep -oE '\("out", *"/gnu/store/[0-9a-z]+-'"$pkg"'-[0-9][^"]*"' \
+           "$drv" | head -n1 | sed -E 's/^\("out", *"//; s/"$//' || true)"
   [ -n "$out" ] || {
-    echo "::error::dry-run named no output path for $pkg:" >&2
-    echo "$dry" >&2; exit 1; }
+    echo "::error::$drv names no out output for $pkg" >&2; exit 1; }
   paths[$pkg]="$out"
   echo "$pkg -> $out (upstreams alone: would be built, as they should be)"
 done
