@@ -146,7 +146,8 @@
                           (list (string-append payload "/libEGL.so")
                                 (string-append payload "/libGLESv2.so")
                                 (string-append payload "/libvulkan.so.1")
-                                (string-append payload "/libvk_swiftshader.so")))))
+                                (string-append payload
+                                               "/libvk_swiftshader.so"))))))
             (add-after 'patch-elf
                        'link-binary
                        (lambda* (#:key outputs #:allow-other-keys)
@@ -158,7 +159,7 @@
                                      "/chrome-headless-shell")
                                     (string-append bin
                                                    "/chrome-headless-shell"))
-                           #t)))))))
+                           #t))))))
     ;; gcc here is gcc:lib (libgcc_s.so.1); glib covers glib, gmodule,
     ;; gobject and gio; at-spi2-core covers atk, at-spi2-atk and atspi in
     ;; the merged upstream the pinned Guix carries.
