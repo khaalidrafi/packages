@@ -33,4 +33,16 @@
  readiness poll timed out.  The rewrite now launches the binary through the
  store loader the same way the upstream @code{hub start} does for a compiled
  entry.")))
+ (entry (commit "df7663f87c99ee7d23e7503b2360e0587022b8e4")
+        (title (en "New packages: konaito-terminal-browser-bin and chrome-headless-shell-bin"))
+        (body (en "The new @code{sane-packages konaito} module packages
+ @code{konaito-terminal-browser-bin}, the TypeScript reimplementation of
+ terminal-browser that drives a headless Chromium over CDP and renders it
+ with the kitty graphics protocol (no Electron).  Its engine ships as
+ @code{chrome-headless-shell-bin} in @code{sane-packages
+ chrome-headless-shell}: the Chrome for Testing headless build, pinned to
+ the revision Puppeteer itself pins.  Install both with @code{guix install
+ konaito-terminal-browser-bin}; the wrapper points Puppeteer at the store's
+ headless shell, and setting @code{PUPPETEER_EXECUTABLE_PATH} swaps in any
+ other Chromium.")))
 )
