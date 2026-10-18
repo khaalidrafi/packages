@@ -1,0 +1,16 @@
+#+TITLE: AGENT-TEAM-TODOS.org — team board (single source of truth)
+#+TODO: TODO PROGRESS BLOCKED REVIEW | DONE CANCELLED DEFERRED
+# DISPATCH counter: 0
+
+* Board
+
+  (empty — work lands here as DISPATCH #n items)
+
+* Org cheat sheet
+
+  - ONGOING work: PROGRESS + CLOCK start line
+  - progress notes go into the :LOGBOOK: drawer
+  - blocked on anyone: BLOCKED; owner must rule: add :OWN:
+  - finished: close CLOCK, completion note in :LOGBOOK: (facts, evidence,
+    UNVERIFIED labels), flip REVIEW — REVIEW without a note is invalid
+  - BLOCKED is never terminal; only the EM flips DONE
