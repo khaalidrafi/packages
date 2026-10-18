@@ -1,0 +1,13 @@
+#+TITLE: AGENT-TEAM-MEMBERS.org — ranked members, ordered by roles
+#+ROSTER: authoritative roster = GET https://ai.khalidrafi.tech/v1/models
+
+* Build Engineer — GLM-5.3 @ chat.z.ai
+  - owns: guix package definitions, CI builds, releases
+  - rank: (to be established by ROSTER DUTY)
+* Platform Engineer — Qwen3.8-Flash @ Qoder
+  - owns: comms-bridge, gateway ops, smoke tests, machine health
+  - rank: (to be established by ROSTER DUTY)
+
+* Package ownership (existing areas)
+  - konaito-terminal-browser-bin, chrome-headless-shell — Platform Engineer
+  - cline, zcode, autoclaw — unassigned
