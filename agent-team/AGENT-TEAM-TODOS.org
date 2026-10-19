@@ -1,10 +1,84 @@
 #+TITLE: AGENT-TEAM-TODOS.org — team board (single source of truth)
 #+TODO: TODO PROGRESS BLOCKED REVIEW | DONE CANCELLED DEFERRED
-# DISPATCH counter: 0
+# DISPATCH counter: 1
 
 * Board
 
-  (empty — work lands here as DISPATCH #n items)
+* TODO DISPATCH #1 — packages/autoclaw-cline: verify autoclaw-bin fixes and the new lark-cli-bin/cline-bin on CI
+  :PROPERTIES:
+  :FROM: Qoder session — DeepSeek-Flash@dfmodel
+  :TO: Build Engineer — GLM-5.3-Flash@chat.z.ai
+  :PRIORITY: P1
+  :ORDER: 1
+  :END:
+
+  BLUF: AutoClaw 2.0.3 had a broken .desktop entry and crashed at launch
+  on this machine; both are fixed and committed (9ce25e7) on ai/packages
+  and need your review plus CI.  Two new packages landed in 71e1b61
+  (lark-cli-bin, cline-bin) and also need CI verification.
+
+  CONTEXT:
+  - The Owner asked this session to install and test Cline and AutoClaw,
+    and to install lark-cli.  All three were built locally from this
+    channel with `guix build -L .' (binaries only, no source builds).
+  - Branch ai/packages, commits 71e1b61 (DeepSeek-Flash) and 9ce25e7
+    (Qwen3.8-Flash); not yet pushed when this entry was written.
+  - Machine laws: AGENTS.md (no source builds locally, *-bin may be
+    built/installed/run locally, CI builds source packages).
+
+  TASK:
+  1. Review and verify 9ce25e7 (autoclaw-bin fixes) and 71e1b61
+     (lark-cli-bin, cline-bin); re-run the local checks below if cheap.
+  2. Make CI build lark-cli-bin and cline-bin, and confirm the existing
+     cline-baseline source build still succeeds (its fixed-output hash
+     is now filled in: 0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g).
+  3. Flip this entry to REVIEW with branch/sha and the CI evidence.
+
+  ISSUES FOUND (with evidence):
+  - autoclaw-bin, desktop entry: the `^Exec=.*' substitution merged two
+    lines.  substitute* hands the pattern the line plus its newline, and
+    Guile's regex '.' matches newline, so the match ate the delimiter;
+    the installed entry read
+    `Exec=/gnu/store/.../bin/autoclaw %UTerminal=false'.
+    Fixed in 9ce25e7 by ending the replacement with a newline; rebuilt
+    output verified.
+  - autoclaw-bin, launch: Electron's GPU process fails to launch
+    (error_code=1002) and the app aborts with
+    `FATAL: GPU process isn't usable.  Goodbye.'.  Passing --disable-gpu
+    starts it (window shown, no renderer failure).  bin/autoclaw is now
+    a script that passes the flag before "$@" (it was a symlink and
+    could not add arguments).
+  - cline: `cline hub start' times out after upstream's fixed 15 s
+    detached-start wait on this Celeron; `hub status' and `hub stop'
+    answer normally.  If cline-baseline's CI smoke ever depends on that
+    15 s window, expect flakiness.
+  - cline-baseline: source build (CI-only, cannot be installed here);
+    its fixed-output hash is no longer a placeholder, but only CI can
+    prove the build.
+
+  DEFINITION OF DONE:
+  - [ ] autoclaw-bin verified after 9ce25e7: .desktop Exec line intact,
+        installed binary opens a window with no GPU fatal.
+  - [ ] CI green for lark-cli-bin and cline-bin, and cline-baseline
+        (or a named blocker with evidence).
+  - [ ] REVIEW note on this entry with branch/sha and suite summary;
+        ai/packages pushed.
+
+  SCOPE:
+  - yours: sane-packages/{autoclaw,cline,lark-cli}.scm, CI, push;
+  - not yours: dotfiles (opencode config lives in its own repo) and
+    home-config.
+
+  ENV:
+  - built/installed/tested here: lark-cli 1.0.98 (schema lookups answer),
+    cline 3.0.73 (--version, hub status/stop), autoclaw 2.0.3 (window
+    shown with --disable-gpu; no GPU fatal).
+  - store outputs: lark-cli-bin /gnu/store/43jn6vngbngxg3l7s9kqr0gw4x1pq4q2-lark-cli-bin-1.0.98,
+    cline-bin /gnu/store/qzlp4grcbfijiww3zksnb8qbjbgj36cb-cline-bin-3.0.73,
+    autoclaw-bin /gnu/store/mhn3wl5qj4zlvinyqq3av8lqqnbhg340-autoclaw-bin-2.0.3.
+
+  FINAL INSTRUCTION: verify the three packages, fix anything I missed,
+  push ai/packages, and flip this entry to REVIEW with the evidence.
 
 * Org cheat sheet
 
