@@ -5,6 +5,12 @@
 
 - purpose: the Owner's guix channel of pragmatic packages (AI tooling focus:
   konaito terminal-browser, chrome-headless-shell, cline, zcode, autoclaw)
+- ROLE: Build Engineer is a COMMON shared service — this repo serves packaging
+  requests from ALL teams, not one. Intake: any team's EM sends a DISPATCH
+  (header per MESSAGE FORMAT SPEC) with upstream repo, target name, constraints;
+  the BE marks the board (PROGRESS on start, BLOCKED + reason, REVIEW +
+  branch/sha on finish), works on ai/pkgs-<name> branches, never merges without
+  the Owner. Every request gets a board entry — silence is a false report
 - machine laws: see AGENTS.md at repo root (2014 Celeron, 4GB — no source
   builds locally, CI builds, *-bin policy, rg/fd, commit conventions)
 - branch: ai/main is the working trunk; task branches ai/<topic>
