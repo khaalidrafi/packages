@@ -348,11 +348,27 @@
                                                  ;; .desktop entry below is pointed at it.
                                                  (mkdir-p (string-append #$output
                                                            "/bin"))
-                                                 (symlink (string-append #$output
-                                                           "/lib/AutoClaw/AutoClaw2")
-                                                          (string-append #$output
-                                                           "/bin/autoclaw")))
-                                               with-patchelf)))
+                                                 ;; The command is a script rather than a
+                                                 ;; symlink so the GPU flag can be passed:
+                                                 ;; on this machine (and in the X session
+                                                 ;; it was tested in) Electron's GPU
+                                                 ;; process fails to launch with
+                                                 ;; error_code=1002 and the app aborts
+                                                 ;; with "GPU process isn't usable.
+                                                 ;; Goodbye."; --disable-gpu makes it
+                                                 ;; start.  User arguments are still
+                                                 ;; appended, so flags given on the
+                                                 ;; command line come after the default.
+                                                 (call-with-output-file (string-append #$output
+                                                                         "/bin/autoclaw")
+                                                   (lambda (port)
+                                                     (format port
+                                                      "#!~a/bin/bash~%exec ~a/lib/AutoClaw/AutoClaw2 --disable-gpu \"$@\"~%"
+                                                      #$bash-minimal
+                                                      #$output)))
+                                                 (chmod (string-append #$output
+                                                         "/bin/autoclaw")
+                                                        #o555)) with-patchelf)))
           (alist-cons-after 'create-wrapper
                             'fix-desktop-entry
                             (lambda _
@@ -376,9 +392,16 @@
                                             "/share/applications/autoclaw.desktop"))
                               (substitute* (string-append #$output
                                             "/share/applications/autoclaw.desktop")
+                                ;; The trailing newline is part of the match:
+                                ;; substitute* hands the line over together
+                                ;; with its delimiter, and in Guile's regex
+                                ;; '.' matches newline, so `.*' eats it.  The
+                                ;; replacement must put it back or the next
+                                ;; line (`Terminal=false') ends up glued onto
+                                ;; the Exec line.
                                 (("^Exec=.*")
                                  (string-append "Exec="
-                                                #$output "/bin/autoclaw %U"))))
+                                                #$output "/bin/autoclaw %U\n"))))
                             with-wrapper))))
     ;; patchelf is on native-inputs because the patchelf-binaries phase
     ;; invokes it by name (execvp through PATH); see the 7963b2f commit
