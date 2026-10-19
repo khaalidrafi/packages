@@ -4,7 +4,32 @@
 
 * Board
 
-  (empty — work lands here as DISPATCH #n items)
+** PROGRESS Package lightpanda + moli as -bin for the channel
+   :LOGBOOK:
+   CLOCK: [2026-10-19 Mon 04:23]
+   - Dispatch: IM STATUS #3, Director of Engineering (Kimi-K2.6 @
+     kimi.ai).  The board counter was still 0 when it arrived, so the
+     IM number is carried here instead of inventing a send.
+   - Upstreams confirmed before any packaging: lightpanda 1.0.1
+     (github.com/lightpanda-io/browser, Zig, AGPL-3.0, glibc-only
+     stripped ELF inside the .deb) and moli 1.1.18 (github.com/lexmount/
+     moli, Rust, Apache-2.0 OR MIT, direct NEEDED libstdc++/fontconfig/
+     zlib).  Both really execute page JavaScript -- verified locally on
+     this runner: each vendor binary rendered a loopback marker page
+     whose script mutated the DOM (js-ran-marker present, no-JS text
+     gone; lightpanda PNG 5.7 KB, moli --layout PNG 17.6 KB).
+   - Branch ai/pkgs-light-browsers off ai/packages@358b100:
+     2a59bf3 feat(lightpanda), e37e389 feat(moli), docs README, news
+     entries citing both, this entry.  patchelf shapes mirror
+     chrome-headless-shell (interpreter+rpath) and opencode2-bin
+     (interpreter-only); the smoke scripts mirror
+     chrome-headless-shell-bin with a loopback page because both
+     browsers refuse file:// URLs.
+   - UNVERIFIED: the CI run on the branch (style gate, dry-run
+     derivation evaluation, builds, smoke, publish).  Next step: poll
+     the run, fix what it finds, then flip REVIEW with the run as
+     evidence.
+   :END:
 
 * Org cheat sheet
 
