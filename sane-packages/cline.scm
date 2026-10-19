@@ -33,6 +33,7 @@
   #:use-module ((guix licenses)
                 #:prefix license:)
   #:use-module (guix download)
+  #:use-module (guix build-system copy)
   #:use-module (guix build-system trivial)
   #:use-module (gnu packages base) ;coreutils, tar, glibc
   #:use-module (gnu packages bash) ;bash-minimal
@@ -856,6 +857,94 @@ Bun-compiled binary that needs AVX2 and crashes with SIGILL on pre-Haswell
 x86_64 CPUs.  This package builds Cline from source with Bun's baseline target
 (@code{bun-linux-x64-baseline}), producing the same CLI that runs on CPUs
 without AVX2 support.")
+    (license license:asl2.0)))
+
+;;; The npm prebuilt
+;;;
+;;; Upstream also publishes the CLI as a platform npm package,
+;;; @cline/cli-linux-x64, whose payload is the same Bun-compiled binary the
+;;; source build above compiles with `bun build --compile' -- plus the
+;;; cline-hub webview tree the hub serves.  That is a vendor binary, so unlike
+;;; cline-baseline it is cheap enough to build (download + repack) and test on
+;;; this machine, and it is what cline-bin packages.  The two packages differ
+;;; in provenance, not in purpose: cline-baseline is compiled here from source
+;;; with Bun's baseline (no-AVX2) target, cline-bin is upstream's published
+;;; build.  Both install the command `cline', so install one per profile, the
+;;; same rule opencode-bin/opencode2-bin follow.
+;;;
+;;; The binary is a Bun ELF carrying PT_INTERP /lib64/ld-linux-x86-64.so.2, a
+;;; path that does not exist in Guix -- direct exec answers ENOENT on the
+;;; target (the same failure the source build's CI smoke test hit, see the
+;;; long note above).  The wrapper therefore execs it through the store glibc
+;;; loader, as every Bun binary in this channel does.  Empirically the npm
+;;; build runs on this pre-Haswell Celeron (--version, --help, hub status/stop
+;;; verified), so it was not compiled for the AVX2 target.
+
+(define %cline-bin-version
+  "3.0.73")
+
+(define %cline-bin-source
+  (origin
+    (method url-fetch)
+    (uri (string-append
+          "https://registry.npmjs.org/@cline/cli-linux-x64/-/cli-linux-x64-"
+          %cline-bin-version ".tgz"))
+    (sha256 (base32 "06mm3ibazw2ajpdk66wszfzx54818m39r40xq2d7nbj63wibwb08"))))
+
+(define-public cline-bin
+  (package
+    (name "cline-bin")
+    (version %cline-bin-version)
+    (source
+     %cline-bin-source)
+    (build-system copy-build-system)
+    (supported-systems '("x86_64-linux"))
+    (arguments
+     (list
+      ;; The Bun ELF is installed byte-for-byte: strip and the runpath
+      ;; validator both touch (or reject) the embedded payload.
+      #:validate-runpath? #f
+      #:strip-binaries? #f
+      ;; The npm tarball's single top-level directory is `package/', and the
+      ;; binary finds cline-hub/ relative to itself, so the whole payload is
+      ;; kept side by side under one directory.
+      #:install-plan
+      #~'(("." "lib/cline"))
+      #:phases
+      #~(modify-phases %standard-phases
+          (add-after 'install 'make-wrapper
+            (lambda* (#:key inputs outputs #:allow-other-keys)
+              (let* ((out (assoc-ref outputs "out"))
+                     (binary (string-append out "/lib/cline/bin/cline"))
+                     (loader (string-append (assoc-ref inputs "glibc")
+                                            "/lib/ld-linux-x86-64.so.2"))
+                     (lib-path (string-append (assoc-ref inputs "gcc") "/lib"
+                                              ":"
+                                              (assoc-ref inputs "zlib") "/lib"))
+                     (bash (assoc-ref inputs "bash-minimal")))
+                (mkdir-p (string-append out "/bin"))
+                (call-with-output-file (string-append out "/bin/cline")
+                  (lambda (port)
+                    (format port
+                            "#!~a/bin/bash
+exec ~a --library-path ~a ~a \"$@\"
+"
+                            bash
+                            loader
+                            lib-path
+                            binary)))
+                (chmod (string-append out "/bin/cline") #o555)))))))
+    (inputs (list bash-minimal glibc
+                  (list gcc "lib") zlib))
+    (home-page "https://cline.bot")
+    (synopsis "Autonomous coding agent CLI (prebuilt)")
+    (description
+     "Cline is an autonomous coding agent for the terminal: it can read and
+edit files, run commands, and use a browser.  This package installs the
+upstream-published prebuilt Linux x86_64 binary from the @code{@cline/cli-linux-x64}
+npm package, wrapped to run through the store glibc loader.  For the variant
+compiled from source with Bun's baseline (no-AVX2) target, install
+@code{cline-baseline} instead; both provide the command @code{cline}.")
     (license license:asl2.0)))
 
 ;;; cline.scm ends here
