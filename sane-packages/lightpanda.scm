@@ -42,10 +42,7 @@
     (method url-fetch)
     (uri (string-append
           "https://github.com/lightpanda-io/browser/releases/download/"
-          %lightpanda-version
-          "/lightpanda_"
-          %lightpanda-version
-          "_amd64.deb"))
+          %lightpanda-version "/lightpanda_" %lightpanda-version "_amd64.deb"))
     (sha256 (base32 "1n2vfpfc7za93xlmq7k94zaf21b086namik18cg11yqcjmg30sn6"))))
 
 (define-public lightpanda-bin
@@ -86,10 +83,8 @@
           (add-after 'install 'patch-elf
             (lambda* (#:key inputs outputs #:allow-other-keys)
               (let* ((out (assoc-ref outputs "out"))
-                     (payload (string-append out
-                                             "/share/lightpanda"))
-                     (binary (string-append payload
-                                            "/lightpanda"))
+                     (payload (string-append out "/share/lightpanda"))
+                     (binary (string-append payload "/lightpanda"))
                      (patchelf (string-append (assoc-ref inputs "patchelf")
                                               "/bin/patchelf"))
                      (loader (string-append (assoc-ref inputs "libc")
@@ -99,17 +94,13 @@
                 ;; rpath naming nothing but the payload would resolve no
                 ;; soname the store loader does not already find in its
                 ;; own output.
-                (invoke patchelf
-                        "--set-interpreter"
-                        loader
-                        binary))))
+                (invoke patchelf "--set-interpreter" loader binary))))
           (add-after 'patch-elf 'link-binary
             (lambda* (#:key outputs #:allow-other-keys)
               (let* ((out (assoc-ref outputs "out"))
                      (bin (string-append out "/bin")))
                 (mkdir-p bin)
-                (symlink (string-append out "/share/lightpanda"
-                                        "/lightpanda")
+                (symlink (string-append out "/share/lightpanda" "/lightpanda")
                          (string-append bin "/lightpanda")) #t))))))
     (synopsis "Headless browser written from scratch in Zig (prebuilt)")
     (description
