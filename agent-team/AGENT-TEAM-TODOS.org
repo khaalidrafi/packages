@@ -25,10 +25,21 @@
      (interpreter-only); the smoke scripts mirror
      chrome-headless-shell-bin with a loopback page because both
      browsers refuse file:// URLs.
-   - UNVERIFIED: the CI run on the branch (style gate, dry-run
-     derivation evaluation, builds, smoke, publish).  Next step: poll
-     the run, fix what it finds, then flip REVIEW with the run as
-     evidence.
+   - Run 39199305873 (3f0a0a2) failed the style gate on lightpanda.scm:
+     hand-split lines that fit.  guix style condenses a split tail that
+     fits within 80 columns -- the mirror-image of why
+     chrome-headless-shell's own splits survive: those do not fit.  The
+     lesson for mirroring a green file: copy lengths, not just shapes.
+   - Fixed without touching the shared trunk: a one-off scratch branch
+     ai/style-canonicalize (push-triggered workflow, [skip ci] on its
+     carrying commits) ran guix style -f on the pinned Guix and
+     committed back with the workflow's GITHUB_TOKEN, which by GitHub's
+     rule does not retrigger workflows -- so this very push is what
+     starts the next build run.  Run 39200282793: success; commit
+     23fc6fd (-17 lines).
+   - UNVERIFIED: the style gate + dry-run derivation evaluation + full
+     build of 23fc6fd, in the run this push triggers.  Flip REVIEW with
+     that run as evidence.
    :END:
 
 * Org cheat sheet
