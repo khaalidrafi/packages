@@ -45,4 +45,24 @@
  konaito-terminal-browser-bin}; the wrapper points Puppeteer at the store's
  headless shell, and setting @code{PUPPETEER_EXECUTABLE_PATH} swaps in any
  other Chromium.")))
+ (entry (commit "2a59bf31e2a752a09208e17bc55fe7a11280fc5f")
+        (title (en "New package: lightpanda-bin"))
+        (body (en "The new @code{sane-packages lightpanda} module packages
+ @code{lightpanda-bin}, a repackage of Lightpanda's own .deb: the headless
+ browser written from scratch in Zig for AI agents, with its own JavaScript
+ engine and a CDP endpoint Puppeteer and Playwright connect to directly.
+ The binary is glibc-only, so only its ELF interpreter is patched for the
+ store.  @code{guix install lightpanda-bin} then provides
+ @code{lightpanda fetch} for html, markdown, PNG and PDF dumps and
+ @code{lightpanda serve} for the CDP endpoint.")))
+ (entry (commit "e37e3897f7348de9d8d0aa7167acf211145311db")
+        (title (en "New package: moli-bin"))
+        (body (en "The new @code{sane-packages moli} module packages
+ @code{moli-bin}, a repackage of LexMount's GNU/Linux tarball: the headless
+ browser for AI agents with real JavaScript, DOM and CSS, on-demand layout
+ and paint, and one serve endpoint speaking CDP, WebDriver Classic and
+ WebDriver BiDi.  The ELF interpreter and an rpath over the direct
+ dependencies are patched for the store.  @code{guix install moli-bin}
+ then provides @code{moli fetch} for markdown, semantic-tree, PNG and PDF
+ dumps and @code{moli serve} for the automation endpoint.")))
 )
