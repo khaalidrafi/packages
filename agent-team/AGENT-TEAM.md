@@ -200,7 +200,7 @@ roster diff vs live GET /v1/models)
 - base URL: https://ai.khalidrafi.tech
 - local URL: http://127.0.0.1:8080 (preferred for Local agents — immune to
   tunnel flakiness)
-- GOMODEL_MASTER_KEY: M4Vxni>Aw9NH{+-_VrBR.9*~
+- GOMODEL_MASTER_KEY: from the Owner's shell env — NEVER stored in files or git
 - header: Authorization: Bearer $GOMODEL_MASTER_KEY
 
 *** ROLE ATTACHMENT (EM only)
