@@ -43,10 +43,8 @@
 (define %moli-source
   (origin
     (method url-fetch)
-    (uri (string-append
-          "https://github.com/lexmount/moli/releases/download/v"
-          %moli-version
-          "/moli-x86_64-unknown-linux-gnu.tar.gz"))
+    (uri (string-append "https://github.com/lexmount/moli/releases/download/v"
+          %moli-version "/moli-x86_64-unknown-linux-gnu.tar.gz"))
     (sha256 (base32 "1ca8dbd65p3yw4wngl4z8nc0yp0r5adbbvg16s8vn5mhnaymywar"))))
 
 (define-public moli-bin
@@ -86,10 +84,8 @@
           (add-after 'install 'patch-elf
             (lambda* (#:key inputs outputs #:allow-other-keys)
               (let* ((out (assoc-ref outputs "out"))
-                     (payload (string-append out
-                                             "/share/moli"))
-                     (binary (string-append payload
-                                            "/moli"))
+                     (payload (string-append out "/share/moli"))
+                     (binary (string-append payload "/moli"))
                      (patchelf (string-append (assoc-ref inputs "patchelf")
                                               "/bin/patchelf"))
                      (loader (string-append (assoc-ref inputs "libc")
@@ -101,11 +97,9 @@
                      ;; every -bin package in this channel leaves them.
                      (rpath (string-join (map (lambda (p)
                                                 (string-append (assoc-ref
-                                                                inputs
-                                                                p)
+                                                                inputs p)
                                                                "/lib"))
-                                              '("gcc" "fontconfig"
-                                                "zlib"))
+                                              '("gcc" "fontconfig" "zlib"))
                                          ":")))
                 (invoke patchelf
                         "--set-interpreter"
@@ -118,12 +112,10 @@
               (let* ((out (assoc-ref outputs "out"))
                      (bin (string-append out "/bin")))
                 (mkdir-p bin)
-                (symlink (string-append out "/share/moli"
-                                        "/moli")
+                (symlink (string-append out "/share/moli" "/moli")
                          (string-append bin "/moli")) #t))))))
     (inputs (list (list gcc "lib") ;libstdc++.so.6, libgcc_s.so.1
-                  fontconfig
-                  zlib))
+                  fontconfig zlib))
     (synopsis "Headless browser for AI agents, on-demand rendering (prebuilt)")
     (description
      "Moli is a headless browser for AI agents: a complete browser runtime
