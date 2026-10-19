@@ -2,11 +2,13 @@ name: style-canonicalize
 
 # One-off: run `guix style -f' over the two new modules on
 # ai/pkgs-light-browsers and commit the canonical result back to that
-# branch.  Dispatch only, never on push; the commit that carries this
-# file is marked [skip ci] so pushing the scratch branch builds nothing.
+# branch.  Fired by pushes to this scratch branch: workflow_dispatch
+# cannot see a workflow that is not on the default branch, and the
+# default branch is not this tool's to touch.
 
 on:
-  workflow_dispatch
+  push:
+    branches: [ai/style-canonicalize]
 
 permissions:
   contents: write
