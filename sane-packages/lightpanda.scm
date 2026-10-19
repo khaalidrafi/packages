@@ -30,7 +30,7 @@
   #:use-module (guix build-system copy)
   #:use-module ((guix licenses)
                 #:prefix license:)
-  #:use-module (gnu packages compression)
+  #:use-module (gnu packages backup)
   #:use-module (gnu packages elf))
 
 (define %lightpanda-version
