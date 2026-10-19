@@ -531,8 +531,12 @@ loader, so no FHS emulation is required.")
                                             "/lib/opencode2/opencode-avx2"))
                                      (baseline (string-append out
                                                 "/lib/opencode2/opencode-baseline"))
+                                     ;; `opencode' is the command upstream's own
+                                     ;; installer uses, and V2 is the default line
+                                     ;; now, so this package claims it; the alias
+                                     ;; comment below covers the v1 collision.
                                      (wrapper (string-append out
-                                                             "/bin/opencode2")))
+                                                             "/bin/opencode")))
                                 ;; V2 re-executes ITSELF as a `serve' child
                                 ;; process for anything that needs the server
                                 ;; (`opencode2 debug config', and every TUI
@@ -616,17 +620,28 @@ if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a \"$@\"; else exec ~a \
                                      avx2
                                      baseline)))
                                 (chmod wrapper #o555)
-                                ;; Second spelling of the same wrapper, matching
-                                ;; the npm package's other bin name.  Deliberately
-                                ;; NOT a plain `opencode': that name belongs to
-                                ;; opencode-bin, and two packages writing it into
-                                ;; one profile is how a profile quietly stops
-                                ;; being reproducible.
-                                (copy-file wrapper
-                                           (string-append out
-                                                          "/bin/opencode-v2"))
-                                (chmod (string-append out "/bin/opencode-v2")
-                                       #o555)))
+                                ;; Explicit aliases so a machine can still name the
+                                ;; major line it wants: `opencode2', plus the npm
+                                ;; package's own second bin name `opencode-v2'.
+                                ;; The plain `opencode' name moved here from
+                                ;; opencode-bin because V2 is what upstream ships
+                                ;; as its default CLI, and this channel's *-bin
+                                ;; rule (README: "*-bin entry points") is to
+                                ;; install the name upstream's own installer uses.
+                                ;; That makes opencode-bin (v1) and opencode2-bin
+                                ;; collide on bin/opencode exactly like
+                                ;; cline-bin/cline-baseline do: same program, two
+                                ;; majors, one belongs in a profile at a time, and
+                                ;; guix package's collision refusal is the correct
+                                ;; outcome.  To run both, install them in separate
+                                ;; profiles.
+                                (for-each (lambda (alias)
+                                            (copy-file wrapper alias)
+                                            (chmod alias #o555))
+                                          (map (lambda (name)
+                                                 (string-append out "/bin/"
+                                                                name))
+                                               (list "opencode2" "opencode-v2")))))
                             (alist-replace 'unpack unpack-variants
                                            %standard-phases)))))
     ;; glibc for the loader path, patchelf to install it in the binary so the
@@ -641,8 +656,10 @@ if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a \"$@\"; else exec ~a \
 package installs the official V2 prebuilt binaries (both the AVX2 and baseline
 variants, published as the npm packages @opencode/cli-linux-x64 and
 @opencode/cli-linux-x64-baseline) and a wrapper that picks the right one for
-the CPU at runtime.  V1 is packaged separately as opencode-bin, because the two
-lines ship from different places and can be installed side by side.")
+the CPU at runtime.  It installs the command as `opencode' (plus the
+`opencode2' and `opencode-v2' aliases), because V2 is upstream's default
+line; V1 is packaged separately as opencode-bin and the two collide on
+bin/opencode, so only one belongs in a profile at a time.")
     (home-page "https://opencode.ai")
     (license license:expat)))
 
