@@ -1,0 +1,73 @@
+name: style-canonicalize
+
+# One-off: run `guix style -f' over the two new modules on
+# ai/pkgs-light-browsers and commit the canonical result back to that
+# branch.  Dispatch only, never on push; the commit that carries this
+# file is marked [skip ci] so pushing the scratch branch builds nothing.
+
+on:
+  workflow_dispatch
+
+permissions:
+  contents: write
+
+jobs:
+  style:
+    name: guix style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ai/pkgs-light-browsers
+
+      - name: Guix download cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/guix
+          key: guix-style-${{ github.sha }}
+          restore-keys: |
+            guix-style-
+            guix-cache-
+
+      - name: Install Guix
+        uses: brix-os/brix-action@v1
+        with:
+          pullAfterInstall: false
+          channels: |-
+            (cons
+             (channel
+              (name 'nonguix)
+              (url "https://gitlab.com/nonguix/nonguix")
+              (introduction
+               (make-channel-introduction
+                "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+                (openpgp-fingerprint
+                 "2A39 3FFF 68F4 EF7A 3D29 12AF 6F51 20A0 22FB B2D5"))))
+             %default-channels)
+
+      - name: Pin channels to tests/channels-lock.scm
+        run: |
+          guix pull --fallback --allow-downgrades -C tests/channels-lock.scm
+          guix describe
+
+      - name: Canonicalize the two new modules
+        run: |
+          for f in lightpanda moli; do
+            echo "==> style: sane-packages/$f.scm"
+            guix style -f "sane-packages/$f.scm"
+          done
+          echo "==> what changed:"
+          git --no-pager diff -- sane-packages
+
+      - name: Commit back to ai/pkgs-light-browsers
+        run: |
+          git config user.name "GLM-5.3 (style bot)"
+          git config user.email "glm-5.3@chat.z.ai"
+          git add -u sane-packages
+          if git diff --cached --quiet; then
+            echo "already canonical; nothing to commit"
+          else
+            git commit -m "style: canonical layout of lightpanda and moli" \
+                       -m "guix style -f, run on the pinned Guix in CI, rewrote what the hand-written layout got wrong.  Co-authored-by: GLM-5.3 <glm-5.3@chat.z.ai>"
+            git push origin HEAD:ai/pkgs-light-browsers
+          fi
