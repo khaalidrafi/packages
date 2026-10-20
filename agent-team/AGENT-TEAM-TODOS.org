@@ -116,8 +116,8 @@
     #14262 (desktop SSH helper) merged.
   - However 3.0.73 embeds Bun 1.4.2, which starts and runs on this
     no-AVX Celeron, so the CLI no longer needs a baseline build here.
-    Keep cline-baseline for now; do not remove packages without the
-    Owner.
+    OWNER DECISION (2026-10-20): keep cline-baseline in the channel.
+    Fix its wrapper and add the hub smoke; do not remove it.
 
   TASK:
   1. Verify dcd11c6 on CI: build cline-bin, run --version, and if the
