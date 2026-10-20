@@ -80,6 +80,61 @@
   FINAL INSTRUCTION: verify the three packages, fix anything I missed,
   push ai/packages, and flip this entry to REVIEW with the evidence.
 
+* TODO UPDATE #1 — packages/autoclaw-cline: cline-bin hub fix; cline-baseline needs the same, CI-only
+  :PROPERTIES:
+  :FROM: Qoder session — Qwen3.8-Flash@qoder
+  :TO: Build Engineer — GLM-5.3-Flash@chat.z.ai
+  :PRIORITY: P1
+  :ORDER: 1
+  :END:
+
+  BLUF: this supersedes two points in DISPATCH #1.  cline-bin's wrapper
+  was broken for every hub-dependent command; fixed in dcd11c6 and
+  verified.  cline-baseline's wrapper has the same bug and needs the same
+  patch, which only CI can build and test.
+
+  CORRECTION: the "hub start times out after upstream's fixed 15 s wait"
+  line in DISPATCH #1 was wrong.  The detached hub re-executes
+  `process.execPath', and our loader wrapper made that the glibc loader;
+  hub-daemon.log read `unrecognized option '--cline-hub-daemon''.
+  dcd11c6 patches the binary's ELF interpreter (patchelf
+  --set-interpreter only) and exports LD_LIBRARY_PATH from the wrapper.
+  Never --set-rpath: a patchelf run that also rewrites the dynamic
+  section corrupts the appended Bun payload (verified: startup segfault).
+
+  VERIFIED on this machine (no AVX at all):
+  - cline-bin rebuilt: /gnu/store/n2jr2xrxf8zdvnl56dz6scfwsxy5lqaz-cline-bin-3.0.73
+  - --version 3.0.73, --help, hub start -> ws URL, hub status running
+    (core 0.0.95), hub stop stopped; also installed into a throwaway
+    profile and re-ran --version.
+
+  UPSTREAM BASELINE RESEARCH:
+  - Upstream still publishes no baseline: @cline/cli-linux-x64-baseline
+    is 404 and apps/cli/script/build.ts compiles `bun-${os}-${arch}'
+    with no baseline target.
+  - PRs #11412 (Linux baseline) and #12273 (Windows) remain open; only
+    #14262 (desktop SSH helper) merged.
+  - However 3.0.73 embeds Bun 1.4.2, which starts and runs on this
+    no-AVX Celeron, so the CLI no longer needs a baseline build here.
+    Keep cline-baseline for now; do not remove packages without the
+    Owner.
+
+  TASK:
+  1. Verify dcd11c6 on CI: build cline-bin, run --version, and if the
+     runner permits, hub start/status/stop.
+  2. cline-baseline (cline.scm builder, around the bin/cline wrapper):
+     apply the same pattern -- patchelf --set-interpreter on the copied
+     binary, wrapper exports LD_LIBRARY_PATH -- and add a hub
+     start/status/stop smoke.  Source package: build/verify in CI only.
+  3. Keep DISPATCH #1's other items (autoclaw-bin, lark-cli-bin) as-is.
+
+  RISK: the interpreter patch is proven on the Bun 1.4.2 payload; the
+  baseline build uses bun-bin 1.4.3 (cline.scm's source build), so the
+  payload is close, but CI must prove the patched binary still boots.
+
+  FINAL INSTRUCTION: fold this into DISPATCH #1's verification, then
+  flip the entry to REVIEW with branch/sha and CI evidence.
+
 * Org cheat sheet
 
   - ONGOING work: PROGRESS + CLOCK start line
