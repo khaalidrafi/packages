@@ -38,6 +38,7 @@
   #:use-module (gnu packages base) ;coreutils, tar, glibc
   #:use-module (gnu packages bash) ;bash-minimal
   #:use-module (gnu packages compression) ;zlib
+  #:use-module (gnu packages elf) ;patchelf
   #:use-module (gnu packages gcc) ;gcc
   #:use-module (gnu packages nss) ;nss-certs
   #:use-module (gnu packages version-control) ;git
@@ -901,8 +902,9 @@ without AVX2 support.")
     (supported-systems '("x86_64-linux"))
     (arguments
      (list
-      ;; The Bun ELF is installed byte-for-byte: strip and the runpath
-      ;; validator both touch (or reject) the embedded payload.
+      ;; The Bun ELF carries its JavaScript payload appended to the ELF
+      ;; image: strip and the runpath validator both touch (or reject) it.
+      ;; The interpreter is patched by hand below.
       #:validate-runpath? #f
       #:strip-binaries? #f
       ;; The npm tarball's single top-level directory is `package/', and the
@@ -912,28 +914,39 @@ without AVX2 support.")
       #~'(("." "lib/cline"))
       #:phases
       #~(modify-phases %standard-phases
-          (add-after 'install 'make-wrapper
+          (add-after 'install 'patch-elf
             (lambda* (#:key inputs outputs #:allow-other-keys)
               (let* ((out (assoc-ref outputs "out"))
                      (binary (string-append out "/lib/cline/bin/cline"))
+                     (patchelf (string-append (assoc-ref inputs "patchelf")
+                                              "/bin/patchelf"))
                      (loader (string-append (assoc-ref inputs "glibc")
                                             "/lib/ld-linux-x86-64.so.2"))
                      (lib-path (string-append (assoc-ref inputs "gcc") "/lib"
                                               ":"
                                               (assoc-ref inputs "zlib") "/lib"))
                      (bash (assoc-ref inputs "bash-minimal")))
+                ;; Only the interpreter, and never --set-rpath: rewriting
+                ;; the Bun executable's dynamic section corrupts the payload
+                ;; appended to it (verified: a patchelf run that also sets
+                ;; the rpath segfaults at startup).
+                (invoke patchelf "--set-interpreter" loader binary)
+                ;; The hub daemon re-executes process.execPath, so the
+                ;; binary must be the process image.  Executing it through
+                ;; `ld-linux --library-path' instead makes the loader the
+                ;; executable and `hub start' then dies with an unknown
+                ;; --cline-hub-daemon option.
                 (mkdir-p (string-append out "/bin"))
                 (call-with-output-file (string-append out "/bin/cline")
                   (lambda (port)
                     (format port
-                            "#!~a/bin/bash
-exec ~a --library-path ~a ~a \"$@\"
+                     "#!~a/bin/bash
+export LD_LIBRARY_PATH=~a${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+exec ~a \"$@\"
 "
-                            bash
-                            loader
-                            lib-path
-                            binary)))
+                     bash lib-path binary)))
                 (chmod (string-append out "/bin/cline") #o555)))))))
+    (native-inputs (list patchelf))
     (inputs (list bash-minimal glibc
                   (list gcc "lib") zlib))
     (home-page "https://cline.bot")
@@ -942,7 +955,7 @@ exec ~a --library-path ~a ~a \"$@\"
      "Cline is an autonomous coding agent for the terminal: it can read and
 edit files, run commands, and use a browser.  This package installs the
 upstream-published prebuilt Linux x86_64 binary from the @code{@cline/cli-linux-x64}
-npm package, wrapped to run through the store glibc loader.  For the variant
+npm package, with its ELF interpreter patched for the Guix store.  For the variant
 compiled from source with Bun's baseline (no-AVX2) target, install
 @code{cline-baseline} instead; both provide the command @code{cline}.")
     (license license:asl2.0)))
