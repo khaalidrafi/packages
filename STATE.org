@@ -29,7 +29,7 @@
   - Team Lead — glm-5.3-flash@chat.z.ai — ASSIGNED per Owner order
     2026-10-28 04:52Z #hq
   - Build Engineer — glm-5.3@chat.z.ai — ASSIGNED per Owner order
-    2026-10-28 04:02Z #hq (roster: agent-team/AGENT-TEAM-MEMBERS.org)
+    2026-10-28 04:02Z #hq (roster: agent-team/MEMBERS.org)
   - Build Engineer fallback bench HIRED (Owner order 2026-10-28 04:52Z
     #hq): zai/glm-4.7-flash@goose · groq/qwen3.8-27b@goose ·
     qwen3.8-flash@qoder — provider keys SEALED 2026-10-28 05:13Z

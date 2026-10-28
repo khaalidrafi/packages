@@ -1,4 +1,4 @@
-#+TITLE: AGENT-TEAM-MEMBERS.org — ranked members, ordered by roles
+#+TITLE: MEMBERS.org — ranked members, ordered by roles
 #+UPDATED: 2026-10-28 05:34Z — agent-team-ci chain installed; bench takes CI turns (Owner order #hq)
 #+ROSTER: authoritative roster = GET https://ai.khalidrafi.tech/v1/models
 
@@ -71,7 +71,7 @@
   - CHAIN ROLE (Owner order 2026-10-28 05:34Z #hq, "set up the
     agent-team-ci there"): the bench IS the CI-turn workforce — the
     agent-team.yml chain rotates the three seats (turn pointer
-    #+TURN in agent-team/TEAM-CONTROL.org); the web BE (glm-5.3) and
+    #+TURN in agent-team/CONTROL.org); the web BE (glm-5.3) and
     Lead (glm-5.3-flash) direct via the board and chat.z.ai, the bench
     executes on CI
   - bench:

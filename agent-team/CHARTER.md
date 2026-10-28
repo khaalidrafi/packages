@@ -1,4 +1,4 @@
-#+TITLE: AGENT-TEAM.md — khaalidrafi/packages team charter + operating manual
+#+TITLE: CHARTER.md — khaalidrafi/packages team charter + operating manual
 #+REPO: khaalidrafi/packages (guix channel: sane-packages)
 
 * REPO CHARTER
@@ -31,8 +31,8 @@
   NO team seat, NO hiring and NO staffing authority
 - branch: ai/packages is the trunk (the default branch; the channel URL
   pulls it); task branches ai/<topic>, packaging requests ai/pkgs-<name>
-- team files: agent-team/AGENT-TEAM-TODOS.org (board), agent-team/
-  AGENT-TEAM-MEMBERS.org (ranked members), STATE.org (Owner pastes back)
+- team files: agent-team/TODOS.org (board), agent-team/
+  MEMBERS.org (ranked members), STATE.org (Owner pastes back)
 
 * OPERATING MANUAL (master prompt — binds every member of this team)
 
@@ -249,7 +249,7 @@ roster diff vs live GET /v1/models)
 - environment-fit: judgment/research → Web · shell work without repo secrets →
   Cloud · repo/machine work → Local · latency-sensitive API calls → groq/ pool
 - one role per concern; overlapping mandates declared, EM names the active one
-- standing roles persist (scoped in agent-team/AGENT-TEAM.md); task roles attach at
+- standing roles persist (scoped in agent-team/CHARTER.md); task roles attach at
   dispatch, detach at close (:LOGBOOK:)
 - segregation: author, verifier, merger are three different models; the EM is
   never any of the three on application code
@@ -270,7 +270,7 @@ roster diff vs live GET /v1/models)
 
 - the board file is the ONLY inter-member channel — no side chats, no DMs; one
   shared state beats N² peer chatter
-- HANDOFF (member → member, inside agent-team/AGENT-TEAM-TODOS.org): a member whose task has
+- HANDOFF (member → member, inside agent-team/TODOS.org): a member whose task has
   a pre-declared next assignee flips the item into that member's queue with a
   structured handoff note — the API contract: :HANDOFF: drawer with :FROM:
   model@platform · :CONTEXT: what was done + evidence refs (branch/sha, file:line)
@@ -392,7 +392,7 @@ roster diff vs live GET /v1/models)
   an existing member's track record (tasks shipped, fails, first-hand results in
   HIRING-LOG) joins the score; proven history of a member outranks fresh
   research about that member
-- the deliverable is the member table in agent-team/AGENT-TEAM-MEMBERS.org — each
+- the deliverable is the member table in agent-team/MEMBERS.org — each
   model@platform id with its role and rank, ORDERED BY ROLES — not chat
 - INTERN PROGRAM: models with no evidence are not ranked on research — they
   enter the intern pool, FIVE PER ROUND; each intern gets real task rounds
@@ -432,7 +432,7 @@ Every inter-member and EM message uses this header, in this order, no omissions:
 - MSG-TYPE: DISPATCH | REPORT | HANDOFF | TEAM-UPDATE | STATUS
 - a message without a valid header line (FROM:/TO: present, model@platform on
   both sides) is INVALID — bounce it back unread, never answer it
-- the #n counter lives in agent-team/AGENT-TEAM-TODOS.org and increments on
+- the #n counter lives in agent-team/TODOS.org and increments on
   every send
 - body sections follow the MESSAGE STANDARD below (BLUF → ... → FINAL
   INSTRUCTION)
@@ -444,9 +444,9 @@ Every inter-member and EM message uses this header, in this order, no omissions:
 
 *** MESSAGE STANDARD
 
-- DISPATCH (task brief; EM → member, chat; worked example lives in agent-team/AGENT-TEAM.md
+- DISPATCH (task brief; EM → member, chat; worked example lives in agent-team/CHARTER.md
   — few-shot is standing, format consistently):
-  - Header: DISPATCH #n (counter in agent-team/AGENT-TEAM-TODOS.org header) —
+  - Header: DISPATCH #n (counter in agent-team/TODOS.org header) —
     <project>/<task-id>: <title> · TO/FROM full role · model@platform ·
     PRIORITY · ORDER
   - BLUF (one line) → CONTEXT (≤4 lines, reference never paste) → TASK (numbered)
@@ -454,7 +454,7 @@ Every inter-member and EM message uses this header, in this order, no omissions:
     (caps, runner commands) → JEV USAGE block when applicable → FINAL INSTRUCTION
     (one closing line — context first, instructions last)
   - EM reflects: would a stranger act correctly from this alone?
-- REPORT (status report; member → EM, lives in agent-team/AGENT-TEAM-TODOS.org — Org-native,
+- REPORT (status report; member → EM, lives in agent-team/TODOS.org — Org-native,
   no email): flip REVIEW; :PROPERTIES: (:RESULT: DONE | PARTIAL | BLOCKED ·
   :DELIVERED: ai/<branch>@<sha> · :NEEDS: merge | verify | decision); :LOGBOOK:
   note = BLUF as a Note + checkbox evidence ([X] green, [ ] UNVERIFIED) +
@@ -499,8 +499,8 @@ Every inter-member and EM message uses this header, in this order, no omissions:
 *** SETUP (session start, in order)
 
 AGENTS.md (repo law, repo root) → .handoff/HANDOFF.org →
-agent-team/AGENT-TEAM.md → agent-team/AGENT-TEAM-MEMBERS.org →
-agent-team/AGENT-TEAM-TODOS.org (board) → STATE.org (Owner pastes back)
+agent-team/CHARTER.md → agent-team/MEMBERS.org →
+agent-team/TODOS.org (board) → STATE.org (Owner pastes back)
 
 - any file missing/empty → STOP, name it, wait — never proceed on assumption
 - EXCEPT (Owner order 2026-10-28 05:13Z #hq): a missing file the team can
@@ -509,7 +509,7 @@ agent-team/AGENT-TEAM-TODOS.org (board) → STATE.org (Owner pastes back)
   answer, one batched question
 - STATE.org: DONE / IN-FLIGHT / READY-FOR-HUMAN-REVIEW / DEFERRED / BLOCKED /
   TEAM-STAFFING / HIRING-LOG / AUTONOMY
-- poll agent-team/AGENT-TEAM-TODOS.org, then act
+- poll agent-team/TODOS.org, then act
 
 *** WORKFLOW (single board; Org cheat sheet at the file's bottom)
 
@@ -527,7 +527,7 @@ agent-team/AGENT-TEAM-TODOS.org (board) → STATE.org (Owner pastes back)
   acceptance — living in-repo, versioned with the code; spec → plan → tasks →
   implement, in that order
 - preamble: local agents "git pull first" · web/cloud "clone/pull with PAT first,
-  then read AGENTS.md + agent-team/AGENT-TEAM.md + agent-team/AGENT-TEAM-TODOS.org"
+  then read AGENTS.md + agent-team/CHARTER.md + agent-team/TODOS.org"
 - one task per chat; every dispatch: allowed files + acceptance
 - pre-dispatch checklist: dependencies before order · risk named (read vs write) ·
   sources consulted (files, then Owner) · cited rules quoted exactly

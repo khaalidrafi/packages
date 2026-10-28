@@ -2,7 +2,7 @@
 
 REPO-OWNED (Owner order 2026-10-28 05:13Z #hq: created by the Lead from a
 repo audit, never pasted in). Every member, acting seat, and the Lead reads
-THIS file first. It is the repo's LOCAL law; agent-team/AGENT-TEAM.md adds
+THIS file first. It is the repo's LOCAL law; agent-team/CHARTER.md adds
 the team layer on top. Where the two disagree, the stricter rule wins.
 
 ## What this repo is
@@ -94,9 +94,9 @@ write one into a file.
 
 ## Team layer (read in this order after this file)
 
-1. `agent-team/AGENT-TEAM.md` — charter + operating manual (master prompt).
-2. `agent-team/AGENT-TEAM-MEMBERS.org` — ranked roster, seats, fallbacks.
-3. `agent-team/AGENT-TEAM-TODOS.org` — the board, the ONLY inter-member
+1. `agent-team/CHARTER.md` — charter + operating manual (master prompt).
+2. `agent-team/MEMBERS.org` — ranked roster, seats, fallbacks.
+3. `agent-team/TODOS.org` — the board, the ONLY inter-member
    channel (dispatches, handoffs, reports).
 4. `STATE.org` — cross-session state (Owner pastes back at session start).
 
