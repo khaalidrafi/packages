@@ -10,8 +10,11 @@ name: build
 # publish job without uploading/downloading it, so publishing stays in the
 # same job as the build.
 
+# Push builds are DISABLED (Owner order 2026-10-28 #hq: the all-packages
+# build on every push is too expensive). Builds run on demand only:
+# workflow_dispatch (Actions tab / gh api) or a pull_request.
+
 on:
-  push:
   pull_request:
   workflow_dispatch:
 

@@ -1,6 +1,26 @@
 #+TITLE: AGENT-TEAM-MEMBERS.org — ranked members, ordered by roles
-#+UPDATED: 2026-10-28 — Build Engineer assigned per Owner order (#hq 04:02Z)
+#+UPDATED: 2026-10-28 04:52Z — Lead assigned, BE fallbacks hired (Owner orders #hq)
 #+ROSTER: authoritative roster = GET https://ai.khalidrafi.tech/v1/models
+
+* Team Lead — glm-5.3-flash@chat.z.ai (COMBINED SEAT with the Owner's relay)
+  - status: ASSIGNED per Owner order 2026-10-28 04:52Z #hq ("assign lead
+    role to glm-5.3-flash")
+  - owns: board triage, dispatches, staffing law, DOD verification,
+    merge-gate recommendation — the Owner merges
+  - model reason: the Owner's explicit pick; on record (agent-team.el
+    CANDIDATES.org): MIT open weights 320B-A18B, DeepSWE 63.4,
+    Terminal-Bench 84.3, AA 42–57 (two AA pages disagree, both quoted);
+    the Lead brain of agent-team.el since 2026-10-20
+  - agent reason (chat.z.ai web): one-shot courier shell the Owner runs
+    via the Discord relay — zero credentials, zero CI, works with the
+    box and gateway DOWN
+  - pair fit: leading is judgment over tool access — the web pair keeps
+    every claim evidence-pasted; CI executes, the Lead decides
+  - fallbacks:
+    1. glm-5.3@chat.z.ai (this team's Build Engineer brain, via the
+       Owner's model picker)
+    2. qwen3.8-max@chat.qwen.ai
+    3. kimi-k2.6@kimi.com
 
 * Build Engineer — glm-5.3@chat.z.ai
   - status: ASSIGNED per Owner order 2026-10-28 04:02Z #hq ("Assign a
@@ -34,6 +54,23 @@
     1. glm-5.3-flash@chat.z.ai (proven web body, on-record team history)
     2. qwen3.8-max@chat.qwen.ai (strongest alternate web brain)
     3. kimi-k2.6@kimi.com (web brain on record)
+
+* Build Engineer fallback bench — HIRED per Owner order 2026-10-28 04:52Z #hq ("lead MUST hire fallbacks to glm-5.3 for agent-team-ci")
+  - serves: the Build Engineer seat — same duties, same charter laws
+    (board entry per request, task branches ai/pkgs-<name>, never merge);
+    bodies are agent-team-ci-kit-installable harnesses (proven team
+    lanes), so package work continues when the glm-5.3 web lane is idle
+  - bench:
+    1. zai/glm-4.7-flash@goose — proven alive on team CI (agent-team.el
+       SE/QA lanes), MIT, free
+    2. groq/qwen3.8-27b@goose — proven runner record (release work
+       shipped through PR), free caps sized for CI
+    3. qwen3.8-flash@qoder — proven on CI (platform proof run); key
+       sealed as QODER_PERSONAL_ACCESS_TOKEN in the team repos
+  - wiring note: these lanes consume repo-secret provider keys — seal
+    ZAI_API_KEY / OPENROUTER_API_KEY / GROQ_API_KEY / the Qoder PAT into
+    khaalidrafi/packages before the bench's first CI turn (Lead action,
+    pending)
 * Platform Engineer — Qwen3.8-Flash @ Qoder
   - owns: comms-bridge, gateway ops, smoke tests, machine health
   - rank: (to be established by ROSTER DUTY)
