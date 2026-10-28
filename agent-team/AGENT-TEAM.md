@@ -13,6 +13,10 @@
   the Owner. Every request gets a board entry — silence is a false report
 - machine laws: see AGENTS.md at repo root (2014 Celeron, 4GB — no source
   builds locally, CI builds, *-bin policy, rg/fd, commit conventions)
+- signature law (Owner order 2026-10-28 #hq): EVERY response, report and
+  dispatch is SIGNED with the member's model name — the Owner drives
+  GLM-5.3 via the chat.z.ai model picker, so identity must be explicit
+  (e.g. "— GLM-5.3" / "— GLM-5.3-Flash")
 - branch: ai/main is the working trunk; task branches ai/<topic>
 - team files: agent-team/AGENT-TEAM-TODOS.org (board), agent-team/
   AGENT-TEAM-MEMBERS.org (ranked members), STATE.org (Owner pastes back)

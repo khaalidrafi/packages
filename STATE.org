@@ -6,8 +6,15 @@
 * DEFERRED
 * BLOCKED
 * TEAM-STAFFING
+  - Team Lead — glm-5.3-flash@chat.z.ai — ASSIGNED per Owner order
+    2026-10-28 04:52Z #hq
   - Build Engineer — glm-5.3@chat.z.ai — ASSIGNED per Owner order
     2026-10-28 04:02Z #hq (roster: agent-team/AGENT-TEAM-MEMBERS.org)
+  - Build Engineer fallback bench HIRED (Owner order 2026-10-28 04:52Z
+    #hq): zai/glm-4.7-flash@goose · groq/qwen3.8-27b@goose ·
+    qwen3.8-flash@qoder — provider keys not yet sealed in this repo
+  - push CI (all-packages build) DISABLED per Owner order 2026-10-28
+    04:52Z #hq — builds now on demand only (workflow_dispatch / PR)
 * HIRING-LOG
   - 2026-10-28 — Build Engineer staffed: glm-5.3@chat.z.ai. Evidence:
     Owner order (override, top priority) + on-record research (AA 60,
