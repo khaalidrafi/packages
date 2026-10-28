@@ -20,10 +20,15 @@
   (e.g. "— GLM-5.3" / "— GLM-5.3-Flash"). Scope per Owner order
   2026-10-28 05:13Z #hq: signatures bind chats THERE (repo artifacts +
   model-picker chats), NOT the Discord #hq relay replies of z.ai-agent
-- hiring law (Owner order 2026-10-28 05:13Z #hq): hiring, benching,
-  fallbacks and seating are the LEAD's decisions, taken on evidence —
-  never held for an Owner word. Query the Owner only for what is his
-  alone: spend, secret values, merge rulings
+- hiring law (Owner orders 2026-10-28 05:13Z + 05:28Z #hq): hiring,
+  benching, fallbacks and seating are the TEAM LEAD's decisions, taken
+  on evidence — the Lead is glm-5.3-flash@chat.z.ai in the Owner's own
+  chat.z.ai session, NOT the Discord relay. Query the Owner only for
+  what is his alone: spend, secret values, merge rulings
+- relay law (Owner order 2026-10-28 05:28Z #hq): the Discord bot
+  z.ai-agent is the Owner's RELAY, not a seat — it carries his orders
+  into this repo, records decisions, commits and reports back; it holds
+  NO team seat, NO hiring and NO staffing authority
 - branch: ai/packages is the trunk (the default branch; the channel URL
   pulls it); task branches ai/<topic>, packaging requests ai/pkgs-<name>
 - team files: agent-team/AGENT-TEAM-TODOS.org (board), agent-team/

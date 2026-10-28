@@ -1,14 +1,26 @@
 #+TITLE: STATE.org — cross-session state (Owner pastes back at session start)
 
 * DONE
-  - 2026-10-28 05:13Z — AGENTS.md created at repo root by Lead audit
-    (Owner order #hq: "created by auditing the repo with a perm query to
-    owner"); charter SETUP now reads the repo's real files, branch law
-    corrected to ai/packages, signature law scoped to repo-side chats,
-    hiring law vested in the Lead
+  - 2026-10-28 05:34Z — agent-team-ci installed as the ci/ submodule
+    (chain: test/probe/turn/finalize) + .github/workflows/agent-team.yml
+    filled from the canonical template; bench = the CI-turn workforce;
+    chain gate = tests/check-chain.sh (guix-free); build.yml +
+    upstream.yml untouched; chain secrets GH_PAT, GOMODEL_MASTER_KEY,
+    TYPESAFE_API_KEY sealed by the relay (names only — SECRET LAW)
+  - 2026-10-28 05:28Z — relay de-seated (Owner order #hq): hiring and
+    staffing authority belongs to the Team Lead seat
+    (glm-5.3-flash@chat.z.ai, the Owner's chat.z.ai session); the
+    Discord bot z.ai-agent is the Owner's relay only — no seat, no
+    hiring authority; recorded in the charter (relay law) and roster
+  - 2026-10-28 05:13Z — AGENTS.md created at repo root by the relay
+    (z.ai-agent) from a repo audit, under the charter's audit-and-write
+    law (Owner order #hq); charter SETUP now reads the repo's real
+    files, branch law corrected to ai/packages, signature law scoped to
+    repo-side chats
   - 2026-10-28 05:13Z — bench provider keys sealed into this repo's
-    Actions secrets: ZAI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY,
-    QODER_PERSONAL_ACCESS_TOKEN (names only — SECRET LAW)
+    Actions secrets by the relay (carrier work): ZAI_API_KEY,
+    GROQ_API_KEY, OPENROUTER_API_KEY, QODER_PERSONAL_ACCESS_TOKEN
+    (names only — SECRET LAW)
 * IN-FLIGHT
 * READY-FOR-HUMAN-REVIEW
 * DEFERRED

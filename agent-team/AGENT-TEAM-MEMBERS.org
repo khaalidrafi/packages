@@ -1,11 +1,16 @@
 #+TITLE: AGENT-TEAM-MEMBERS.org — ranked members, ordered by roles
-#+UPDATED: 2026-10-28 05:13Z — seats separated, bench keys sealed, AGENTS.md created (Owner orders #hq)
+#+UPDATED: 2026-10-28 05:34Z — agent-team-ci chain installed; bench takes CI turns (Owner order #hq)
 #+ROSTER: authoritative roster = GET https://ai.khalidrafi.tech/v1/models
 
 * Team Lead — glm-5.3-flash@chat.z.ai
   - seat note: Lead and Build Engineer are SEPARATE seats (Owner order
     2026-10-28 05:13Z #hq) — different models, different duties; they
     meet only in each other's fallback chains
+  - relay note (Owner order 2026-10-28 05:28Z #hq, verbatim "hiring is
+    upon the lead of khaalidrafi/packages, NOT YOU"): the Discord bot
+    z.ai-agent is the Owner's RELAY, NOT a seat on this team — it
+    carries his orders in, records decisions, commits, reports back;
+    hiring and staffing authority sits with THIS seat alone
   - status: ASSIGNED per Owner order 2026-10-28 04:52Z #hq ("assign lead
     role to glm-5.3-flash")
   - owns: board triage, dispatches, staffing law, DOD verification,
@@ -14,9 +19,9 @@
     CANDIDATES.org): MIT open weights 320B-A18B, DeepSWE 63.4,
     Terminal-Bench 84.3, AA 42–57 (two AA pages disagree, both quoted);
     the Lead brain of agent-team.el since 2026-10-20
-  - agent reason (chat.z.ai web): one-shot courier shell the Owner runs
-    via the Discord relay — zero credentials, zero CI, works with the
-    box and gateway DOWN
+  - agent reason (chat.z.ai): the Lead acts in the OWNER'S OWN chat.z.ai
+    session — he picks GLM-5.3-Flash from the model picker and talks to
+    it directly; no credentials, no CI, nothing to break
   - pair fit: leading is judgment over tool access — the web pair keeps
     every claim evidence-pasted; CI executes, the Lead decides
   - fallbacks:
@@ -63,6 +68,12 @@
     (board entry per request, task branches ai/pkgs-<name>, never merge);
     bodies are agent-team-ci-kit-installable harnesses (proven team
     lanes), so package work continues when the glm-5.3 web lane is idle
+  - CHAIN ROLE (Owner order 2026-10-28 05:34Z #hq, "set up the
+    agent-team-ci there"): the bench IS the CI-turn workforce — the
+    agent-team.yml chain rotates the three seats (turn pointer
+    #+TURN in agent-team/TEAM-CONTROL.org); the web BE (glm-5.3) and
+    Lead (glm-5.3-flash) direct via the board and chat.z.ai, the bench
+    executes on CI
   - bench:
     1. zai/glm-4.7-flash@goose — proven alive on team CI (agent-team.el
        SE/QA lanes), MIT, free
@@ -72,8 +83,8 @@
        sealed as QODER_PERSONAL_ACCESS_TOKEN in the team repos
   - wiring note: DONE 2026-10-28 — ZAI_API_KEY, GROQ_API_KEY,
     OPENROUTER_API_KEY and QODER_PERSONAL_ACCESS_TOKEN sealed into
-    khaalidrafi/packages Actions secrets by the Lead (hiring is upon
-    the team Lead, Owner order 2026-10-28 05:13Z #hq); bench is
+    khaalidrafi/packages Actions secrets by the relay (z.ai-agent) —
+    mechanical carrier work under the Lead's hiring order; bench is
     CI-ready — first turn consumes the keys as env names only
     (SECRET LAW: names, never values)
 * Platform Engineer — Qwen3.8-Flash @ Qoder
