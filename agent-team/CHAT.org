@@ -99,3 +99,100 @@
      `guix build -L . cline-bin` (it must give you the 3.0.73 store item).
   3. Then dispatch build.yml (PACKAGES="cline-bin lark-cli-bin autoclaw-bin")
      so DISPATCH #1 can finally be flipped to REVIEW with a real CI link.
+
+* MSG build-bench-qoder -> @lead :report:      :msg:build-bench-qoder:lead:report:
+:PROPERTIES:
+:FROM: build-bench-qoder
+:TO: lead
+:KIND: report
+:WHEN: [2026-10-28 Wed 18:37 UTC]
+:END:
+  FROM: build-bench-qoder
+  TO: @lead
+  RESULT: PARTIAL.  Two plain findings, one small fix.
+
+  1. MY LAST FIX LANDED AND IS CLEAN.  Commit 484a9d9 carried all five files
+     (README.org, CHAT, TODOS, cline.scm, custom.scm).  I re-checked the tree:
+     no package name is defined twice anywhere now (40 names, every one
+     unique), %cline-version is still exported at sane-packages/custom.scm:10
+     and defined at 2949 and read by cline.scm:63/783/789, so the deletion did
+     not break cline-baseline's tag.  The remaining /proc/cpuinfo guards in
+     custom.scm (308, 402, 616, 3653) belong to bun-bin, opencode-bin,
+     opencode2-bin and kilocode-bin -- they are supposed to be there.
+     DISPATCH #1 still needs the CI run itself, which this seat cannot start.
+
+  2. A LAND CLAIM IN THE REPO IS WRONG -- please check before the Owner acts
+     on it.  STATE.org:25-26 says "2026-10-28 — DISPATCH #2 landed (login
+     persistence for autoclaw + qoder, --password-store=basic wrappers +
+     qoder-cli investigation)".  It has NOT landed.  The flag appears nowhere
+     in the channel: `grep -rn "password-store" sane-packages/` returns
+     nothing.  autoclaw's wrapper is still the bare line
+     `exec ~a/lib/AutoClaw/AutoClaw2 --disable-gpu "$@"`
+     (sane-packages/autoclaw.scm:366) -- no --password-store=basic beside
+     --disable-gpu.  The board itself is right (DISPATCH #2 still reads TODO);
+     it is STATE.org that overstates, and STATE.org is the file the Owner
+     pastes back at session start, so he may believe his logins are fixed.
+     DISPATCH #3's own ordering (Task 1 first, Task 2 after) also says Task 2
+     has not been worked.  I did not touch it -- those wrapper edits are the
+     Build Engineer's dispatched item, and a bench seat that cannot run
+     `guix build --dry-run` should not be the one making them.
+
+  3. WHAT I DID CHANGE: the defect in finding 1's class had no guard, so it
+     could come back silently.  tests/check-chain.sh now has a step 2, "names:
+     no package defined twice" (tests/check-chain.sh:29-53), using the same
+     harvest pattern as tests/build-all.sh:30 and tests/check-static.sh:80 so
+     all three see the same name set.  It is grep/sort/uniq only, so unlike
+     the guile step below it also runs inside a bare bench container like this
+     one.  Verified both ways: on the real tree it finds nothing (correct, the
+     40 names are unique), and pointed at the same file twice it reports
+     `(define-public cline-baseline' and `(define-public cline-bin' as
+     duplicates with file:line for each (correct, that is the firing case).
+
+  STILL BLOCKED, SAME AS LAST TURN: this container has git, grep, sort, uniq,
+  date, ls and python3 --version only.  `which guix`, `which guile`, `which gh`
+  are empty; `bash -n`, `rm`, `mv`, `awk` and any `python3 -c` are refused by
+  the permission layer.  So I could not run ./tests/check-chain.sh end to end
+  (it needs guile anyway) and my step-2 syntax is reviewed by reading, not by
+  a shell parse.  That is the UNVERIFIED part of this report.  Two asks for
+  @build-engineer, both cheap: run ./tests/check-chain.sh once, and
+  `git rm dupscan.py` (a 14-line scratch scan of mine the host will sweep into
+  a commit -- the seat would not let me delete it; it breaks no check but it
+  is litter).
+
+* MSG build-bench-qoder -> @build-engineer :request:      :msg:build-bench-qoder:build-engineer:request:
+:PROPERTIES:
+:FROM: build-bench-qoder
+:TO: build-engineer
+:KIND: request
+:WHEN: [2026-10-28 Wed 18:37 UTC]
+:END:
+  Three small things, in the order I would do them, all needing a toolchain I
+  do not have in this container (no guix, no guile, no gh; bash -n refused):
+
+  1. Run ./tests/check-chain.sh.  I added step 2 "names: no package defined
+     twice" (tests/check-chain.sh:29-53) because nothing guarded the
+     duplicate cline-bin I found last turn.  I verified its detection by hand
+     (quiet on the tree, fires on a doubled file) but could NOT parse the
+     script -- so the gate's green light has to come from you.  If you merge
+     it, keep it BEFORE the guile step: that ordering is what lets a bare
+     bench seat get signal from this gate at all.
+  2. `git rm dupscan.py` — 14 lines of my scratch scanning.  It is at the repo
+     root, so it is not compiled by the channel contract (only .scm files are)
+     and it breaks nothing, but it should not live in the channel.
+  3. DISPATCH #1 evidence, now that cline-bin resolves to one definition:
+     `guix build -L . --dry-run cline-bin lark-cli-bin autoclaw-bin`, then
+     build.yml via workflow_dispatch with
+     PACKAGES="cline-bin lark-cli-bin autoclaw-bin".  That is the only thing
+     standing between DISPATCH #1 and REVIEW.
+
+  And a heads-up, not a task for me: STATE.org claimed DISPATCH #2 (the
+  --password-store=basic wrappers) had landed.  It has not — the flag is
+  nowhere in sane-packages/ and autoclaw.scm:366 still passes only
+  --disable-gpu.  I recorded the correction in STATE.org IN-FLIGHT and in the
+  DISPATCH #2 LOGBOOK, and left the wrapper edits to you since DISPATCH #3
+  puts them after Task 1 and since only a seat with guix can honour this
+  repo's *-bin law (build, install, actually run it).
+
+  Lark webhook: skipped, $ROLE_LARK_WEBHOOK could not be read or posted here
+  without printing it, and a value must never be printed.
+
