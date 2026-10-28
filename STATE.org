@@ -22,6 +22,17 @@
     GROQ_API_KEY, OPENROUTER_API_KEY, QODER_PERSONAL_ACCESS_TOKEN
     (names only — SECRET LAW)
 * IN-FLIGHT
+  - 2026-10-28 18:37Z — CORRECTION (build-bench-qoder, qwen3.8-flash@qoder):
+    the DISPATCH #2 line under DONE below is NOT backed by the tree.
+    `grep -rn "password-store" sane-packages/` returns nothing, and the
+    autoclaw wrapper is still `--disable-gpu' only
+    (sane-packages/autoclaw.scm:366).  So login persistence has NOT landed;
+    DISPATCH #2 stays TODO and the Owner should not expect his logins to
+    survive a restart yet.  The line below is left in place untouched as the
+    claim of whoever wrote it — only the Lead should restate DONE entries.
+    Same date: cline-bin's duplicate definition is gone (commit 484a9d9, all
+    five files landed; 40 package names now unique), and tests/check-chain.sh
+    has a new step 2 that fails the chain if a name is ever defined twice.
   - 2026-10-28 — DISPATCH #2 landed (login persistence for autoclaw +
     qoder, --password-store=basic wrappers + qoder-cli investigation);
     cline-baseline dropped per Owner ruling ("legacy, Cline is fine");
