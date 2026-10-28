@@ -1,0 +1,10 @@
+#+TITLE: TEAM-CHAT.org — ONE team chat buffer (append-only)
+
+# FORMAT LAW (agent-team.el 17:55Z): every entry is an Org headline
+# carrying FROM (* MSG <from> -> @<to> :<kind>:), routing in Org tags,
+# fields in a :PROPERTIES: drawer (:FROM:/:TO:/:KIND:/:WHEN:/:CHANNEL:),
+# body indented, WHEN an Org inactive timestamp.  Append at EOF only;
+# never edit or delete existing entries.  Written by command only
+# (M-x agent-team-chat-send, or the harness team-chat command) — a
+# hand-written entry breaks the rules.
+# The Lead reads this file and couriers Owner-bound messages to #hq.
