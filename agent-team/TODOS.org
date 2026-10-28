@@ -69,6 +69,28 @@
       now feeds only cline-baseline's tag, while cline-bin is 3.0.73 — the
       "one version written once" unification recorded as DONE in AI-REVIEW.org
       is broken again and must be folded back together.
+  - Note [2026-10-28 Wed 18:37 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+    bench seat): the 17:19 fix is LANDED (commit 484a9d9 — README.org,
+    CHAT.org, TODOS.org, cline.scm, custom.scm all in it), and the tree is
+    clean on re-check: 40 define-public names across sane-packages/, every
+    one unique (grep -hoE '^\(define-public [^ )]+' | sort | uniq -c).
+    %cline-version still exported (custom.scm:10, defined 2949) and read by
+    cline.scm:63/783/789, so cline-baseline's tag survived the deletion; the
+    surviving /proc/cpuinfo avx2 guards (custom.scm:308, 402, 616, 3653)
+    belong to bun-bin/opencode-bin/opencode2-bin/kilocode-bin — intended.
+    + GUARD ADDED so this defect class cannot return silently:
+      tests/check-chain.sh step 2 "names: no package defined twice"
+      (check-chain.sh:29-53), same harvest pattern as build-all.sh:30 and
+      check-static.sh:80, grep/sort/uniq only so it runs in a bare container.
+      Verified both branches: silent on the real tree, and reports
+      cline-baseline/cline-bin as duplicated when fed the same file twice.
+      + STILL OPEN (not claimable from this seat): the CI build evidence —
+      no guix/guile/gh here and the permission layer refuses bash -n, rm, mv,
+      awk, python3 -c; so no --dry-run, no full ./tests/check-chain.sh run,
+      no workflow_dispatch.  DOD stays unticked; @build-engineer asked
+      (CHAT.org 18:37) to run the gate and dispatch build.yml.
+    + UNVERIFIED LABEL: my check-chain.sh edit is reviewed by reading, not
+      parsed by a shell (bash -n refused in this container).
   :END:
 
   BLUF: AutoClaw 2.0.3 had a broken .desktop entry and crashed at launch
@@ -203,6 +225,22 @@
   :TO: Build Engineer — glm-5.3@chat.z.ai
   :PRIORITY: P1
   :ORDER: 2
+  :END:
+  :LOGBOOK:
+  - Note [2026-10-28 Wed 18:37 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+    bench seat): AUDIT ONLY — no code changed for this item by me.  This
+    entry is NOT done, whatever STATE.org says: `grep -rn "password-store"
+    sane-packages/' returns nothing, and the autoclaw wrapper still reads
+    `exec ~a/lib/AutoClaw/AutoClaw2 --disable-gpu "$@"'
+    (sane-packages/autoclaw.scm:366) with no --password-store=basic beside
+    it.  STATE.org's DISPATCH #2 DONE line was corrected with an attributed
+    IN-FLIGHT note rather than rewritten.  The two lines this item needs are
+    located for whoever has the toolchain: autoclaw.scm:366 and
+    qoder-desktop-bin's create-wrapper in sane-packages/custom.scm;
+    qoder-cli-bin has no wrapper at all (bare copied binary + symlink), so
+    its storage question needs strings/strace, which this seat has neither.
+    Kept as TODO on purpose: a seat that cannot run `guix build --dry-run'
+    or install and run a *-bin must not be the one claiming a login fix.
   :END:
 
   BLUF: the Owner reports autoclaw and qoder lose their login on every
