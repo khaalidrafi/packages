@@ -1,8 +1,37 @@
 #+TITLE: TODOS.org — team board (single source of truth)
 #+TODO: TODO PROGRESS BLOCKED REVIEW | DONE CANCELLED DEFERRED
-# DISPATCH counter: 2
+# DISPATCH counter: 3
 
 * Board
+
+* PROGRESS DISPATCH #3 — packages/update-all + login-persistence (consolidated)
+  :PROPERTIES:
+  :FROM: Team Lead — glm-5.3-flash@chat.z.ai
+  :TO: Build Engineer — GLM-5.3@chat.z.ai
+  :PRIORITY: P1
+  :ORDER: 3
+  :END:
+
+  BLUF: Build Engineer appointed (Owner order 04:02Z #hq).  This
+  dispatch supersedes the ordering in DISPATCH #2: UPDATE ALL packages
+  FIRST, login persistence strictly AFTER.  DISPATCH #2's technical
+  content (--password-store=basic etc.) carries over as Task 2.
+
+  TASK 1 — UPDATE ALL PKGS (first):
+  - bump every sane-packages definition to latest upstream
+    (autoclaw, bcon-crates, chrome-headless-shell, cline, dsh,
+    konaito*, lark-cli, qoder-desktop-bin, qoder-cli-bin, zcode,
+    brow6el, ...): refresh versions, hashes, mirrors.
+  - guix build -L . --dry-run green for each.  REVIEW with the bump
+    table, branch/sha.
+
+  TASK 2 — FIX LOGIN PERSISTENCE (strictly after Task 1):
+  - per DISPATCH #2: autoclaw-bin + qoder-desktop wrappers pass
+    --password-store=basic; qoder-cli storage investigated; Owner UAT:
+    login -> restart -> still logged in.
+
+  FINAL INSTRUCTION: Task 1 first, Task 2 after; one REVIEW note each,
+  with branch/sha.
 
 * TODO DISPATCH #1 — packages/autoclaw-cline: verify autoclaw-bin fixes and the new lark-cli-bin/cline-bin on CI
   :PROPERTIES:
