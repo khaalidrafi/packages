@@ -1,0 +1,101 @@
+#+TITLE: HANDOFF.org — cross-session handoff (written 2026-10-28 ~14:4x +06)
+#+DESCRIPTION: Read this first in the new session. Owner moved the conversation to a fresh session; this file carries the full state.
+
+* WHERE THINGS STAND (BLUF)
+  - Repo: github.com/khaalidrafi/packages, branch =ai/packages=, tip
+    =806b754= (team files renamed to short names; chain turn now
+    =zai/glm-4.7-flash@goose=).
+  - The objective (DISPATCH #1) is still OPEN: verify autoclaw-bin
+    (9ce25e7), lark-cli-bin + cline-bin (71e1b61) and the cline-baseline
+    hub-wrapper fix (dcd11c6) on CI, then flip the board entry to
+    REVIEW with branch/sha + CI evidence.
+  - The autonomous chain is STALLED: =#+STALL-COUNT: 2= — the
+    qwen3.8-flash@qoder bench turn merged BLOCKED (all bench lanes
+    failed); the turn then rotated to zai/glm-4.7-flash@goose, which
+    has not completed. Next session must either revive the bench lanes
+    or run the turn itself.
+  - The cron watcher job ("autoclaw-push-ci-watch", id 479594) was
+    DELETED at handoff time by the outgoing session. CI watching is
+    now manual only.
+
+* HOW TO RESTORE THE WORKSPACE
+  #+BEGIN_EXAMPLE
+  git clone --depth 30 -b ai/packages https://github.com/khaalidrafi/packages \
+      /home/z/my-project/packages
+  #+END_EXAMPLE
+  - The sandbox container resets between sessions; anything not pushed
+    or copied out is lost. Treat origin as the only durable store.
+  - Network notes: api.github.com is 403-rate-limited from the sandbox;
+    use WebFetch for actions/releases pages. npm registry and vendor
+    endpoints are reachable. No push token is held in-session —
+    produce patches or ask the Owner to push.
+
+* SOURCE OF TRUTH FILES (read in this order)
+  1. =AGENTS.md= (repo root) — machine laws: no source builds locally,
+     *-bin packages may be built/installed/run locally, CI builds
+     source packages; secret law (names only, never values); branch
+     law (=ai/packages=); signature law scoped to repo-side chats.
+  2. =agent-team/TODOS.org= — the team board, single source of truth.
+     DISPATCH #1 is the only entry, P1, from Qoder session
+     (DeepSeek-Flash@dfmodel) to the Build Engineer.
+  3. =agent-team/CONTROL.org= — chain control plane (Lead-owned; seats
+     READ, never write). KILL-SWITCH OFF, OBJECTIVE-STATE OPEN,
+     TURN = zai/glm-4.7-flash@goose, STALL-COUNT 2.
+  4. =STATE.org= (repo root) — cross-session state the Owner pastes
+     back at session start; also record the handoff there.
+  5. =agent-team/MEMBERS.org= — roster/seats. Charter is now
+     =agent-team/CHARTER.md=, chat =agent-team/CHAT.org= (2026-10-28
+     rename in 806b754 — older docs may use the long names).
+
+* TEAM STATE (as of 2026-10-28)
+  - Team Lead: glm-5.3-flash@chat.z.ai (the Owner's chat.z.ai session).
+  - Build Engineer: glm-5.3@chat.z.ai.
+  - Build Engineer fallback bench (hired, CI-ready):
+    zai/glm-4.7-flash@goose, groq/qwen3.8-27b@goose, qwen3.8-flash@qoder.
+  - The Discord relay (z.ai-agent) is the Owner's relay only — no seat,
+    no hiring authority (relay law, Owner order #hq 2026-10-28 05:28Z).
+  - Push CI (all-packages build) is DISABLED by Owner order — builds
+    are on demand only (workflow_dispatch / PR). The agent-team chain
+    runs via .github/workflows/agent-team.yml; agent-team-ci is
+    installed as the ci/ submodule (chain: test/probe/turn/finalize);
+    chain gate = tests/check-chain.sh (guix-free).
+  - Secrets sealed in Actions (names only): GH_PAT, GOMODEL_MASTER_KEY,
+    TYPESAFE_API_KEY, ZAI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY,
+    QODER_PERSONAL_ACCESS_TOKEN.
+
+* TECHNICAL FINDINGS ALREADY BANKED (do not re-derive)
+  - autoclaw-bin 2.0.3 fixes landed in 9ce25e7:
+    (a) .desktop entry: =substitute*= regex =.= matches newline, so the
+    =^Exec=.*= substitution merged two lines; fix ends the replacement
+    with a newline.
+    (b) launch crash: Electron GPU process fails (error_code=1002,
+    "FATAL: GPU process isn't usable. Goodbye."); bin/autoclaw is now a
+    script passing --disable-gpu before "$@" (it was a symlink).
+  - lark-cli-bin and cline-bin landed in 71e1b61 (DeepSeek-Flash).
+  - cline hub: =cline hub start= times out after upstream's fixed 15 s
+    detached-start wait on the Celeron; hub status/stop answer fine.
+    dcd11c6 patched the interpreter so the hub can re-exec itself.
+  - cline-baseline (source build, CI-only): fixed-output hash filled in
+    (0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g); only CI can
+    prove the build. Owner decision recorded (ebb2a3f): keep
+    cline-baseline.
+  - Historical: the full 39-package channel went fully green on
+    2026-10-17 (packages + substitute-install jobs), substitutes
+    published at https://khaalidrafi.github.io/packages (25 items;
+    >95MB nar skipped due to GitHub Pages cap — those build from
+    source via the channel).
+
+* IMMEDIATE NEXT STEPS (suggested order)
+  1. Read AGENTS.md + the board + TEAM-CONTROL.org (files above).
+  2. Resolve the chain BLOCKED state: inspect the latest agent-team.yml
+     run (WebFetch the Actions page for branch ai/packages) to see why
+     all bench lanes failed (likely provider/auth or prompt-contract
+     issues), fix, and reset =#+STALL-COUNT: 0= in TEAM-CONTROL.org.
+  3. Get DISPATCH #1 to CI (workflow_dispatch the chain or a PR), then
+     flip the board entry to REVIEW with branch/sha + CI evidence.
+  4. Update STATE.org DONE/IN-FLIGHT with this handoff's date.
+
+* HOUSEKEEPING DONE AT HANDOFF TIME
+  - Cron job 479594 (autoclaw-push-ci-watch, fixed_rate 2400s) deleted.
+  - This file is committed and PUSHED to origin/ai/packages (rebased
+    onto the rename commit 806b754 before pushing).
