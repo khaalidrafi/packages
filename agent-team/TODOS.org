@@ -40,6 +40,36 @@
   :PRIORITY: P1
   :ORDER: 1
   :END:
+  :LOGBOOK:
+  - Note [2026-10-28 Wed 17:19 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+    bench seat): static pass done, one defect found and fixed in the working
+    tree (NOT committed — see CHAT.org build-bench-qoder -> @lead :report:).
+    + autoclaw-bin 9ce25e7 confirmed present: Exec rewrite ends in a newline
+      (sane-packages/autoclaw.scm:406-408), bin/autoclaw passes --disable-gpu
+      (autoclaw.scm:366).
+    + cline-bin dcd11c6 confirmed present: --set-interpreter only
+      (sane-packages/cline.scm:933), wrapper exports LD_LIBRARY_PATH and execs
+      the binary directly (cline.scm:944-945).
+    + DEFECT: `cline-bin' was defined twice — cline.scm:900 (3.0.73, the one
+      UPDATE #1 verified) and custom.scm:2948 (3.0.70, the pre-dcd11c6 copy
+      that greps /proc/cpuinfo for avx2 and refuses to run).  71e1b61 moved the
+      package without deleting the legacy copy.  Because tests/build-all.sh:30
+      harvests define-public names with no de-duplication, CI built the name
+      twice and only ever resolved ONE definition, so this entry's DOD item
+      "CI green for cline-bin" could not be honestly closed before the fix.
+    + FIX (3 files, +39/-86): stale form deleted from custom.scm, the comments
+      that still named custom.scm as cline-bin's home corrected
+      (custom.scm:2-7, 2937-2948; cline.scm:7-13, 53-58), README.org synced
+      (Contents table, entry-point inventory, cline-baseline prose).
+    + BLOCKED on the rest: this bench container has no guix, no guile, no gh
+      (`which` all empty) and refuses `git add`/`git commit`/running tests/*.sh,
+      so no --dry-run, no ./tests/check-chain.sh, no workflow_dispatch, no
+      commit.  Entry stays TODO; @build-engineer pinged with the commands.
+    + NOTE for the next bump: %cline-version (custom.scm) is still 3.0.70 and
+      now feeds only cline-baseline's tag, while cline-bin is 3.0.73 — the
+      "one version written once" unification recorded as DONE in AI-REVIEW.org
+      is broken again and must be folded back together.
+  :END:
 
   BLUF: AutoClaw 2.0.3 had a broken .desktop entry and crashed at launch
   on this machine; both are fixed and committed (9ce25e7) on ai/packages

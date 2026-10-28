@@ -8,3 +8,94 @@
 # (M-x agent-team-chat-send, or the harness team-chat command) — a
 # hand-written entry breaks the rules.
 # The Lead reads this file and couriers Owner-bound messages to #hq.
+
+* MSG build-bench-qoder -> @lead :report:      :msg:build-bench-qoder:lead:report:
+:PROPERTIES:
+:FROM: build-bench-qoder
+:TO: lead
+:KIND: report
+:WHEN: [2026-10-28 Wed 17:19 UTC]
+:END:
+  RESULT: PARTIAL.  I read every line DISPATCH #1 asks me to verify, found one
+  real defect, and fixed it in the working tree.  I could not commit it and I
+  could not get CI evidence, because this bench seat has no Guix and no git
+  write access (see BLOCKER below).
+
+  VERIFIED FROM SOURCE (DISPATCH #1, read-only):
+  - autoclaw-bin 9ce25e7 is in the tree and both fixes are there: the desktop
+    Exec rewrite now ends with a newline (sane-packages/autoclaw.scm:406-408),
+    which is what stopped `Terminal=false' from being glued onto the Exec line,
+    and bin/autoclaw is a script that passes --disable-gpu (autoclaw.scm:366).
+  - cline-bin dcd11c6 is in the tree: patchelf is --set-interpreter only
+    (sane-packages/cline.scm:933, with the never-use --set-rpath note at
+    929-932) and the wrapper exports LD_LIBRARY_PATH and execs the binary
+    directly (cline.scm:944-945).
+  - lark-cli-bin exists as its own module (sane-packages/lark-cli.scm:47).
+
+  DEFECT FOUND AND FIXED (working tree, UNCOMMITTED):
+  - The channel carried the package name `cline-bin' twice: the new 3.0.73 copy
+    in sane-packages/cline.scm:900 AND the old 3.0.70 copy in
+    sane-packages/custom.scm:2948, which 71e1b61 forgot to delete when it moved
+    the package into its own module.  Only cline.scm's copy has the dcd11c6 hub
+    fix; custom.scm's copy still refuses to start on this CPU (its wrapper greps
+    /proc/cpuinfo for avx2 and exits).
+  - This also broke the CI proof DISPATCH #1 asks for: tests/build-all.sh:30
+    builds one name per `define-public' it finds, with no de-duplication, so
+    `cline-bin' was on the CI list twice and both runs built whichever single
+    definition `guix build -L . cline-bin' happened to resolve.  CI could never
+    have shown both, so "CI green for cline-bin" was not a claimable statement.
+  - Fix: deleted the stale form from custom.scm (one whole balanced
+    `define-public'), corrected the comments that still said custom.scm carries
+    cline-bin (custom.scm:2-7 and 2937-2948, sane-packages/cline.scm:7-13 and
+    53-58), and synced README.org (the Contents table, the entry-point inventory
+    line `cline-bin  cline, cline-bin', and the cline-baseline section that
+    described the AVX2 guard as live).  %cline-version stays 3.0.70 and still
+    feeds only cline-baseline's tag; cline.scm's %cline-bin-version is 3.0.73,
+    so the two now drift, and the next update-all pass must fold them back
+    together (noted in the comments I touched).
+  - diff is 3 files, +39 / -86 lines: `git diff --stat` in this tree.
+
+  BLOCKER (why this segment ends PARTIAL, not REVIEW):
+  - This container has python3 and git only: `which guix`, `which guile`,
+    `which gh` all come back empty, and the permission layer refuses `git add`,
+    `git commit`, and running any tests/*.sh.  So: no `guix build --dry-run`,
+    no ./tests/check-chain.sh, no workflow_dispatch, no commit.  That is also
+    why the earlier bench turns of this seat closed with "no-branch": the seat
+    cannot land anything as it is provisioned now.
+  - Ask: either give the bench seat guix + guile + gh and git write, or route
+    the CI-proof half of DISPATCH #1 to a seat that has them.  I pinged
+    @build-engineer with the exact commands.
+  - Lark webhook: skipped.  I could not safely test $ROLE_LARK_WEBHOOK here (no
+    shell-script execution, and the value must never be printed), so no report
+    was posted to the bot.
+
+  DISPATCH #2 (login persistence) is untouched by me, in order after #1 as
+  DISPATCH #3 instructs.  The two lines it needs are located: the autoclaw
+  wrapper at sane-packages/autoclaw.scm:366 (add --password-store=basic beside
+  --disable-gpu) and qoder-desktop-bin's create-wrapper at
+  sane-packages/custom.scm:3027.  qoder-cli-bin installs a bare copied binary
+  with a symlink and no wrapper at all (custom.scm:2981-2988), so it has no
+  launch line to put a flag on; its credential storage is still an open question
+  for whoever can run strings/strace on it.
+
+* MSG build-bench-qoder -> @build-engineer :request:      :msg:build-bench-qoder:build-engineer:request:
+:PROPERTIES:
+:FROM: build-bench-qoder
+:TO: build-engineer
+:KIND: request
+:WHEN: [2026-10-28 Wed 17:19 UTC]
+:END:
+  I found and fixed a duplicate package name but cannot commit or build here
+  (no guix, no git write — see my report to @lead in this file).  Three things,
+  all cheap on your machine:
+  1. Review + commit the working-tree change on branch
+     ai/turn-packages-20261028-171153 (3 files, +39/-86).  Suggested subject:
+     `fix(cline-bin): drop the duplicate definition left in custom.scm`.
+     The diff only deletes one whole balanced `define-public' form and rewrites
+     comments, so a parenthesis slip is not possible — but please confirm with
+     ./tests/check-chain.sh, which I could not run.
+  2. Run `guix build -L . --dry-run cline-bin cline-baseline autoclaw-bin
+     lark-cli-bin` and, since cline-bin now resolves to one definition only,
+     `guix build -L . cline-bin` (it must give you the 3.0.73 store item).
+  3. Then dispatch build.yml (PACKAGES="cline-bin lark-cli-bin autoclaw-bin")
+     so DISPATCH #1 can finally be flipped to REVIEW with a real CI link.
