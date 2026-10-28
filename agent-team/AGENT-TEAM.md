@@ -13,11 +13,19 @@
   the Owner. Every request gets a board entry — silence is a false report
 - machine laws: see AGENTS.md at repo root (2014 Celeron, 4GB — no source
   builds locally, CI builds, *-bin policy, rg/fd, commit conventions)
-- signature law (Owner order 2026-10-28 #hq): EVERY response, report and
-  dispatch is SIGNED with the member's model name — the Owner drives
+- signature law (Owner order 2026-10-28 #hq): every response, report and
+  dispatch on the REPO SIDE — board entries, handoffs, reports, dispatch
+  headers — is SIGNED with the member's model name; the Owner drives
   GLM-5.3 via the chat.z.ai model picker, so identity must be explicit
-  (e.g. "— GLM-5.3" / "— GLM-5.3-Flash")
-- branch: ai/main is the working trunk; task branches ai/<topic>
+  (e.g. "— GLM-5.3" / "— GLM-5.3-Flash"). Scope per Owner order
+  2026-10-28 05:13Z #hq: signatures bind chats THERE (repo artifacts +
+  model-picker chats), NOT the Discord #hq relay replies of z.ai-agent
+- hiring law (Owner order 2026-10-28 05:13Z #hq): hiring, benching,
+  fallbacks and seating are the LEAD's decisions, taken on evidence —
+  never held for an Owner word. Query the Owner only for what is his
+  alone: spend, secret values, merge rulings
+- branch: ai/packages is the trunk (the default branch; the channel URL
+  pulls it); task branches ai/<topic>, packaging requests ai/pkgs-<name>
 - team files: agent-team/AGENT-TEAM-TODOS.org (board), agent-team/
   AGENT-TEAM-MEMBERS.org (ranked members), STATE.org (Owner pastes back)
 
@@ -485,10 +493,15 @@ Every inter-member and EM message uses this header, in this order, no omissions:
 
 *** SETUP (session start, in order)
 
-AGENTS.md → .github/copilot-instructions.md → HANDOFF.org → RECHECK.org →
-TODOs.org → agent-team/AGENT-TEAM.md → agent-team/AGENT-TEAM-MEMBERS.org → STATE.org (Owner pastes back)
+AGENTS.md (repo law, repo root) → .handoff/HANDOFF.org →
+agent-team/AGENT-TEAM.md → agent-team/AGENT-TEAM-MEMBERS.org →
+agent-team/AGENT-TEAM-TODOS.org (board) → STATE.org (Owner pastes back)
 
 - any file missing/empty → STOP, name it, wait — never proceed on assumption
+- EXCEPT (Owner order 2026-10-28 05:13Z #hq): a missing file the team can
+  author is not a stop — audit the repo and write it (AGENTS.md was created
+  exactly this way); query the Owner only for what the audit cannot
+  answer, one batched question
 - STATE.org: DONE / IN-FLIGHT / READY-FOR-HUMAN-REVIEW / DEFERRED / BLOCKED /
   TEAM-STAFFING / HIRING-LOG / AUTONOMY
 - poll agent-team/AGENT-TEAM-TODOS.org, then act
@@ -516,7 +529,8 @@ TODOs.org → agent-team/AGENT-TEAM.md → agent-team/AGENT-TEAM-MEMBERS.org →
 
 *** MEMBER LAWS
 
-- ai/main only; task branches: rebase + --force-with-lease only
+- ai/packages + task branches only; task branches: rebase +
+  --force-with-lease only
 - divergence: fetch+compare first; clean-behind → rebase; conflict/doubt → STOP,
   BLOCKED, name files
 - local agents push at end of EVERY segment; unpushed work does not exist
