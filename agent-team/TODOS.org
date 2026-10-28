@@ -1,6 +1,6 @@
 #+TITLE: TODOS.org — team board (single source of truth)
 #+TODO: TODO PROGRESS BLOCKED REVIEW | DONE CANCELLED DEFERRED
-# DISPATCH counter: 1
+# DISPATCH counter: 2
 
 * Board
 
@@ -59,8 +59,11 @@
   DEFINITION OF DONE:
   - [ ] autoclaw-bin verified after 9ce25e7: .desktop Exec line intact,
         installed binary opens a window with no GPU fatal.
-  - [ ] CI green for lark-cli-bin and cline-bin, and cline-baseline
-        (or a named blocker with evidence).
+  - [ ] CI green for lark-cli-bin and cline-bin.
+  OWNER RULING (2026-10-28 #hq, recorded by the Lead): cline-baseline
+  is legacy and is DROPPED from this DOD — "Cline is fine".  Verify
+  cline-bin only.
+
   - [ ] REVIEW note on this entry with branch/sha and suite summary;
         ai/packages pushed.
 
@@ -134,6 +137,65 @@
 
   FINAL INSTRUCTION: fold this into DISPATCH #1's verification, then
   flip the entry to REVIEW with branch/sha and CI evidence.
+
+* TODO DISPATCH #2 — packages/login-persistence: autoclaw + qoder logins must survive restart
+  :PROPERTIES:
+  :FROM: Team Lead — glm-5.3-flash@chat.z.ai
+  :TO: Build Engineer — glm-5.3@chat.z.ai
+  :PRIORITY: P1
+  :ORDER: 2
+  :END:
+
+  BLUF: the Owner reports autoclaw and qoder lose their login on every
+  restart (Owner order #hq 2026-10-28: "Fix autoclaw and qoder's log
+  in persistence issue").  Both desktop apps are Electron; the likely
+  cause on this minimal Guix box (no keyring service) is Chromium
+  password-store detection finding nothing to write tokens to.  The
+  standard fix is --password-store=basic so credentials persist on disk
+  in the profile dir.  UNVERIFIED until confirmed from app behavior at
+  login time.
+
+  CONTEXT:
+  - autoclaw-bin wrapper (sane-packages/autoclaw.scm, create-wrapper
+    phase) already passes --disable-gpu; add --password-store=basic
+    the same way, comment updated.
+  - qoder-desktop-bin (sane-packages/custom.scm) wraps lib/Qoder/qoder;
+    the flag goes on its launch path the same way.
+  - qoder-cli-bin is a single qodercli binary — investigate where its
+    login state lands; fix only if actually broken.
+  - Machine law (AGENTS.md): *-bin must build, install and actually
+    run locally; source builds CI-only; no heavy builds here.
+
+  TASK:
+  1. autoclaw-bin: add --password-store=basic next to --disable-gpu
+     in the bin/autoclaw wrapper script.
+  2. qoder-desktop-bin: add --password-store=basic to its launch path.
+  3. qoder-cli-bin: find the credential storage (upstream docs,
+     strings/strace on the binary); record the finding.
+  4. guix build -L . --dry-run green for all three; push branch
+     ai/login-persistence; CI build via workflow_dispatch.
+
+  DEFINITION OF DONE:
+  - [ ] autoclaw + qoder-desktop wrappers pass --password-store=basic.
+  - [ ] qoder-cli storage investigated; finding recorded (fixed, or
+        "not broken" with evidence).
+  - [ ] guix build -L . --dry-run green for all three packages.
+  - [ ] CI build green; workflow_dispatch run URL in the note.
+  - [ ] Owner-side UAT: login survives an app restart — the Owner
+        runs this; the REVIEW note carries the ask.
+
+  SCOPE:
+  - yours: sane-packages/autoclaw.scm, sane-packages/custom.scm
+    (qoder-*-bin hunks only), the CI dispatch, the branch push.
+  - not yours: cline-baseline (Owner order 2026-10-28: legacy — "Cline
+    is fine"), dotfiles, home-config.
+
+  ENV: 2014 Celeron, 4 GB RAM, no AVX2; X session present; no keyring
+  daemon assumed; no source builds locally.
+
+  FINAL INSTRUCTION: re-read the DOD before reporting; work on
+  ai/login-persistence; flip this entry to REVIEW with branch/sha,
+  dry-run + CI evidence, and the qoder-cli finding.
 
 * Org cheat sheet
 
