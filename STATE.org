@@ -6,6 +6,13 @@
 * DEFERRED
 * BLOCKED
 * TEAM-STAFFING
+  - Build Engineer — glm-5.3@chat.z.ai — ASSIGNED per Owner order
+    2026-10-28 04:02Z #hq (roster: agent-team/AGENT-TEAM-MEMBERS.org)
 * HIRING-LOG
+  - 2026-10-28 — Build Engineer staffed: glm-5.3@chat.z.ai. Evidence:
+    Owner order (override, top priority) + on-record research (AA 60,
+    GDPval-AA 1769, WebDev Elo 1621). Fallbacks: glm-5.3-flash@chat.z.ai,
+    qwen3.8-max@chat.qwen.ai, kimi-k2.6@kimi.com. Applied by
+    GLM-5.3-Flash (Team Lead, via the Discord relay).
 * AUTONOMY
   AUTO

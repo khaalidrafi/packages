@@ -1,13 +1,44 @@
 #+TITLE: AGENT-TEAM-MEMBERS.org — ranked members, ordered by roles
+#+UPDATED: 2026-10-28 — Build Engineer assigned per Owner order (#hq 04:02Z)
 #+ROSTER: authoritative roster = GET https://ai.khalidrafi.tech/v1/models
 
-* Build Engineer — GLM-5.3 @ chat.z.ai
-  - owns: guix package definitions, CI builds, releases
-  - rank: (to be established by ROSTER DUTY)
+* Build Engineer — glm-5.3@chat.z.ai
+  - status: ASSIGNED per Owner order 2026-10-28 04:02Z #hq ("Assign a
+    role to glm-5.3@chat.z.ai for defining Guix pkgs at
+    khaalidrafi/packages")
+  - owns: guix package definitions (sane-packages/*.scm), CI builds,
+    releases — a COMMON shared service serving packaging requests from
+    ALL teams (charter); unassigned definitions (cline, zcode, autoclaw)
+    route here on request
+  - model reason: the Owner's explicit pick (top evidence priority per
+    the hiring protocol); on-record research numbers (agent-team.el
+    CANDIDATES.org): AA intelligence 60, GDPval-AA 1769, WebDev Elo
+    1621 — the strongest web brain in the pool; custom licence,
+    $1.40/$4.40 per Mtok if ever API-served; no dated expiry on the
+    free web tier
+  - agent reason (chat.z.ai web): one-shot courier shell — no
+    filesystem, no git, no credentials; a packaging request goes in, a
+    ready-to-apply Scheme definition comes back as text; zero
+    supply-chain risk, secrets never touched
+  - pair fit: a package definition is research + judgment — upstream
+    version pins, mirrors, build phases, inputs — the strongest brain
+    drafts it; build.yml proves the build on CI; the Owner's machine
+    proves *-bin installs; the Owner merges
+  - laws: charter-shaped work — board entry per request (PROGRESS on
+    start, BLOCKED with reason, REVIEW with branch/sha on finish), task
+    branches ai/pkgs-<name>, never merges without the Owner
+  - identity note: board items addressed to GLM-5.3-Flash@chat.z.ai
+    (written before this order) belong to THIS seat — the Owner's
+    2026-10-28 order supersedes
+  - fallbacks:
+    1. glm-5.3-flash@chat.z.ai (proven web body, on-record team history)
+    2. qwen3.8-max@chat.qwen.ai (strongest alternate web brain)
+    3. kimi-k2.6@kimi.com (web brain on record)
 * Platform Engineer — Qwen3.8-Flash @ Qoder
   - owns: comms-bridge, gateway ops, smoke tests, machine health
   - rank: (to be established by ROSTER DUTY)
 
 * Package ownership (existing areas)
   - konaito-terminal-browser-bin, chrome-headless-shell — Platform Engineer
-  - cline, zcode, autoclaw — unassigned
+  - cline, zcode, autoclaw — unassigned; definitions route to the Build
+    Engineer on request
