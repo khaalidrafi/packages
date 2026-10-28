@@ -209,8 +209,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
-        with:
           fetch-depth: 0
           submodules: recursive
 
@@ -948,11 +946,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
-        with:
           fetch-depth: 0
-          submodules: recursive
           ref: ${{ github.ref_name }}   # R-2-69: the chain ref itself — ai/packages trunk or the task branch
+          submodules: recursive
 
       # R-2-69: GITHUB_ENV is JOB-SCOPED — the turn job's CHAIN_REF never
       # crosses into finalize. Recompute it here (proof run 40218134008:
