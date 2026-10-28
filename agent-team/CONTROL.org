@@ -3,5 +3,5 @@
 #+OBJECTIVE: DISPATCH #1 — verify autoclaw-bin (9ce25e7), lark-cli-bin + cline-bin (71e1b61) and the cline-baseline hub-wrapper fix (UPDATE #1) on CI; flip the board entry to REVIEW with branch/sha + CI evidence. Build proof runs via build.yml (workflow_dispatch / PR only — push builds are disabled by the Owner 2026-10-28).
 #+OBJECTIVE-STATE: OPEN
 #+TURN: zai/glm-4.7-flash@goose (Build Engineer, bench)
-#+STALL-COUNT: 0
+#+STALL-COUNT: 1
 #+LAST-VERDICT:
