@@ -1,8 +1,11 @@
 #+TITLE: AGENT-TEAM-MEMBERS.org — ranked members, ordered by roles
-#+UPDATED: 2026-10-28 04:52Z — Lead assigned, BE fallbacks hired (Owner orders #hq)
+#+UPDATED: 2026-10-28 05:13Z — seats separated, bench keys sealed, AGENTS.md created (Owner orders #hq)
 #+ROSTER: authoritative roster = GET https://ai.khalidrafi.tech/v1/models
 
-* Team Lead — glm-5.3-flash@chat.z.ai (COMBINED SEAT with the Owner's relay)
+* Team Lead — glm-5.3-flash@chat.z.ai
+  - seat note: Lead and Build Engineer are SEPARATE seats (Owner order
+    2026-10-28 05:13Z #hq) — different models, different duties; they
+    meet only in each other's fallback chains
   - status: ASSIGNED per Owner order 2026-10-28 04:52Z #hq ("assign lead
     role to glm-5.3-flash")
   - owns: board triage, dispatches, staffing law, DOD verification,
@@ -67,10 +70,12 @@
        shipped through PR), free caps sized for CI
     3. qwen3.8-flash@qoder — proven on CI (platform proof run); key
        sealed as QODER_PERSONAL_ACCESS_TOKEN in the team repos
-  - wiring note: these lanes consume repo-secret provider keys — seal
-    ZAI_API_KEY / OPENROUTER_API_KEY / GROQ_API_KEY / the Qoder PAT into
-    khaalidrafi/packages before the bench's first CI turn (Lead action,
-    pending)
+  - wiring note: DONE 2026-10-28 — ZAI_API_KEY, GROQ_API_KEY,
+    OPENROUTER_API_KEY and QODER_PERSONAL_ACCESS_TOKEN sealed into
+    khaalidrafi/packages Actions secrets by the Lead (hiring is upon
+    the team Lead, Owner order 2026-10-28 05:13Z #hq); bench is
+    CI-ready — first turn consumes the keys as env names only
+    (SECRET LAW: names, never values)
 * Platform Engineer — Qwen3.8-Flash @ Qoder
   - owns: comms-bridge, gateway ops, smoke tests, machine health
   - rank: (to be established by ROSTER DUTY)
