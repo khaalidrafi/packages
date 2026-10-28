@@ -22,6 +22,10 @@
     GROQ_API_KEY, OPENROUTER_API_KEY, QODER_PERSONAL_ACCESS_TOKEN
     (names only — SECRET LAW)
 * IN-FLIGHT
+  - 2026-10-28 — DISPATCH #2 landed (login persistence for autoclaw +
+    qoder, --password-store=basic wrappers + qoder-cli investigation);
+    cline-baseline dropped per Owner ruling ("legacy, Cline is fine");
+    chain running, stall=0. Recorded by Team Lead glm-5.3-flash@chat.z.ai.
 * READY-FOR-HUMAN-REVIEW
 * DEFERRED
 * BLOCKED
