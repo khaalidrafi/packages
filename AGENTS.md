@@ -88,8 +88,9 @@ The Owner's box is a 2014 Celeron, 4 GB RAM, no AVX2:
 ## Secret law
 
 Credentials NEVER travel in chat, files, commits, or messages — only as ENV
-VAR NAMES. Provider keys CI needs live as repo Actions secrets, sealed by the
-Lead from the Owner's vault. Never echo a value; never write one into a file.
+VAR NAMES. Provider keys CI needs live as repo Actions secrets, sealed by
+the Owner's relay (z.ai-agent) from the vault. Never echo a value; never
+write one into a file.
 
 ## Team layer (read in this order after this file)
 
