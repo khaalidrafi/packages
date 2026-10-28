@@ -389,6 +389,9 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
           GOMODEL_MASTER_KEY: ${{ secrets.GOMODEL_MASTER_KEY }}
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           set -u
           if [ -z "${GH_PAT:-}" ]; then
@@ -402,8 +405,14 @@ jobs:
           docker rm -f gomodel >/dev/null 2>&1 || true
           # Tuned env block = llmfisher docker-compose.yml gomodel service
           # verbatim (field types checked per the GoModel source; a wrong
-          # shape is a crash loop, not a warning). Keys ride as env only
-          # (env-var law): nothing baked, nothing printed, nothing in git.
+          # shape is a crash loop, not a warning). Provider keys ride as
+          # env only (env-var law) — compose passes them via env_file
+          # .env; without them the providers never configure and their
+          # models vanish from the gateway catalog (run 40645162293:
+          # "unsupported model: glm-4.7-flash"). Retry tuning is the
+          # compose law (Owner 2026-10-23: zai is very rate limited but
+          # works after a few retries — same-model RETRY absorbs the 429
+          # before failover sweeps on).
           export JEV_API_KEY="${TYPESAFE_API_KEY:-}"
           docker run -d --name gomodel -p 127.0.0.1:8080:8080 \
             -v /tmp/llmfisher-src/config:/app/config:ro \
@@ -412,8 +421,8 @@ jobs:
             -e CONFIGURED_PROVIDER_MODELS_MODE=allowlist \
             -e FAILOVER_RETRY_ON_STATUSES=4xx,5xx \
             -e FAILOVER_MAX_ATTEMPTS=5 \
-            -e RETRY_MAX_RETRIES=1 \
-            -e RETRY_INITIAL_BACKOFF=3s \
+            -e RETRY_MAX_RETRIES=3 \
+            -e RETRY_INITIAL_BACKOFF=5s \
             -e CIRCUIT_BREAKER_SCOPE=model \
             -e HTTP_RESPONSE_HEADER_TIMEOUT=30 \
             -e CACHE_REFRESH_INTERVAL=21600 \
@@ -422,6 +431,7 @@ jobs:
             -e PROVIDER_PROMPT_CACHE_PLANNER_ENABLED=false \
             -e GOMODEL_DEMO_MODE=false \
             -e GOMODEL_MASTER_KEY -e JEV_API_KEY \
+            -e ZAI_API_KEY -e GROQ_API_KEY -e OPENROUTER_API_KEY \
             enterpilot/gomodel >/dev/null
           ok=""
           for i in $(seq 1 30); do
@@ -1190,6 +1200,9 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
           GOMODEL_MASTER_KEY: ${{ secrets.GOMODEL_MASTER_KEY }}
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           set -u
           if [ -z "${GH_PAT:-}" ]; then
@@ -1203,8 +1216,14 @@ jobs:
           docker rm -f gomodel >/dev/null 2>&1 || true
           # Tuned env block = llmfisher docker-compose.yml gomodel service
           # verbatim (field types checked per the GoModel source; a wrong
-          # shape is a crash loop, not a warning). Keys ride as env only
-          # (env-var law): nothing baked, nothing printed, nothing in git.
+          # shape is a crash loop, not a warning). Provider keys ride as
+          # env only (env-var law) — compose passes them via env_file
+          # .env; without them the providers never configure and their
+          # models vanish from the gateway catalog (run 40645162293:
+          # "unsupported model: glm-4.7-flash"). Retry tuning is the
+          # compose law (Owner 2026-10-23: zai is very rate limited but
+          # works after a few retries — same-model RETRY absorbs the 429
+          # before failover sweeps on).
           export JEV_API_KEY="${TYPESAFE_API_KEY:-}"
           docker run -d --name gomodel -p 127.0.0.1:8080:8080 \
             -v /tmp/llmfisher-src/config:/app/config:ro \
@@ -1213,8 +1232,8 @@ jobs:
             -e CONFIGURED_PROVIDER_MODELS_MODE=allowlist \
             -e FAILOVER_RETRY_ON_STATUSES=4xx,5xx \
             -e FAILOVER_MAX_ATTEMPTS=5 \
-            -e RETRY_MAX_RETRIES=1 \
-            -e RETRY_INITIAL_BACKOFF=3s \
+            -e RETRY_MAX_RETRIES=3 \
+            -e RETRY_INITIAL_BACKOFF=5s \
             -e CIRCUIT_BREAKER_SCOPE=model \
             -e HTTP_RESPONSE_HEADER_TIMEOUT=30 \
             -e CACHE_REFRESH_INTERVAL=21600 \
@@ -1223,6 +1242,7 @@ jobs:
             -e PROVIDER_PROMPT_CACHE_PLANNER_ENABLED=false \
             -e GOMODEL_DEMO_MODE=false \
             -e GOMODEL_MASTER_KEY -e JEV_API_KEY \
+            -e ZAI_API_KEY -e GROQ_API_KEY -e OPENROUTER_API_KEY \
             enterpilot/gomodel >/dev/null
           ok=""
           for i in $(seq 1 30); do
