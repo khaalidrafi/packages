@@ -95,3 +95,34 @@
   - konaito-terminal-browser-bin, chrome-headless-shell — Platform Engineer
   - cline, zcode, autoclaw — unassigned; definitions route to the Build
     Engineer on request
+
+* HIRES WITH REASONS (HR LEDGER — one line per hire; the hire list law)
+  - Team Lead — glm-5.3-flash@chat.z.ai: hired 2026-10-28 04:52Z by
+    Owner override ("assign lead role to glm-5.3-flash").  Evidence on
+    record (agent-team.el CANDIDATES.org): MIT open weights 320B-A18B,
+    DeepSWE 63.4, Terminal-Bench 84.3, AA 42-57 (two AA pages disagree,
+    both quoted).  Hands-on: Lead brain of agent-team.el since
+    2026-10-20.  Over the runner-up: the Owner's explicit pick —
+    override is top evidence priority in the hiring protocol.
+  - Build Engineer — glm-5.3@chat.z.ai: hired 2026-10-28 04:02Z by
+    Owner override ("Assign a role to glm-5.3@chat.z.ai for defining
+    Guix pkgs at khaalidrafi/packages").  Evidence on record: AA
+    intelligence 60, GDPval-AA 1769, WebDev Elo 1621 — the strongest
+    web brain in the pool.  Over the runner-up (qwen3.8-max@chat.qwen.ai,
+    now fallback 2): stronger every measured axis + the Owner's pick.
+  - Build Engineer bench — zai/glm-4.7-flash@goose: hired 2026-10-28
+    04:52Z (Owner: "lead MUST hire fallbacks to glm-5.3 for
+    agent-team-ci").  Evidence: proven alive on team CI (agent-team.el
+    SE/QA lanes), MIT, free.  CI-observed 2026-10-28: goose run OK
+    (commit 16f7e83).
+  - Build Engineer bench — groq/qwen3.8-27b@goose: hired 2026-10-28
+    04:52Z.  Evidence: proven runner record (release work shipped
+    through PR on agent-team.el), free caps sized for CI.  CI-observed
+    2026-10-28: one all-lanes BLOCKED event (commit 59b1361) — WATCH
+    per HR law; two empty runs means RELEASE review.
+  - Build Engineer bench — qwen3.8-flash@qoder: hired 2026-10-28
+    04:52Z.  Evidence: proven on CI (platform proof run); key sealed as
+    QODER_PERSONAL_ACCESS_TOKEN (names only — SECRET LAW).
+  - Platform Engineer — Qwen3.8-Flash@qoder: seat reserved, rank TBD
+    by ROSTER DUTY — no shipped-work evidence yet; hires from its own
+    record after it delivers.
