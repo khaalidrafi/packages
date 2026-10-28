@@ -1,4 +1,4 @@
-#+TITLE: TEAM-CHAT.org — ONE team chat buffer (append-only)
+#+TITLE: CHAT.org — ONE team chat buffer (append-only)
 
 # FORMAT LAW (agent-team.el 17:55Z): every entry is an Org headline
 # carrying FROM (* MSG <from> -> @<to> :<kind>:), routing in Org tags,
