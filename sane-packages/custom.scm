@@ -1,8 +1,9 @@
 (define-module (sane-packages custom)
   ;; The one non-package name this module exports.  (sane-packages cline)
-  ;; already imports this module for bun-bin, and cline's CLI release number
-  ;; covers all three deliveries (see %cline-version below); exporting it lets
-  ;; that number be written once.  It goes through #:export rather than
+  ;; already imports this module for bun-bin, so the cline CLI release number
+  ;; is written here and read from there (see %cline-version below); it is
+  ;; cline-baseline's tag today, and cline-bin's version should be folded back
+  ;; into it at the next bump.  It goes through #:export rather than
   ;; `define-public' because tests/check-static.sh harvests package names by
   ;; grepping `define-public' forms -- a version *string* must not show up
   ;; there.
@@ -2934,79 +2935,19 @@ kitty, ghostty, mlterm, xterm, etc.).")
     (home-page "https://tangled.org/janantos.tngl.sh/brow6el.git")
     (license license:expat)))
 
-;; One version for one upstream release line.  Cline tags the CLI as
-;; cli-vX.Y.Z, publishes X.Y.Z to npm as @cline/* (which is what cline-bin
-;; repackages) and the same number drives cline-baseline's git tag, so the
-;; number is written exactly once here and (sane-packages cline) reads it back
-;; through the module import it already has -- via the #:export at the top of
-;; this module, since a plain `define' is private to its module in Guile and
-;; cline.scm would otherwise see an unbound variable.  Importing the other way
-;; would have made the dependency between the two modules circular.
+;; Cline's version, kept here rather than in (sane-packages cline) because that
+;; module already imports this one for bun-bin and importing the other way would
+;; make the dependency between the two modules circular.  A plain `define' is
+;; private to its module in Guile, hence the #:export at the top of this module:
+;; without it cline.scm reads an unbound variable.
+;;
+;; It feeds cline-baseline's `cli-v<version>' git tag only.  cline-bin now lives
+;; in (sane-packages cline) with its own %cline-bin-version (3.0.73), so the two
+;; deliveries of one upstream no longer share one number written down once; they
+;; must be bumped together, or the next update-all pass folds %cline-bin-version
+;; back into this variable.
 (define %cline-version
   "3.0.70")
-
-(define-public cline-bin
-  (package
-    (name "cline-bin")
-    (version %cline-version)
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append
-             "https://registry.npmjs.org/@cline/cli-linux-x64/-/cli-linux-x64-"
-             version ".tgz"))
-       (sha256
-        (base32 "18x6cl1wbi22gzjl960anqbmhbv7lr5djfk6dslhbpm2ss0m51js"))))
-    (build-system trivial-build-system)
-    (arguments
-     (list
-      #:modules '((guix build utils))
-      #:builder
-      #~(begin
-          (use-modules (guix build utils))
-          (let ((tar (string-append #$tar "/bin/tar"))
-                (gzip (string-append #$gzip "/bin/gzip"))
-                (patchelf (string-append #$patchelf "/bin/patchelf"))
-                (output #$output))
-            (setenv "PATH"
-                    (string-append #$gzip "/bin"))
-            (mkdir-p output)
-            (mkdir-p (string-append output "/bin"))
-            (invoke tar "xzf"
-                    #$source)
-            (copy-recursively "package"
-                              (string-append output "/libexec/cline"))
-            (let ((bin (string-append output "/bin/cline"))
-                  (target (string-append output "/libexec/cline/bin/cline")))
-              (symlink target bin)
-              (chmod target #o755)
-              (invoke patchelf "--set-interpreter"
-                      (string-append #$glibc "/lib/ld-linux-x86-64.so.2")
-                      target)
-              (rename-file bin
-                           (string-append output "/bin/cline-bin"))
-              (call-with-output-file bin
-                (lambda (port)
-                  (format port
-                   "#!~a~%
-if ! grep -qw avx2 /proc/cpuinfo 2>/dev/null; then
-  echo \"Error: Cline v3.0+ requires a CPU with AVX2 support (e.g., Haswell or newer).\" >&2
-  echo \"Your CPU appears to be missing AVX2 instructions.\" >&2
-  exit 1
-fi
-exec ~a/bin/cline-bin \"$@\"
-"
-                   (string-append #$bash-minimal "/bin/bash") output)))
-              (chmod bin #o555))))))
-    (native-inputs (list tar gzip patchelf))
-    (inputs (list glibc))
-    (synopsis "Autonomous coding agent CLI (Cline)")
-    (description
-     "Cline is an autonomous coding agent CLI capable of creating/editing files,
-running commands, using the browser, and more.  This package wraps the prebuilt
-linux-x64 binary distribution.")
-    (home-page "https://cline.bot")
-    (license license:asl2.0)))
 
 (define-public qoder-cli-bin
   (package
