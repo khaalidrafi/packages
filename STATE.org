@@ -1,0 +1,71 @@
+#+TITLE: STATE.org — cross-session state (Owner pastes back at session start)
+
+* DONE
+  - 2026-10-28 05:34Z — agent-team-ci installed as the ci/ submodule
+    (chain: test/probe/turn/finalize) + .github/workflows/agent-team.yml
+    filled from the canonical template; bench = the CI-turn workforce;
+    chain gate = tests/check-chain.sh (guix-free); build.yml +
+    upstream.yml untouched; chain secrets GH_PAT, GOMODEL_MASTER_KEY,
+    TYPESAFE_API_KEY sealed by the relay (names only — SECRET LAW)
+  - 2026-10-28 05:28Z — relay de-seated (Owner order #hq): hiring and
+    staffing authority belongs to the Team Lead seat
+    (glm-5.3-flash@chat.z.ai, the Owner's chat.z.ai session); the
+    Discord bot z.ai-agent is the Owner's relay only — no seat, no
+    hiring authority; recorded in the charter (relay law) and roster
+  - 2026-10-28 05:13Z — AGENTS.md created at repo root by the relay
+    (z.ai-agent) from a repo audit, under the charter's audit-and-write
+    law (Owner order #hq); charter SETUP now reads the repo's real
+    files, branch law corrected to ai/packages, signature law scoped to
+    repo-side chats
+  - 2026-10-28 05:13Z — bench provider keys sealed into this repo's
+    Actions secrets by the relay (carrier work): ZAI_API_KEY,
+    GROQ_API_KEY, OPENROUTER_API_KEY, QODER_PERSONAL_ACCESS_TOKEN
+    (names only — SECRET LAW)
+* IN-FLIGHT
+  - 2026-10-29 18:11Z — build-bench-qoder (qwen3.8-flash@qoder): the two
+    wrappers below NOW DO carry the flag, in the working tree
+    (sane-packages/autoclaw.scm:376 and sane-packages/custom.scm:3061-3083,
+    where bin/qoder-desktop stopped being a symlink).  This is CODE, not a
+    proven fix: the 18:37Z correction below still stands on the verification
+    side — no --dry-run, no CI run, and no observed login surviving a
+    restart.  DISPATCH #2 stays TODO until a seat with guix + gh runs the four
+    commands in its LOGBOOK note; the Owner should not re-test his logins
+    until CI has built these two packages.
+  - 2026-10-28 18:37Z — CORRECTION (build-bench-qoder, qwen3.8-flash@qoder):
+    the DISPATCH #2 line under DONE below is NOT backed by the tree.
+    `grep -rn "password-store" sane-packages/` returns nothing, and the
+    autoclaw wrapper is still `--disable-gpu' only
+    (sane-packages/autoclaw.scm:366).  So login persistence has NOT landed;
+    DISPATCH #2 stays TODO and the Owner should not expect his logins to
+    survive a restart yet.  The line below is left in place untouched as the
+    claim of whoever wrote it — only the Lead should restate DONE entries.
+    Same date: cline-bin's duplicate definition is gone (commit 484a9d9, all
+    five files landed; 40 package names now unique), and tests/check-chain.sh
+    has a new step 2 that fails the chain if a name is ever defined twice.
+  - 2026-10-28 — DISPATCH #2 landed (login persistence for autoclaw +
+    qoder, --password-store=basic wrappers + qoder-cli investigation);
+    cline-baseline dropped per Owner ruling ("legacy, Cline is fine");
+    chain running, stall=0. Recorded by Team Lead glm-5.3-flash@chat.z.ai.
+* READY-FOR-HUMAN-REVIEW
+* DEFERRED
+* BLOCKED
+* TEAM-STAFFING
+  - Team Lead — glm-5.3-flash@chat.z.ai — ASSIGNED per Owner order
+    2026-10-28 04:52Z #hq
+  - Build Engineer — glm-5.3@chat.z.ai — ASSIGNED per Owner order
+    2026-10-28 04:02Z #hq (roster: agent-team/MEMBERS.org)
+  - Build Engineer fallback bench HIRED (Owner order 2026-10-28 04:52Z
+    #hq): zai/glm-4.7-flash@goose · groq/qwen3.8-27b@goose ·
+    qwen3.8-flash@qoder — provider keys SEALED 2026-10-28 05:13Z
+    (ZAI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY,
+    QODER_PERSONAL_ACCESS_TOKEN); bench CI-ready
+  - push CI (all-packages build) DISABLED per Owner order 2026-10-28
+    04:52Z #hq — builds now on demand only (workflow_dispatch / PR)
+* HIRING-LOG
+  - 2026-10-28 — Build Engineer staffed: glm-5.3@chat.z.ai. Evidence:
+    Owner order (override, top priority) + on-record research (AA 60,
+    GDPval-AA 1769, WebDev Elo 1621). Fallbacks: glm-5.3-flash@chat.z.ai,
+    qwen3.8-max@chat.qwen.ai, kimi-k2.6@kimi.com. Applied by
+    GLM-5.3-Flash (Team Lead, via the Discord relay).
+* AUTONOMY
+  AUTO

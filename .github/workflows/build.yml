@@ -1,0 +1,242 @@
+name: build
+
+# One job, in order: static checks, lint (advisory), build every package
+# (source-based first, `*-bin' after), smoke tests, then publish substitutes
+# for everything that built, and push them to the `gh-pages' branch.
+#
+# Splitting into jobs would mean installing Guix and pulling the channels
+# once per job, which costs more CI minutes than it saves review time.  It
+# also means the substitute cache from a build job could not be handed to a
+# publish job without uploading/downloading it, so publishing stays in the
+# same job as the build.
+
+# Push builds are DISABLED (Owner order 2026-10-28 #hq: the all-packages
+# build on every push is too expensive). Builds run on demand only:
+# workflow_dispatch (Actions tab / gh api) or a pull_request.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write        # push the gh-pages branch
+  pages: write           # (informational; Pages is enabled once via gh api)
+
+jobs:
+  packages:
+    name: guix build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Download cache only: /gnu/store must not be restored from a cache, the
+      # store database would disagree with the files (see the note in
+      # PromyLOPh/guix-install-action's own workflow).
+      #
+      # The key is `guix-cache-${{ github.sha }}` with a branch-scoped
+      # restore-key, NOT `github.run_id`.  A run-id key is unique per run, so
+      # it never matches anything on a miss and the `guix-cache-` prefix then
+      # selects the single most recent cache -- the download cache survives
+      # exactly one run and is then evicted by the 10GB LRU, so a slow build
+      # re-downloads tarballs it should have had.  Keying on the commit makes
+      # the cache follow the branch: a rerun of the same SHA reuses it, a new
+      # commit saves a new one, and `ref-` keeps two branches from thrashing
+      # each other's entries.
+      - name: Guix download cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/guix
+          key: guix-cache-${{ github.sha }}
+          restore-keys: |
+            guix-cache-${{ github.ref }}-
+            guix-cache-
+
+      # brix-os/brix-action, not PromyLOPh/guix-install-action.
+      #
+      # Same inputs (channels, pullAfterInstall, service-file) so this is a drop-in
+      # swap, and two reasons make it the better one here.
+      #
+      # Availability: PromyLOPh's action fetches the Guix binary from
+      # ci.guix.gnu.org, which was returning 502 for the whole of 2026-10-06.
+      # Runs 37429327168 (12s) and 37430510992 (15 min of polling) both went red
+      # before a single package in this repository was looked at.  brix-action
+      # fetches the same binary from the brix-os/brix GitHub *release* instead,
+      # so a Guix CDN outage can no longer block a build of this channel.
+      #
+      # Correctness: brix's `testing' release is built from commit b07db32753,
+      # which is exactly what tests/channels-lock.scm pins.  So the daemon being
+      # installed is the one this channel is written against, instead of a stock
+      # Guix nightly that `guix pull -C channels-lock.scm' immediately discards.
+      #
+      # It also authorises the nonguix substitutes, which this channel needs
+      # because nonguix is a declared dependency in .guix-channel.
+      #
+      # Note the asset is named .tar.xz but is gzip; tar autodetects, and the
+      # action gets this right, which is more than can be said for a hand-rolled
+      # `tar -tJf' on it (that lists nothing and exits 0).
+      - name: Install Guix
+        uses: brix-os/brix-action@v1
+        with:
+          # The channel definitions themselves live in this repository and are
+          # passed with `-L`; nonguix is a real channel because the packages
+          # build on its binary build systems and licenses.
+          #
+          # pullAfterInstall is off so the pin below decides what the daemon
+          # runs.  The action's own `guix pull --fallback' follows the *tip*
+          # of guix master and nonguix master, and both move daily: a build
+          # green this morning can be red this afternoon with no change to
+          # this repository, and the log then blames a package definition
+          # nobody touched.  channels-lock.scm pins both to exact commits, so
+          # a red build is reproducible and an upstream regression stays red
+          # until the pin is deliberately moved.  Bump it with
+          # tests/update-channels-lock.sh.
+          pullAfterInstall: false
+          channels: |-
+            (cons
+             (channel
+              (name 'nonguix)
+              (url "https://gitlab.com/nonguix/nonguix")
+              (introduction
+               (make-channel-introduction
+                "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+                (openpgp-fingerprint
+                 "2A39 3FFF 68F4 EF7A 3D29 12AF 6F51 20A0 22FB B2D5"))))
+             %default-channels)
+
+      # `guix pull', not `guix time-machine': time-machine would compile a
+      # whole Guix profile on every run, and the daemon is already reachable
+      # here, so pulling into it is what we actually want.  This reads the
+      # committed lock rather than duplicating the hashes a second time.
+      #
+      # --fallback matters: without it, `guix pull' refuses to move a channel
+      # the daemon already has unless the new commit is reachable from it, and
+      # nonguix is simply absent on a fresh runner.
+      # --allow-downgrades matters because the pin is usually *older* than the
+      # guix commit the nightly tarball carries.  Guix calls that refusal
+      # `ensure-forward-channel-update' (guix/scripts/pull.scm:88) and it is
+      # exactly the check we are overriding on purpose here: without it, any
+      # pin that is not newer than the tarball fails the step, which is the
+      # opposite of what a lock file is for.
+      - name: Pin channels to tests/channels-lock.scm
+        run: |
+          guix pull --fallback --allow-downgrades -C tests/channels-lock.scm
+          guix describe
+
+      - name: Static checks (style, derivation validity)
+        run: ./tests/check-static.sh
+
+      - name: guix lint
+        # Advisory: lint has known false positives for repackaged vendor
+        # binaries (e.g. it asks for a source archive of the Electron app).
+        # The build below is the gate; this step only surfaces review hints.
+        continue-on-error: true
+        run: ./tests/lint.sh
+
+      # The private half of the substitute-signing keypair; the public half is
+      # committed at .guix-substitutes.pub.  GUIX_BUILT_PATHS is how
+      # build-all.sh hands its freshly built store paths to the publisher
+      # without re-deriving them.
+      - name: Build and smoke test
+        env:
+          GUIX_BUILT_PATHS: ${{ github.workspace }}/built-paths.txt
+        run: |
+          touch "$GUIX_BUILT_PATHS"
+          # Record the exit status so a later step can gate CI on it, after
+          # publishing has had a chance to run on whatever *did* build.
+          if ./tests/build-all.sh; then
+            echo ok > .build-status
+          else
+            echo fail > .build-status
+          fi
+
+      # Publishing runs even if a package failed, so the substitutes for the
+      # packages that DID build still go up.  The gate below re-fails CI so a
+      # red build stays red.  See tests/publish-substitutes.sh for mechanics.
+      # Skipped on pull_request (fork PRs have no access to the signing key,
+      # and we do not want PRs mutating the public mirror anyway).
+      - name: Publish substitutes
+        if: github.event_name != 'pull_request'
+        env:
+          GUIX_SIGNING_KEY: ${{ secrets.GUIX_SIGNING_KEY }}
+          GUIX_BUILT_PATHS: ${{ github.workspace }}/built-paths.txt
+        run: ./tests/publish-substitutes.sh
+
+      - name: Deploy substitute mirror to gh-pages
+        if: github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./.substitute-site
+          # Substitutes are opaque binary archives: no Jekyll, keep the store
+          # item names verbatim so the client's URL resolution works.
+          enable_jekyll: false
+          exclude_assets: ''
+          # Replace the mirror each run rather than accumulating history; nar
+          # files are large and Git would choke on thousands of old blobs.
+          force_orphan: true
+
+      - name: Gate CI on the build result
+        run: |
+          # Publish and deploy used `if:` conditions that let them run even on
+          # a failed build; here we re-surface the build-all.sh exit status so
+          # the workflow itself is red if any package or smoke test failed.
+          status=$(cat .build-status 2>/dev/null || echo fail)
+          echo "build-all.sh exited: $status"
+          [ "$status" = ok ]
+
+  # The consumer-side mirror test, on a runner that built nothing: install
+  # this channel's packages from the gh-pages substitute mirror the way a
+  # user machine does, and run their smoke tests against what arrived.
+  # Fresh store, same channels pin, so every item must come back as a
+  # substitute or the step fails.  Push only: PRs do not publish, so the
+  # mirror would be serving some other commit's outputs.
+  substitutes:
+    name: substitute install
+    needs: packages
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Separate cache key from the build job: sharing `guix-cache-<ref>-'
+      # would evict the build job's entry every time this job saves one.
+      - name: Guix download cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/guix
+          key: guix-substitutes-${{ github.sha }}
+          restore-keys: |
+            guix-substitutes-${{ github.ref }}-
+            guix-substitutes-
+
+      # Same installer and pin as the build job: the point is that a fresh
+      # machine with the documented setup gets substitutes, so the setup
+      # here is the documented one, nothing more.
+      - name: Install Guix
+        uses: brix-os/brix-action@v1
+        with:
+          pullAfterInstall: false
+          channels: |-
+            (cons
+             (channel
+              (name 'nonguix)
+              (url "https://gitlab.com/nonguix/nonguix")
+              (introduction
+               (make-channel-introduction
+                "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+                (openpgp-fingerprint
+                 "2A39 3FFF 68F4 EF7A 3D29 12AF 6F51 20A0 22FB B2D5"))))
+             %default-channels)
+
+      - name: Pin channels to tests/channels-lock.scm
+        run: |
+          guix pull --fallback --allow-downgrades -C tests/channels-lock.scm
+          guix describe
+
+      - name: Test substitute install from the mirror
+        run: ./tests/check-substitutes.sh

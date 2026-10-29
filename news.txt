@@ -1,0 +1,48 @@
+;; This file is read by `guix pull' (see .guix-channel's (news-file "news.txt")).
+;; Each entry is keyed to a commit or tag and is shown to a user once, the first
+;; time they pull past it.  Because a commit cannot name its own hash, add the
+;; entry in a FOLLOWING commit that cites the change's hash -- the convention
+;; nonguix follows.  Bodies use Texinfo markup, not Markdown.
+
+(channel-news
+ (version 0)
+ (entry (commit "7c26726671f50aae990807f0ac0b664883ecf7d1")
+        (title (en "New package: autoclaw-bin"))
+        (body (en "The new @code{sane-packages autoclaw} module provides
+ @code{autoclaw-bin}, a repackage of Z.ai's AutoClaw desktop client for
+ its OpenClaw gateway from the AppImage upstream publishes for Linux.  The
+ payload is extracted from the AppImage at build time, so
+ @code{guix install autoclaw-bin} works without FUSE or the vendor
+ runtime; the desktop entry registers the @code{zwork:} URL scheme.")))
+ (entry (commit "be517be23e45465491c3565546894e4bfad3d533")
+        (title (en "zcode-bin bumped to 3.15.3"))
+        (body (en "The @code{zcode-bin} package now repackages the 3.15.3
+ .deb of ZCode's desktop app instead of 3.14.5.  Both architecture hashes
+ were refreshed; reinstall with @code{guix install zcode-bin} after
+ @code{guix pull}.")))
+ (entry (commit "1a1721424679920a988c0536dd3c3cfebf6e5b4c")
+        (title (en "cline-baseline now builds with the pinned Bun"))
+        (body (en "The hub-daemon rewrite in @code{cline-baseline}'s
+ build no longer emits the parenthesized void operator, which Bun 1.4.3's
+ parser rejects; the fixed-output derivation can now finish its bundle.")))
+ (entry (commit "c323f8a5c4aa860ba7f2852386f35eb793dd57dd")
+        (title (en "cline-baseline's smoke phase really starts the hub now"))
+        (body (en "The hub-daemon rewrite in @code{cline-baseline}'s build
+ handed the whole command line to the Bun runtime as a single argument and
+ exec'd the compiled artifact directly, so the daemon never started and the
+ readiness poll timed out.  The rewrite now launches the binary through the
+ store loader the same way the upstream @code{hub start} does for a compiled
+ entry.")))
+ (entry (commit "df7663f87c99ee7d23e7503b2360e0587022b8e4")
+        (title (en "New packages: konaito-terminal-browser-bin and chrome-headless-shell-bin"))
+        (body (en "The new @code{sane-packages konaito} module packages
+ @code{konaito-terminal-browser-bin}, the TypeScript reimplementation of
+ terminal-browser that drives a headless Chromium over CDP and renders it
+ with the kitty graphics protocol (no Electron).  Its engine ships as
+ @code{chrome-headless-shell-bin} in @code{sane-packages
+ chrome-headless-shell}: the Chrome for Testing headless build, pinned to
+ the revision Puppeteer itself pins.  Install both with @code{guix install
+ konaito-terminal-browser-bin}; the wrapper points Puppeteer at the store's
+ headless shell, and setting @code{PUPPETEER_EXECUTABLE_PATH} swaps in any
+ other Chromium.")))
+)

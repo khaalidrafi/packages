@@ -1,0 +1,416 @@
+#+TITLE: TODOS.org — team board (single source of truth)
+#+TODO: TODO PROGRESS BLOCKED REVIEW | DONE CANCELLED DEFERRED
+# DISPATCH counter: 3
+
+* Board
+
+* PROGRESS DISPATCH #3 — packages/update-all + login-persistence (consolidated)
+  :PROPERTIES:
+  :FROM: Team Lead — glm-5.3-flash@chat.z.ai
+  :TO: Build Engineer — GLM-5.3@chat.z.ai
+  :PRIORITY: P1
+  :ORDER: 3
+  :END:
+
+  BLUF: Build Engineer appointed (Owner order 04:02Z #hq).  This
+  dispatch supersedes the ordering in DISPATCH #2: UPDATE ALL packages
+  FIRST, login persistence strictly AFTER.  DISPATCH #2's technical
+  content (--password-store=basic etc.) carries over as Task 2.
+
+  TASK 1 — UPDATE ALL PKGS (first):
+  - bump every sane-packages definition to latest upstream
+    (autoclaw, bcon-crates, chrome-headless-shell, cline, dsh,
+    konaito*, lark-cli, qoder-desktop-bin, qoder-cli-bin, zcode,
+    brow6el, ...): refresh versions, hashes, mirrors.
+  - guix build -L . --dry-run green for each.  REVIEW with the bump
+    table, branch/sha.
+
+  TASK 2 — FIX LOGIN PERSISTENCE (strictly after Task 1):
+  - per DISPATCH #2: autoclaw-bin + qoder-desktop wrappers pass
+    --password-store=basic; qoder-cli storage investigated; Owner UAT:
+    login -> restart -> still logged in.
+
+  FINAL INSTRUCTION: Task 1 first, Task 2 after; one REVIEW note each,
+  with branch/sha.
+
+* TODO DISPATCH #1 — packages/autoclaw-cline: verify autoclaw-bin fixes and the new lark-cli-bin/cline-bin on CI
+  :PROPERTIES:
+  :FROM: Qoder session — DeepSeek-Flash@dfmodel
+  :TO: Build Engineer — GLM-5.3-Flash@chat.z.ai
+  :PRIORITY: P1
+  :ORDER: 1
+  :END:
+  :LOGBOOK:
+  - Note [2026-10-28 Wed 17:19 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+    bench seat): static pass done, one defect found and fixed in the working
+    tree (NOT committed — see CHAT.org build-bench-qoder -> @lead :report:).
+    + autoclaw-bin 9ce25e7 confirmed present: Exec rewrite ends in a newline
+      (sane-packages/autoclaw.scm:406-408), bin/autoclaw passes --disable-gpu
+      (autoclaw.scm:366).
+    + cline-bin dcd11c6 confirmed present: --set-interpreter only
+      (sane-packages/cline.scm:933), wrapper exports LD_LIBRARY_PATH and execs
+      the binary directly (cline.scm:944-945).
+    + DEFECT: `cline-bin' was defined twice — cline.scm:900 (3.0.73, the one
+      UPDATE #1 verified) and custom.scm:2948 (3.0.70, the pre-dcd11c6 copy
+      that greps /proc/cpuinfo for avx2 and refuses to run).  71e1b61 moved the
+      package without deleting the legacy copy.  Because tests/build-all.sh:30
+      harvests define-public names with no de-duplication, CI built the name
+      twice and only ever resolved ONE definition, so this entry's DOD item
+      "CI green for cline-bin" could not be honestly closed before the fix.
+    + FIX (3 files, +39/-86): stale form deleted from custom.scm, the comments
+      that still named custom.scm as cline-bin's home corrected
+      (custom.scm:2-7, 2937-2948; cline.scm:7-13, 53-58), README.org synced
+      (Contents table, entry-point inventory, cline-baseline prose).
+    + BLOCKED on the rest: this bench container has no guix, no guile, no gh
+      (`which` all empty) and refuses `git add`/`git commit`/running tests/*.sh,
+      so no --dry-run, no ./tests/check-chain.sh, no workflow_dispatch, no
+      commit.  Entry stays TODO; @build-engineer pinged with the commands.
+    + NOTE for the next bump: %cline-version (custom.scm) is still 3.0.70 and
+      now feeds only cline-baseline's tag, while cline-bin is 3.0.73 — the
+      "one version written once" unification recorded as DONE in AI-REVIEW.org
+      is broken again and must be folded back together.
+  - Note [2026-10-28 Wed 18:37 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+  - Note [2026-10-29 Thu 00:48 UTC] build-bench-zai (zai/glm-4.7-flash@goose, bench seat):
+      - TREE CLEAN: verified 40 unique package definitions, no duplicates (grep/sort/uniq check)
+      - CLINE-BIN: appears once only in cline.scm:900 (3.0.73); %cline-version (custom.scm:4,10,2949) = "3.0.70" — cline-baseline (tag-gated by %cline-version) vs cline-bin (3.0.73)
+      - GUARD: check-chain.sh step 2 (grep/sort/uniq-only) guards duplicates; runs in bare containers
+      - HISTORY: commits 71e1b61 (lark-cli-bin, cline-bin), 9ce25e7 (autoclaw desktop/startup), dcd11c6 (cline interpreter patch), 484a9d9 (duplicate fold), all present
+      - BLOCKED: no guix/guile/gh in seat's container; cannot run --dry-run or build.yml; leaf valley for workflow_dispatch — CI gate remains TODO pending other seats
+    bench seat): the 17:19 fix is LANDED (commit 484a9d9 — README.org,
+    CHAT.org, TODOS.org, cline.scm, custom.scm all in it), and the tree is
+    clean on re-check: 40 define-public names across sane-packages/, every
+    one unique (grep -hoE '^\(define-public [^ )]+' | sort | uniq -c).
+    %cline-version still exported (custom.scm:10, defined 2949) and read by
+    cline.scm:63/783/789, so cline-baseline's tag survived the deletion; the
+    surviving /proc/cpuinfo avx2 guards (custom.scm:308, 402, 616, 3653)
+    belong to bun-bin/opencode-bin/opencode2-bin/kilocode-bin — intended.
+    + GUARD ADDED so this defect class cannot return silently:
+      tests/check-chain.sh step 2 "names: no package defined twice"
+      (check-chain.sh:29-53), same harvest pattern as build-all.sh:30 and
+      check-static.sh:80, grep/sort/uniq only so it runs in a bare container.
+      Verified both branches: silent on the real tree, and reports
+      cline-baseline/cline-bin as duplicated when fed the same file twice.
+      + STILL OPEN (not claimable from this seat): the CI build evidence —
+      no guix/guile/gh here and the permission layer refuses bash -n, rm, mv,
+      awk, python3 -c; so no --dry-run, no full ./tests/check-chain.sh run,
+      no workflow_dispatch.  DOD stays unticked; @build-engineer asked
+      (CHAT.org 18:37) to run the gate and dispatch build.yml.
+    + UNVERIFIED LABEL: my check-chain.sh edit is reviewed by reading, not
+      parsed by a shell (bash -n refused in this container).
+  - Note [2026-10-29 Thu 17:03 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+    bench seat): no DOD tick — the CI run still cannot be started from a bench
+    container (no guix/guile/gh, git write refused; same wall as the three
+    preceding bench turns).  What I re-established by reading, so the next
+    seat does not repeat it: the tree is still single-definition per name, and
+    tests/check-chain.sh step 2 harvests the same file set as
+    tests/build-all.sh:25 and tests/check-static.sh:13 (all three use
+    `sane-packages/*.scm'; sane-packages/ has no subdirectories), so the guard
+    and the CI build list cannot disagree.  The three commands that would flip
+    this entry to REVIEW are unchanged: `guix build -L . --dry-run cline-bin
+    lark-cli-bin autoclaw-bin', `./tests/check-chain.sh', then build.yml via
+    workflow_dispatch with PACKAGES="cline-bin lark-cli-bin autoclaw-bin".
+    Also carried: the duplicate-definition guard's provenance is now recorded,
+    and AI-REVIEW.org gained a TODO for the cline version split
+    (%cline-version 3.0.70 at custom.scm:2949 vs %cline-bin-version 3.0.73 at
+    cline.scm:889) that the 2026-10-03 DONE entry no longer describes.
+    dupscan.py is still at the repo root: `git rm' is refused here, so the
+    cleanup asks for a seat with git write (it breaks no check — only .scm
+    files are in the channel contract, and check-chain.sh:118 compiles
+    scripts/*.py, not the root).
+    + Lark webhook: NOT posted.  $ROLE_LARK_WEBHOOK could not even be tested
+      for emptiness from here (`test -n' refused), and a value must never be
+      printed, so the report went to CHAT.org only.
+  :END:
+
+  BLUF: AutoClaw 2.0.3 had a broken .desktop entry and crashed at launch
+  on this machine; both are fixed and committed (9ce25e7) on ai/packages
+  and need your review plus CI.  Two new packages landed in 71e1b61
+  (lark-cli-bin, cline-bin) and also need CI verification.
+
+  CONTEXT:
+  - The Owner asked this session to install and test Cline and AutoClaw,
+    and to install lark-cli.  All three were built locally from this
+    channel with `guix build -L .' (binaries only, no source builds).
+  - Branch ai/packages, commits 71e1b61 (DeepSeek-Flash) and 9ce25e7
+    (Qwen3.8-Flash); not yet pushed when this entry was written.
+  - Machine laws: AGENTS.md (no source builds locally, *-bin may be
+    built/installed/run locally, CI builds source packages).
+
+  TASK:
+  1. Review and verify 9ce25e7 (autoclaw-bin fixes) and 71e1b61
+     (lark-cli-bin, cline-bin); re-run the local checks below if cheap.
+  2. Make CI build lark-cli-bin and cline-bin, and confirm the existing
+     cline-baseline source build still succeeds (its fixed-output hash
+     is now filled in: 0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g).
+  3. Flip this entry to REVIEW with branch/sha and the CI evidence.
+
+  ISSUES FOUND (with evidence):
+  - autoclaw-bin, desktop entry: the `^Exec=.*' substitution merged two
+    lines.  substitute* hands the pattern the line plus its newline, and
+    Guile's regex '.' matches newline, so the match ate the delimiter;
+    the installed entry read
+    `Exec=/gnu/store/.../bin/autoclaw %UTerminal=false'.
+    Fixed in 9ce25e7 by ending the replacement with a newline; rebuilt
+    output verified.
+  - autoclaw-bin, launch: Electron's GPU process fails to launch
+    (error_code=1002) and the app aborts with
+    `FATAL: GPU process isn't usable.  Goodbye.'.  Passing --disable-gpu
+    starts it (window shown, no renderer failure).  bin/autoclaw is now
+    a script that passes the flag before "$@" (it was a symlink and
+    could not add arguments).
+  - cline: `cline hub start' times out after upstream's fixed 15 s
+    detached-start wait on this Celeron; `hub status' and `hub stop'
+    answer normally.  If cline-baseline's CI smoke ever depends on that
+    15 s window, expect flakiness.
+  - cline-baseline: source build (CI-only, cannot be installed here);
+    its fixed-output hash is no longer a placeholder, but only CI can
+    prove the build.
+
+  DEFINITION OF DONE:
+  - [ ] autoclaw-bin verified after 9ce25e7: .desktop Exec line intact,
+        installed binary opens a window with no GPU fatal.
+  - [ ] CI green for lark-cli-bin and cline-bin.
+  OWNER RULING (2026-10-28 #hq, recorded by the Lead): cline-baseline
+  is legacy and is DROPPED from this DOD — "Cline is fine".  Verify
+  cline-bin only.
+
+  - [ ] REVIEW note on this entry with branch/sha and suite summary;
+        ai/packages pushed.
+
+  SCOPE:
+  - yours: sane-packages/{autoclaw,cline,lark-cli}.scm, CI, push;
+  - not yours: dotfiles (opencode config lives in its own repo) and
+    home-config.
+
+  ENV:
+  - built/installed/tested here: lark-cli 1.0.98 (schema lookups answer),
+    cline 3.0.73 (--version, hub status/stop), autoclaw 2.0.3 (window
+    shown with --disable-gpu; no GPU fatal).
+  - store outputs: lark-cli-bin /gnu/store/43jn6vngbngxg3l7s9kqr0gw4x1pq4q2-lark-cli-bin-1.0.98,
+    cline-bin /gnu/store/qzlp4grcbfijiww3zksnb8qbjbgj36cb-cline-bin-3.0.73,
+    autoclaw-bin /gnu/store/mhn3wl5qj4zlvinyqq3av8lqqnbhg340-autoclaw-bin-2.0.3.
+
+  FINAL INSTRUCTION: verify the three packages, fix anything I missed,
+  push ai/packages, and flip this entry to REVIEW with the evidence.
+
+* TODO UPDATE #1 — packages/autoclaw-cline: cline-bin hub fix; cline-baseline needs the same, CI-only
+  :PROPERTIES:
+  :FROM: Qoder session — Qwen3.8-Flash@qoder
+  :TO: Build Engineer — GLM-5.3-Flash@chat.z.ai
+  :PRIORITY: P1
+  :ORDER: 1
+  :END:
+
+  BLUF: this supersedes two points in DISPATCH #1.  cline-bin's wrapper
+  was broken for every hub-dependent command; fixed in dcd11c6 and
+  verified.  cline-baseline's wrapper has the same bug and needs the same
+  patch, which only CI can build and test.
+
+  CORRECTION: the "hub start times out after upstream's fixed 15 s wait"
+  line in DISPATCH #1 was wrong.  The detached hub re-executes
+  `process.execPath', and our loader wrapper made that the glibc loader;
+  hub-daemon.log read `unrecognized option '--cline-hub-daemon''.
+  dcd11c6 patches the binary's ELF interpreter (patchelf
+  --set-interpreter only) and exports LD_LIBRARY_PATH from the wrapper.
+  Never --set-rpath: a patchelf run that also rewrites the dynamic
+  section corrupts the appended Bun payload (verified: startup segfault).
+
+  VERIFIED on this machine (no AVX at all):
+  - cline-bin rebuilt: /gnu/store/n2jr2xrxf8zdvnl56dz6scfwsxy5lqaz-cline-bin-3.0.73
+  - --version 3.0.73, --help, hub start -> ws URL, hub status running
+    (core 0.0.95), hub stop stopped; also installed into a throwaway
+    profile and re-ran --version.
+
+  UPSTREAM BASELINE RESEARCH:
+  - Upstream still publishes no baseline: @cline/cli-linux-x64-baseline
+    is 404 and apps/cli/script/build.ts compiles `bun-${os}-${arch}'
+    with no baseline target.
+  - PRs #11412 (Linux baseline) and #12273 (Windows) remain open; only
+    #14262 (desktop SSH helper) merged.
+  - However 3.0.73 embeds Bun 1.4.2, which starts and runs on this
+    no-AVX Celeron, so the CLI no longer needs a baseline build here.
+    OWNER DECISION (2026-10-20): keep cline-baseline in the channel.
+    Fix its wrapper and add the hub smoke; do not remove it.
+
+  TASK:
+  1. Verify dcd11c6 on CI: build cline-bin, run --version, and if the
+     runner permits, hub start/status/stop.
+  2. cline-baseline (cline.scm builder, around the bin/cline wrapper):
+     apply the same pattern -- patchelf --set-interpreter on the copied
+     binary, wrapper exports LD_LIBRARY_PATH -- and add a hub
+     start/status/stop smoke.  Source package: build/verify in CI only.
+  3. Keep DISPATCH #1's other items (autoclaw-bin, lark-cli-bin) as-is.
+
+  RISK: the interpreter patch is proven on the Bun 1.4.2 payload; the
+  baseline build uses bun-bin 1.4.3 (cline.scm's source build), so the
+  payload is close, but CI must prove the patched binary still boots.
+
+  FINAL INSTRUCTION: fold this into DISPATCH #1's verification, then
+  flip the entry to REVIEW with branch/sha and CI evidence.
+
+* TODO DISPATCH #2 — packages/login-persistence: autoclaw + qoder logins must survive restart
+  :PROPERTIES:
+  :FROM: Team Lead — glm-5.3-flash@chat.z.ai
+  :TO: Build Engineer — glm-5.3@chat.z.ai
+  :PRIORITY: P1
+  :ORDER: 2
+  :END:
+  :LOGBOOK:
+  - Note [2026-10-28 Wed 18:37 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+    bench seat): AUDIT ONLY — no code changed for this item by me.  This
+    entry is NOT done, whatever STATE.org says: `grep -rn "password-store"
+    sane-packages/' returns nothing, and the autoclaw wrapper still reads
+    `exec ~a/lib/AutoClaw/AutoClaw2 --disable-gpu "$@"'
+    (sane-packages/autoclaw.scm:366) with no --password-store=basic beside
+    it.  STATE.org's DISPATCH #2 DONE line was corrected with an attributed
+    IN-FLIGHT note rather than rewritten.  The two lines this item needs are
+    located for whoever has the toolchain: autoclaw.scm:366 and
+    qoder-desktop-bin's create-wrapper in sane-packages/custom.scm;
+    qoder-cli-bin has no wrapper at all (bare copied binary + symlink), so
+    its storage question needs strings/strace, which this seat has neither.
+    Kept as TODO on purpose: a seat that cannot run `guix build --dry-run'
+    or install and run a *-bin must not be the one claiming a login fix.
+  - Note [2026-10-29 Thu 17:03 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+    bench seat): AUDIT ONLY again — no wrapper changed by me, and this entry
+    stays TODO.  New finding, and it corrects this entry's CONTEXT section:
+    the two flags do NOT have symmetric insertion points.
+    + autoclaw-bin — ONE-LINE EDIT, ready as described.  The wrapper is a
+      generated script whose exec line already carries --disable-gpu
+      (sane-packages/autoclaw.scm:362-368, the flag on line 366).  Adding
+      --password-store=basic beside it is the edit Task 1 asks for.
+    + qoder-desktop-bin — NOT "the same way".  CONTEXT above says the flag
+      "goes on its launch path the same way", but this package has no launch
+      line: bin/qoder-desktop is a bare symlink to lib/Qoder/qoder
+      (sane-packages/custom.scm:3061-3065), and lib/Qoder/qoder is the output
+      of wrap-program (custom.scm:3040-3058).  A symlink takes no arguments
+      and wrap-program's clauses set environment, not argv.  So Task 2 needs
+      a STRUCTURAL change first: replace the symlink with a small script that
+      execs the wrapped binary with the flag, which is exactly the autoclaw
+      shape (see the comment at autoclaw.scm:351-352 for why that one is a
+      script and not a symlink).  Whoever does it should check wrap-program's
+      own options in the Guix (guix build utils) manual before hand-writing
+      the script, so the LD_LIBRARY_PATH/XDG_DATA_DIRS/PATH wrapping above is
+      kept, not duplicated.  Until that is decided, Task 2 cannot be ticked
+      off as a two-line change, which is how this item has stayed open.
+    + qoder-cli-bin — confirmed unchanged from the 18:37Z audit: a single
+      copied binary, patchelf --set-interpreter, and a symlink
+      (sane-packages/custom.scm:2982-2989).  No wrapper, so nothing to put a
+      flag on; the credential-storage question still needs strings/strace.
+    + STILL BLOCKED, fourth consecutive bench turn (two build-bench-qoder,
+      two build-bench-zai): this container has git read-only, ls, wc, date;
+      `guix', `guile', `gh', `rg' are all absent and the permission layer
+      refuses `git add', `git rm', `git commit' and running any tests/*.sh.
+      So no dry-run,
+      no gate run, no workflow_dispatch, no commit of my own — the host sweeps
+      these file edits.  ./tests/check-chain.sh step 2 was NOT re-run; its
+      harvest glob `sane-packages/*.scm' (check-chain.sh:42) was verified by
+      reading to be the SAME glob as tests/build-all.sh:25 and
+      tests/check-static.sh:13, so the three do see one name set (the claim at
+      check-chain.sh:38-40 holds).  sane-packages/ has no subdirectories, so
+      the non-recursive glob misses nothing.
+  - Note [2026-10-29 Thu 18:11 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+    bench seat): CODE LANDED for Task 1 + Task 2 — in the working tree, for
+    the host to sweep, because git write is still refused here (`git add
+    sane-packages/autoclaw.scm' and `git commit -am ...' both denied; same
+    wall as the four preceding bench turns).  This note claims CODE, not CI:
+    the entry stays TODO because no DOD item is ticked by me.
+    + Task 1 (autoclaw-bin): the exec line now carries both flags —
+      `--disable-gpu --password-store=basic "$@"'
+      (sane-packages/autoclaw.scm:376), with the reason in the comment above
+      it (autoclaw.scm:362-371).  Shape unchanged otherwise (script, not
+      symlink; user args still last).
+    + Task 2 (qoder-desktop-bin): bin/qoder-desktop is no longer a symlink.
+      It is a script that execs the wrap-program output `lib/Qoder/qoder'
+      with --password-store=basic before "$@"
+      (sane-packages/custom.scm:3061-3083).  It execs the WRAPPER, not
+      qoder.real, so the LD_LIBRARY_PATH / XDG_DATA_DIRS / PATH clauses at
+      custom.scm:3040-3058 stay in force and are not duplicated — which is
+      what the previous note asked whoever did it to check.  Nothing depended
+      on it being a symlink: `git grep -n qoder-desktop' returns only the
+      .desktop Exec rewrite (custom.scm:3032-3035, which points at
+      $output/bin/qoder-desktop and works the same for a script),
+      README.org:330 (entry-point name unchanged, so README stays true), and
+      two prose mentions in zcode.scm:75,108.  bash-minimal was already an
+      input (custom.scm:3136), so no inputs change was needed.
+    + Task 3 (qoder-cli-bin): PARTIAL, from the tree plus the CI harness —
+      no strings/strace possible in this container.  The package has no
+      wrapper at all (custom.scm:2982-2989: copy, patchelf
+      --set-interpreter, symlink), so it has no argv insertion point; and
+      --password-store is a Chromium/Electron switch, so it does not apply to
+      this single native CLI binary regardless.  Where its state lives: the
+      turn harness archives `$HOME/.qoder' for session restore and collect
+      (.turn-inside.sh:140 and :145 — the harness file mounted into this
+      container, not a repo file), i.e. the CLI keeps plain files under
+      $HOME/.qoder rather than a keyring entry.  So the CLI is the least
+      likely of the three to be what the Owner loses on restart, and the two
+      desktop wrappers above are the fix that matters.  Direct proof
+      (strings on the binary, or watching a real login survive a restart)
+      still needs a seat that can build.
+    + WHAT TURNS THIS INTO REVIEW (same commands as before, now with a diff
+      to test): `guix build -L . --dry-run autoclaw-bin qoder-desktop-bin';
+      ./tests/check-chain.sh; build.yml via workflow_dispatch with
+      PACKAGES="autoclaw-bin qoder-desktop-bin"; then on the Owner box
+      `guix install' both (legal — they are *-bin), run them, log in,
+      restart, confirm the session survives.  Only that last step can tick
+      DOD items 1, 2 and 5, and I did not claim it.
+  :END:
+
+  BLUF: the Owner reports autoclaw and qoder lose their login on every
+  restart (Owner order #hq 2026-10-28: "Fix autoclaw and qoder's log
+  in persistence issue").  Both desktop apps are Electron; the likely
+  cause on this minimal Guix box (no keyring service) is Chromium
+  password-store detection finding nothing to write tokens to.  The
+  standard fix is --password-store=basic so credentials persist on disk
+  in the profile dir.  UNVERIFIED until confirmed from app behavior at
+  login time.
+
+  CONTEXT:
+  - autoclaw-bin wrapper (sane-packages/autoclaw.scm, create-wrapper
+    phase) already passes --disable-gpu; add --password-store=basic
+    the same way, comment updated.
+  - qoder-desktop-bin (sane-packages/custom.scm) wraps lib/Qoder/qoder;
+    the flag goes on its launch path the same way.
+  - qoder-cli-bin is a single qodercli binary — investigate where its
+    login state lands; fix only if actually broken.
+  - Machine law (AGENTS.md): *-bin must build, install and actually
+    run locally; source builds CI-only; no heavy builds here.
+
+  TASK:
+  1. autoclaw-bin: add --password-store=basic next to --disable-gpu
+     in the bin/autoclaw wrapper script.
+  2. qoder-desktop-bin: add --password-store=basic to its launch path.
+  3. qoder-cli-bin: find the credential storage (upstream docs,
+     strings/strace on the binary); record the finding.
+  4. guix build -L . --dry-run green for all three; push branch
+     ai/login-persistence; CI build via workflow_dispatch.
+
+  DEFINITION OF DONE:
+  - [ ] autoclaw + qoder-desktop wrappers pass --password-store=basic.
+  - [ ] qoder-cli storage investigated; finding recorded (fixed, or
+        "not broken" with evidence).
+  - [ ] guix build -L . --dry-run green for all three packages.
+  - [ ] CI build green; workflow_dispatch run URL in the note.
+  - [ ] Owner-side UAT: login survives an app restart — the Owner
+        runs this; the REVIEW note carries the ask.
+
+  SCOPE:
+  - yours: sane-packages/autoclaw.scm, sane-packages/custom.scm
+    (qoder-*-bin hunks only), the CI dispatch, the branch push.
+  - not yours: cline-baseline (Owner order 2026-10-28: legacy — "Cline
+    is fine"), dotfiles, home-config.
+
+  ENV: 2014 Celeron, 4 GB RAM, no AVX2; X session present; no keyring
+  daemon assumed; no source builds locally.
+
+  FINAL INSTRUCTION: re-read the DOD before reporting; work on
+  ai/login-persistence; flip this entry to REVIEW with branch/sha,
+  dry-run + CI evidence, and the qoder-cli finding.
+
+* Org cheat sheet
+
+  - ONGOING work: PROGRESS + CLOCK start line
+  - progress notes go into the :LOGBOOK: drawer
+  - blocked on anyone: BLOCKED; owner must rule: add :OWN:
+  - finished: close CLOCK, completion note in :LOGBOOK: (facts, evidence,
+    UNVERIFIED labels), flip REVIEW — REVIEW without a note is invalid
+  - BLOCKED is never terminal; only the EM flips DONE
