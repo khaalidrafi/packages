@@ -1,8 +1,66 @@
 #+TITLE: TODOS.org — team board (single source of truth)
 #+TODO: TODO PROGRESS BLOCKED REVIEW | DONE CANCELLED DEFERRED
-# DISPATCH counter: 3
+# DISPATCH counter: 4
 
 * Board
+
+* TODO DISPATCH #4 — packages/devin-bin: package the Devin CLI as devin-bin
+  :PROPERTIES:
+  :FROM: Team Lead — glm-5.3-flash@chat.z.ai
+  :TO: Build Engineer — GLM-5.3@chat.z.ai
+  :PRIORITY: P1
+  :ORDER: 4
+  :END:
+
+  BLUF: Owner order 2026-10-29 #hq: package the Devin CLI (Cognition)
+  in this channel as a *-bin package.  PACKAGING ONLY — no credentials,
+  no auth steps anywhere in build, package or smoke.
+
+  FACTS (measured 2026-10-29, do not re-derive):
+  - npm package `devin', command `devin'; current pin 3000.11.228,
+    tarball https://registry.npmjs.org/devin/-/devin-3000.11.228.tgz.
+    Re-check `npm view devin version' at build time and pin the version
+    YOU verify, not the one this dispatch quotes.
+  - Single Bun-compiled binary inside the tarball — same shape as
+    cline-bin: patchelf --set-interpreter ONLY; NEVER --set-rpath (a
+    patchelf run that also rewrites the dynamic section corrupts the
+    appended Bun payload — verified on cline-bin, UPDATE #1).
+  - This box has no AVX2; cline's Bun 1.4.2 payload runs here.  The
+    Bun version bundled in devin is UNKNOWN — prove the binary actually
+    starts on this Celeron before claiming anything.
+
+  TASK:
+  1. Add `devin-bin' to sane-packages/ (one home, defined once;
+     kilocode-bin lives in custom.scm, cline-bin in cline.scm — your
+     pick per repo convention).
+  2. FATAL version check: the build must DIE when `devin --version'
+     does not answer exactly the pinned version.  No silent
+     wrong-binary outputs.
+  3. NO CREDS: no credentials.toml, tokens, API keys or auth steps in
+     the package, build or smoke.  Auth lives outside this channel
+     (vault hold secrets/DEVIN_API_KEY + agent-org WO-17 restore);
+     `devin auth login' is FORBIDDEN in build and smoke.
+  4. README.org: Contents table + entry-point inventory rows for
+     devin-bin.
+  5. guix build -L . --dry-run green; tests/check-chain.sh step 2 green
+     (one definition per name); CI build via build.yml
+     workflow_dispatch PACKAGES="devin-bin".
+
+  DEFINITION OF DONE:
+  - [ ] devin-bin defined once; dry-run green; CI build green (run URL
+        in the note).
+  - [ ] FATAL version check present and demonstrated (wrong version
+        dies).
+  - [ ] --version answers the pinned version on this box (no-AVX2
+        Celeron).
+  - [ ] No credential material anywhere in the package or its build.
+  - [ ] REVIEW note with branch/sha; ai/packages pushed.
+
+  SEQUENCING: no reorder of DISPATCH #3 — slot this after the segment
+  in flight; it is independent of Tasks 1/2 there.
+
+  FINAL INSTRUCTION: work on ai/packages; flip this entry to REVIEW
+  with branch/sha and the CI run URL.
 
 * PROGRESS DISPATCH #3 — packages/update-all + login-persistence (consolidated)
   :PROPERTIES:
