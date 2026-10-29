@@ -97,6 +97,29 @@
       (CHAT.org 18:37) to run the gate and dispatch build.yml.
     + UNVERIFIED LABEL: my check-chain.sh edit is reviewed by reading, not
       parsed by a shell (bash -n refused in this container).
+  - Note [2026-10-29 Thu 17:03 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+    bench seat): no DOD tick — the CI run still cannot be started from a bench
+    container (no guix/guile/gh, git write refused; same wall as the three
+    preceding bench turns).  What I re-established by reading, so the next
+    seat does not repeat it: the tree is still single-definition per name, and
+    tests/check-chain.sh step 2 harvests the same file set as
+    tests/build-all.sh:25 and tests/check-static.sh:13 (all three use
+    `sane-packages/*.scm'; sane-packages/ has no subdirectories), so the guard
+    and the CI build list cannot disagree.  The three commands that would flip
+    this entry to REVIEW are unchanged: `guix build -L . --dry-run cline-bin
+    lark-cli-bin autoclaw-bin', `./tests/check-chain.sh', then build.yml via
+    workflow_dispatch with PACKAGES="cline-bin lark-cli-bin autoclaw-bin".
+    Also carried: the duplicate-definition guard's provenance is now recorded,
+    and AI-REVIEW.org gained a TODO for the cline version split
+    (%cline-version 3.0.70 at custom.scm:2949 vs %cline-bin-version 3.0.73 at
+    cline.scm:889) that the 2026-10-03 DONE entry no longer describes.
+    dupscan.py is still at the repo root: `git rm' is refused here, so the
+    cleanup asks for a seat with git write (it breaks no check — only .scm
+    files are in the channel contract, and check-chain.sh:118 compiles
+    scripts/*.py, not the root).
+    + Lark webhook: NOT posted.  $ROLE_LARK_WEBHOOK could not even be tested
+      for emptiness from here (`test -n' refused), and a value must never be
+      printed, so the report went to CHAT.org only.
   :END:
 
   BLUF: AutoClaw 2.0.3 had a broken .desktop entry and crashed at launch
@@ -247,6 +270,44 @@
     its storage question needs strings/strace, which this seat has neither.
     Kept as TODO on purpose: a seat that cannot run `guix build --dry-run'
     or install and run a *-bin must not be the one claiming a login fix.
+  - Note [2026-10-29 Thu 17:03 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+    bench seat): AUDIT ONLY again — no wrapper changed by me, and this entry
+    stays TODO.  New finding, and it corrects this entry's CONTEXT section:
+    the two flags do NOT have symmetric insertion points.
+    + autoclaw-bin — ONE-LINE EDIT, ready as described.  The wrapper is a
+      generated script whose exec line already carries --disable-gpu
+      (sane-packages/autoclaw.scm:362-368, the flag on line 366).  Adding
+      --password-store=basic beside it is the edit Task 1 asks for.
+    + qoder-desktop-bin — NOT "the same way".  CONTEXT above says the flag
+      "goes on its launch path the same way", but this package has no launch
+      line: bin/qoder-desktop is a bare symlink to lib/Qoder/qoder
+      (sane-packages/custom.scm:3061-3065), and lib/Qoder/qoder is the output
+      of wrap-program (custom.scm:3040-3058).  A symlink takes no arguments
+      and wrap-program's clauses set environment, not argv.  So Task 2 needs
+      a STRUCTURAL change first: replace the symlink with a small script that
+      execs the wrapped binary with the flag, which is exactly the autoclaw
+      shape (see the comment at autoclaw.scm:351-352 for why that one is a
+      script and not a symlink).  Whoever does it should check wrap-program's
+      own options in the Guix (guix build utils) manual before hand-writing
+      the script, so the LD_LIBRARY_PATH/XDG_DATA_DIRS/PATH wrapping above is
+      kept, not duplicated.  Until that is decided, Task 2 cannot be ticked
+      off as a two-line change, which is how this item has stayed open.
+    + qoder-cli-bin — confirmed unchanged from the 18:37Z audit: a single
+      copied binary, patchelf --set-interpreter, and a symlink
+      (sane-packages/custom.scm:2982-2989).  No wrapper, so nothing to put a
+      flag on; the credential-storage question still needs strings/strace.
+    + STILL BLOCKED, fourth consecutive bench turn (two build-bench-qoder,
+      two build-bench-zai): this container has git read-only, ls, wc, date;
+      `guix', `guile', `gh', `rg' are all absent and the permission layer
+      refuses `git add', `git rm', `git commit' and running any tests/*.sh.
+      So no dry-run,
+      no gate run, no workflow_dispatch, no commit of my own — the host sweeps
+      these file edits.  ./tests/check-chain.sh step 2 was NOT re-run; its
+      harvest glob `sane-packages/*.scm' (check-chain.sh:42) was verified by
+      reading to be the SAME glob as tests/build-all.sh:25 and
+      tests/check-static.sh:13, so the three do see one name set (the claim at
+      check-chain.sh:38-40 holds).  sane-packages/ has no subdirectories, so
+      the non-recursive glob misses nothing.
   :END:
 
   BLUF: the Owner reports autoclaw and qoder lose their login on every
