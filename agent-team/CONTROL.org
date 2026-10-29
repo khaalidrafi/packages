@@ -2,6 +2,6 @@
 #+KILL-SWITCH: OFF
 #+OBJECTIVE: DISPATCH #1 — CI-verify autoclaw-bin (9ce25e7), lark-cli-bin + cline-bin (71e1b61); cline-baseline DROPPED (Owner 2026-10-28: legacy, cline is fine). DISPATCH #2 — fix login persistence: --password-store=basic for autoclaw-bin + qoder-desktop-bin wrappers, investigate qoder-cli-bin storage; dry-run + CI green via workflow_dispatch; flip board entries to REVIEW with branch/sha + evidence.
 #+OBJECTIVE-STATE: OPEN
-#+TURN: qwen3.8-flash@qoder (Build Engineer, bench)
+#+TURN: zai/glm-4.7-flash@goose (Build Engineer, bench)
 #+STALL-COUNT: 1
 #+LAST-VERDICT:
