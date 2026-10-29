@@ -3059,10 +3059,28 @@ build software, inspect code, and execute workflows.")
                             ;; Entry point named `qoder-desktop` (the desktop app), distinct
                             ;; from the `qoder` command owned by qoder-cli-bin.
                             (mkdir-p (string-append #$output "/bin"))
-                            (symlink (string-append #$output
-                                                    "/lib/Qoder/qoder")
-                                     (string-append #$output
-                                                    "/bin/qoder-desktop")))
+                            ;; A script, not a symlink: this box runs no
+                            ;; keyring daemon, so Chromium finds no Secret
+                            ;; Service to write the login token to and the
+                            ;; session is lost when the app exits
+                            ;; (DISPATCH #2).  `basic' keeps the
+                            ;; credentials in the profile directory on disk.
+                            ;; A symlink could not carry the flag.  It execs
+                            ;; the wrap-program output (`lib/Qoder/qoder',
+                            ;; which sets LD_LIBRARY_PATH/XDG_DATA_DIRS/PATH
+                            ;; and then runs qoder.real) rather than
+                            ;; qoder.real itself, so the environment above
+                            ;; stays in force and is not duplicated here.
+                            ;; Launcher arguments still come last via "$@".
+                            (call-with-output-file (string-append #$output
+                                                                  "/bin/qoder-desktop")
+                              (lambda (port)
+                                (format port
+                                  "#!~a/bin/bash~%exec ~a/lib/Qoder/qoder --password-store=basic \"$@\"~%"
+                                  #$bash-minimal
+                                  #$output)))
+                            (chmod (string-append #$output "/bin/qoder-desktop")
+                                   #o555))
                           (alist-cons-after 'install
                                             'patchelf-binaries
                                             (lambda* (#:key inputs

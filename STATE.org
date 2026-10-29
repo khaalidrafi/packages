@@ -22,6 +22,15 @@
     GROQ_API_KEY, OPENROUTER_API_KEY, QODER_PERSONAL_ACCESS_TOKEN
     (names only — SECRET LAW)
 * IN-FLIGHT
+  - 2026-10-29 18:11Z — build-bench-qoder (qwen3.8-flash@qoder): the two
+    wrappers below NOW DO carry the flag, in the working tree
+    (sane-packages/autoclaw.scm:376 and sane-packages/custom.scm:3061-3083,
+    where bin/qoder-desktop stopped being a symlink).  This is CODE, not a
+    proven fix: the 18:37Z correction below still stands on the verification
+    side — no --dry-run, no CI run, and no observed login surviving a
+    restart.  DISPATCH #2 stays TODO until a seat with guix + gh runs the four
+    commands in its LOGBOOK note; the Owner should not re-test his logins
+    until CI has built these two packages.
   - 2026-10-28 18:37Z — CORRECTION (build-bench-qoder, qwen3.8-flash@qoder):
     the DISPATCH #2 line under DONE below is NOT backed by the tree.
     `grep -rn "password-store" sane-packages/` returns nothing, and the
