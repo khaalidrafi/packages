@@ -308,6 +308,51 @@
       tests/check-static.sh:13, so the three do see one name set (the claim at
       check-chain.sh:38-40 holds).  sane-packages/ has no subdirectories, so
       the non-recursive glob misses nothing.
+  - Note [2026-10-29 Thu 18:11 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+    bench seat): CODE LANDED for Task 1 + Task 2 — in the working tree, for
+    the host to sweep, because git write is still refused here (`git add
+    sane-packages/autoclaw.scm' and `git commit -am ...' both denied; same
+    wall as the four preceding bench turns).  This note claims CODE, not CI:
+    the entry stays TODO because no DOD item is ticked by me.
+    + Task 1 (autoclaw-bin): the exec line now carries both flags —
+      `--disable-gpu --password-store=basic "$@"'
+      (sane-packages/autoclaw.scm:376), with the reason in the comment above
+      it (autoclaw.scm:362-371).  Shape unchanged otherwise (script, not
+      symlink; user args still last).
+    + Task 2 (qoder-desktop-bin): bin/qoder-desktop is no longer a symlink.
+      It is a script that execs the wrap-program output `lib/Qoder/qoder'
+      with --password-store=basic before "$@"
+      (sane-packages/custom.scm:3061-3083).  It execs the WRAPPER, not
+      qoder.real, so the LD_LIBRARY_PATH / XDG_DATA_DIRS / PATH clauses at
+      custom.scm:3040-3058 stay in force and are not duplicated — which is
+      what the previous note asked whoever did it to check.  Nothing depended
+      on it being a symlink: `git grep -n qoder-desktop' returns only the
+      .desktop Exec rewrite (custom.scm:3032-3035, which points at
+      $output/bin/qoder-desktop and works the same for a script),
+      README.org:330 (entry-point name unchanged, so README stays true), and
+      two prose mentions in zcode.scm:75,108.  bash-minimal was already an
+      input (custom.scm:3136), so no inputs change was needed.
+    + Task 3 (qoder-cli-bin): PARTIAL, from the tree plus the CI harness —
+      no strings/strace possible in this container.  The package has no
+      wrapper at all (custom.scm:2982-2989: copy, patchelf
+      --set-interpreter, symlink), so it has no argv insertion point; and
+      --password-store is a Chromium/Electron switch, so it does not apply to
+      this single native CLI binary regardless.  Where its state lives: the
+      turn harness archives `$HOME/.qoder' for session restore and collect
+      (.turn-inside.sh:140 and :145 — the harness file mounted into this
+      container, not a repo file), i.e. the CLI keeps plain files under
+      $HOME/.qoder rather than a keyring entry.  So the CLI is the least
+      likely of the three to be what the Owner loses on restart, and the two
+      desktop wrappers above are the fix that matters.  Direct proof
+      (strings on the binary, or watching a real login survive a restart)
+      still needs a seat that can build.
+    + WHAT TURNS THIS INTO REVIEW (same commands as before, now with a diff
+      to test): `guix build -L . --dry-run autoclaw-bin qoder-desktop-bin';
+      ./tests/check-chain.sh; build.yml via workflow_dispatch with
+      PACKAGES="autoclaw-bin qoder-desktop-bin"; then on the Owner box
+      `guix install' both (legal — they are *-bin), run them, log in,
+      restart, confirm the session survives.  Only that last step can tick
+      DOD items 1, 2 and 5, and I did not claim it.
   :END:
 
   BLUF: the Owner reports autoclaw and qoder lose their login on every

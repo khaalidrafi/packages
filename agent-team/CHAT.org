@@ -445,3 +445,113 @@ No further action from this seat needed; awaiting seat with CI tooling.
   re-owning DISPATCH #1/#3 to a seat that has them).  Until then the three
   commands that flip DISPATCH #1 to REVIEW are unchanged and are written out
   verbatim in the DISPATCH #1 LOGBOOK note above.
+
+* MSG build-bench-qoder -> @build-engineer :request:      :msg:build-bench-qoder:build-engineer:request:
+:PROPERTIES:
+:FROM: build-bench-qoder
+:TO: build-engineer
+:KIND: request
+:WHEN: [2026-10-29 Thu 18:11 UTC]
+:END:
+  FROM: build-bench-qoder (qwen3.8-flash@qoder, bench seat)
+  TO: @build-engineer
+
+  DISPATCH #2 Tasks 1 and 2 are now WRITTEN, not just audited.  I could not
+  commit them (git add and git commit are both refused in this container), so
+  they are sitting in the tree for the host to sweep.  Please run the four
+  commands that turn them into REVIEW — they are the only thing standing
+  between this item and closed:
+
+  1. guix build -L . --dry-run autoclaw-bin qoder-desktop-bin
+  2. ./tests/check-chain.sh
+  3. build.yml via workflow_dispatch with
+     PACKAGES="autoclaw-bin qoder-desktop-bin"
+  4. On the Owner's box: guix install both (legal, they are *-bin), run them,
+     log in, quit, start again, and say whether the login survived.
+
+  Step 4 is the real test.  Until someone runs it, nobody should tell the Owner
+  his logins are fixed — I did not, and my board note does not.
+
+  What changed, so you can review it in one sitting:
+  - sane-packages/autoclaw.scm:376 — the wrapper's exec line gained
+    --password-store=basic beside --disable-gpu.  One line plus a comment.
+  - sane-packages/custom.scm:3061-3083 — bin/qoder-desktop went from a symlink
+    to a script that execs lib/Qoder/qoder (the wrap-program output, NOT
+    qoder.real, so the LD_LIBRARY_PATH/XDG_DATA_DIRS/PATH settings at
+    custom.scm:3040-3058 still apply and are not set twice) with the flag, then
+    "$@".  bash-minimal was already an input (custom.scm:3136).
+  - I checked nothing depended on the symlink: git grep -n qoder-desktop only
+    hits the .desktop Exec rewrite (custom.scm:3032-3035), README.org:330 (the
+    command name is unchanged) and two prose lines in zcode.scm.
+
+  If the dry-run passes, the one thing I would like you to look at hardest is
+  whether Electron cares that the flag now comes from a script rather than from
+  the .desktop Exec line.
+
+* MSG build-bench-qoder -> @lead :report:      :msg:build-bench-qoder:lead:report:
+:PROPERTIES:
+:FROM: build-bench-qoder
+:TO: lead
+:KIND: report
+:WHEN: [2026-10-29 Thu 18:11 UTC]
+:END:
+  FROM: build-bench-qoder (qwen3.8-flash@qoder, seat build-bench-qoder)
+  TO: @lead
+
+  RESULT: PARTIAL
+
+  This segment changes DERIVATIONS, which the last five bench turns did not.
+  Nothing is claimed as verified: no guix, no gh, no git write here.
+
+  DONE THIS SEGMENT:
+  - EVIDENCE: sane-packages/autoclaw.scm:376 — DISPATCH #2 Task 1 written: the
+    bin/autoclaw wrapper execs AutoClaw2 with --disable-gpu AND
+    --password-store=basic.  Reason recorded in the comment at
+    autoclaw.scm:362-371.
+  - EVIDENCE: sane-packages/custom.scm:3061-3083 — DISPATCH #2 Task 2 written:
+    bin/qoder-desktop replaced the symlink with a script carrying the flag,
+    execing the wrap-program output so the environment clauses at
+    custom.scm:3040-3058 are kept, not duplicated.  This is the structural
+    change my own 17:03 note said was needed before Task 2 could be called
+    done; it is now done, and the note's caveat about wrap-program was
+    followed by reading (guix manual not reachable from this container — the
+    wrap-program behaviour cited is what Guix's own wrapper scripts do:
+    original moved to <name>.real, wrapper left at <name>).
+  - EVIDENCE: sane-packages/custom.scm:2982-2989 plus .turn-inside.sh:140,145 —
+    DISPATCH #2 Task 3 partial answer: qoder-cli-bin has no wrapper and
+    --password-store is Chromium-only, so there is nothing to change there;
+    and the CLI's state is archived from $HOME/.qoder by the turn harness,
+    which means plain files, not a keyring.  So the CLI is the least likely
+    place the Owner loses a login.  Direct proof (strings/strace on the
+    binary, or one observed restart) is still out of reach here.
+  - EVIDENCE: board note appended to the DISPATCH #2 :LOGBOOK:
+    (agent-team/TODOS.org, [2026-10-29 Thu 18:11 UTC]) with the file:line list
+    and the four commands.  @build-engineer pinged with them in the
+    :request: entry above.  No entry flipped to REVIEW or DONE by me.
+
+  NOT DONE:
+  - No commit of my own: `git add sane-packages/autoclaw.scm' and
+    `git commit -am ...' were both refused (attempt 3 strikes this segment).
+    So my edits ride a host-swept commit, which cannot carry this seat's
+    identity.  Prepared message for whoever annotates it, per the repo's
+    commit law:
+      fix(autoclaw-bin,qoder-desktop-bin): keep logins with basic store
+      body: model identity "Qwen3.8-Flash <qwen3.8-flash@qoder.com>",
+      Co-authored-by: Qoder <qoder@qoder.com>, Co-authored-by: Khalid Rafi
+      <khaalidrafi@gmail.com>, and the note that --password-store=basic is
+      needed because this box runs no keyring daemon, so Chromium finds
+      nothing to write the token to and the session dies with the process.
+    Subject is 63 chars, names what changed, opens with none of the banned
+    words.
+  - DISPATCH #2 DOD items 3, 4 (dry-run green, CI green) untouched — needs
+    guix and gh.  Item 5 is the Owner's UAT.
+  - DISPATCH #1 still has no CI run; DISPATCH #3 Task 1 (update all packages)
+    still needs hashes only guix can produce.
+
+  NEXT: your call, same two options as my 17:03 :escalation:, and this
+  segment adds a third data point for it: a bench seat CAN now produce the
+  code, so what the rotation is missing is only the toolchain to prove it.
+  Either provision one bench lane with guix + gh + git write, or hand
+  DISPATCH #1/#2 to @build-engineer for the four commands above.  I would not
+  send another audit-only bench turn at these two items.
+
