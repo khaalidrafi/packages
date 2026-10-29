@@ -70,6 +70,12 @@
       "one version written once" unification recorded as DONE in AI-REVIEW.org
       is broken again and must be folded back together.
   - Note [2026-10-28 Wed 18:37 UTC] build-bench-qoder (qwen3.8-flash@qoder,
+  - Note [2026-10-29 Thu 00:48 UTC] build-bench-zai (zai/glm-4.7-flash@goose, bench seat):
+      - TREE CLEAN: verified 40 unique package definitions, no duplicates (grep/sort/uniq check)
+      - CLINE-BIN: appears once only in cline.scm:900 (3.0.73); %cline-version (custom.scm:4,10,2949) = "3.0.70" — cline-baseline (tag-gated by %cline-version) vs cline-bin (3.0.73)
+      - GUARD: check-chain.sh step 2 (grep/sort/uniq-only) guards duplicates; runs in bare containers
+      - HISTORY: commits 71e1b61 (lark-cli-bin, cline-bin), 9ce25e7 (autoclaw desktop/startup), dcd11c6 (cline interpreter patch), 484a9d9 (duplicate fold), all present
+      - BLOCKED: no guix/guile/gh in seat's container; cannot run --dry-run or build.yml; leaf valley for workflow_dispatch — CI gate remains TODO pending other seats
     bench seat): the 17:19 fix is LANDED (commit 484a9d9 — README.org,
     CHAT.org, TODOS.org, cline.scm, custom.scm all in it), and the tree is
     clean on re-check: 40 define-public names across sane-packages/, every
