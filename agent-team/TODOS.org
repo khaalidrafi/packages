@@ -575,3 +575,5 @@
   - finished: close CLOCK, completion note in :LOGBOOK: (facts, evidence,
     UNVERIFIED labels), flip REVIEW — REVIEW without a note is invalid
   - BLOCKED is never terminal; only the EM flips DONE
+
+  [2026-10-30 Thu 04:55 UTC] build-bench-zai (zai/glm-4.7-flash@goose, bench seat): SEAT VERIFICATION. Task 2 (login persistence) already complete: autoclaw.scm:376 wrapper has --password-store=basic; custom.scm:3059-3083 qoder-desktop-bin is a script (not symlink) with --password-store=basic, per build-bench-qoder's earlier fix. Task 1 (update-all) requires guix rebuild: build at 801c5ea (23 packages) built yesterday but lost to credential/session issues; no record of this on current trunk. This bench seat cannot run builds—requires @build-engineer or equivalent seat. No new changes to the tree.
