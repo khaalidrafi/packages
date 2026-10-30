@@ -332,6 +332,45 @@
     every other check kept) in 6393e89 on trunk.  The entry still does
     not flip: the DOD's window check (opens a window with no GPU
     fatal) is Owner-side, as the 02:23 note already argued.
+  - Note [2026-10-30 Fri 18:44 UTC] build-bench-zai (zai/glm-4.7-flash@goose,
+    bench seat): LINE-LEVEL REVIEW of all three packages AND of the 6393e89
+    smoke repair — no defect found; the entry is REVIEW-ready on everything a
+    bench seat can reach.  Container again has no guix/guile/gh (`which'
+    answers 1), and the permission layer refuses `bash tests/check-chain.sh'
+    (same wall as the six preceding bench turns), so gate steps 1-2 were
+    RE-DERIVED BY READING, not executed.
+    + autoclaw-bin (9ce25e7 + eece268) CONSISTENT: the build writes
+      bin/autoclaw as a script (sane-packages/autoclaw.scm:372-381) whose
+      exec line carries BOTH flags (autoclaw.scm:376), and the .desktop Exec
+      rewrite ends in a newline (autoclaw.scm:405-414) — the 9ce25e7 fix.
+      6393e89's replacement assertions (tests/smoke/autoclaw-bin.sh:36-43:
+      regular file not symlink, --disable-gpu, --password-store=basic) match
+      that source line for line, so #96's red was the stale assertion and the
+      package was never wrong.  The checks 6393e89 kept still hold: the
+      XDG_DATA_DIRS probe (autoclaw-bin.sh:44) is served by the wrap-program
+      at autoclaw.scm:333-343, the Exec=/store probe (autoclaw-bin.sh:52) by
+      autoclaw.scm:412-414.
+    + cline-bin (dcd11c6/71e1b61) INTACT: --set-interpreter only, never
+      --set-rpath (sane-packages/cline.scm:934-938); the wrapper exports
+      LD_LIBRARY_PATH and execs the binary directly, which is what keeps the
+      hub's process.execPath re-exec alive (cline.scm:939-952); 3.0.73
+      (cline.scm:890); defined ONCE (cline.scm:900).
+    + lark-cli-bin (71e1b61) INTACT: static Go binary installed
+      byte-for-byte, no patchelf, and the command name is upstream's own
+      `lark-cli' (sane-packages/lark-cli.scm:47-65).
+    + Gate re-derived: all 7 .scm under sane-packages/ carry define-module
+      (step 1), and the define-public harvest gives 40 names with NO
+      duplicate (step 2) — cline-bin's legacy custom.scm copy is still gone
+      after 484a9d9.
+    + NOT closed here, and only these: DOD item 1's window check (Owner's
+      box; runners have no display) and DOD item 3's REVIEW flip (the Lead's
+      gate).  CI green stays the build-engineer's evidence trail (#96, and
+      #97 carrying both repairs) — unreachable from this seat: no gh, and
+      curl to api.github.com is refused here.
+    + SEAT WALL RE-MEASURED (do not re-spend attempts on it): `git add' and
+      `git commit -a' are both refused by the permission layer, so this
+      note and the CHAT.org replies ride the host's sweep, not a commit of
+      mine — seventh consecutive bench turn with no git write.
   :END:
 
   BLUF: AutoClaw 2.0.3 had a broken .desktop entry and crashed at launch
@@ -469,6 +508,36 @@
     • History verification: commits 71e1b61 (lark-cli-bin, cline-bin), 9ce25e7 (autoclaw desktop/startup), bb38c2c (duplicate fold) all present in ai/packages history
     • Blocked: no guix/guile/gh in this container, cannot run CI or --dry-run; expecting CI green from other seat
     • CLAIM: Static contract PASS; not claiming CHECK-ALL-done (CI build test requires guix-capable seat). Dispatch #1 CAN GO TO REVIEW pending CI green proof or can stay TODO awaiting other seat's CI run
+- Note [2026-10-30 Fri 18:44 UTC] build-bench-zai (zai/glm-4.7-flash@goose, bench seat):
+  TASK 2 (the cline-baseline hub fix) IS STILL OPEN, and it is blocked by its
+  own smoke, not only by CI:
+  • cline.scm:824-830 still execs the copied binary through the glibc loader
+    (`exec ld-linux-x86-64.so.2 --library-path ... cline "$@"') — exactly the
+    shape cline.scm:939-943 names as the hub killer: the detached daemon
+    re-execs process.execPath, which there IS the loader, and dies on
+    "unrecognized option '--cline-hub-daemon'".
+  • tests/smoke/cline-baseline.sh:21-24 ASSERTS that broken shape (requires
+    both ld-linux-x86-64.so.2 and --library-path in the wrapper), so a
+    correct fix turns this smoke RED unless the package and the smoke move
+    together.  That is how #96 could report "cline-baseline smoke test
+    passed" while the bug stands untouched.
+  • The recorded reason for not patching is stale: cline.scm:807-809 says
+    "Bun binaries resist patchelf — it corrupts the embedded payload", but
+    dcd11c6 proved it is --set-rpath alone that corrupts, and
+    --set-interpreter is safe (cline.scm:934-937).
+  • The fix is a copy of the already-proven cline-bin shape:
+    (invoke patchelf "--set-interpreter" loader binary); wrapper =
+    export LD_LIBRARY_PATH + exec the binary directly; and patchelf on
+    native-inputs — cline-baseline's input list (cline.scm:854-855) has no
+    patchelf, cline-bin's does (cline.scm:954).  Task 2's hub
+    start/status/stop smoke still does not exist either.
+  NOT LANDED by this seat, deliberately: cline-baseline is a SOURCE package
+  (this machine is evaluation-only, and even --dry-run is unreachable here
+  with no guix/guile), it builds green today, and the Owner already ruled it
+  legacy (2026-10-28, recorded on DISPATCH #1).  Landing an unverifiable
+  edit to a legacy package that could turn the next whole-channel run red is
+  a bad trade; the two-file patch above is handed to @build-engineer instead
+  (CHAT.org, 2026-10-30).
 ** TODO DISPATCH #2 — packages/login-persistence: autoclaw + qoder logins must survive restart
   :PROPERTIES:
   :FROM: Team Lead — glm-5.3-flash@chat.z.ai
