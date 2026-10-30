@@ -13,6 +13,7 @@ built by CI instead of by hand on a 4 GB laptop.
 | zcode-bin        | =(sane-packages zcode)=  | vendor Electron .deb and its CLI  |
 | cline-baseline   | =(sane-packages cline)=  | Bun CLI, built for non-AVX2 CPUs  |
 | cline-bin        | =(sane-packages cline)=  | vendor Bun CLI from the npm build  |
+| devin-bin        | =(sane-packages devin)=  | vendor Bun CLI (Cognition Devin)  |
 | autoclaw-bin     | =(sane-packages autoclaw)= | vendor Electron AppImage         |
 | konaito-terminal-browser-bin | =(sane-packages konaito)= | terminal browser over CDP, no Electron |
 | chrome-headless-shell-bin | =(sane-packages chrome-headless-shell)= | headless Chromium for Puppeteer |
@@ -317,6 +318,7 @@ codebuddy-code-bin     codebuddy, codebuddy-code, cbc, cbc-prewarm,
 copilot-cli-bin        copilot
 cua-driver-bin         cua-driver
 cursor-cli-bin         cursor-cli
+devin-bin              devin
 dsh                    dsh
 goose-cli-bin          goose
 kilocode-bin           kilocode
