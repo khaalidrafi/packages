@@ -57,17 +57,16 @@
     ;; Not the version in (name "devin"): the payload is the platform
     ;; release of the same package name, whose version string carries the
     ;; platform suffix and whose tarball name therefore does too.
-    (uri (string-append
-          "https://registry.npmjs.org/devin/-/devin-"
-          %devin-version "-linux-x64.tgz"))
-    (sha256
-     (base32 "1lnjkspfscykx1j18avb7q1pjl15cl1qlcvm87ph76ymxmj1w4in"))))
+    (uri (string-append "https://registry.npmjs.org/devin/-/devin-"
+                        %devin-version "-linux-x64.tgz"))
+    (sha256 (base32 "1lnjkspfscykx1j18avb7q1pjl15cl1qlcvm87ph76ymxmj1w4in"))))
 
 (define-public devin-bin
   (package
     (name "devin-bin")
     (version %devin-version)
-    (source %devin-source)
+    (source
+     %devin-source)
     (build-system copy-build-system)
     (supported-systems '("x86_64-linux"))
     (arguments
@@ -102,9 +101,8 @@
                   (mkdir-p (string-append out "/bin"))
                   (call-with-output-file (string-append out "/bin/devin")
                     (lambda (port)
-                      (format port "#!~a/bin/bash
-exec ~a \"$@\"
-" bash payload)))
+                      (format port "#!~a/bin/bash\nexec ~a \"$@\"\n" bash
+                              payload)))
                   (chmod (string-append out "/bin/devin") #o555))))
             (add-after 'make-wrapper 'check-version
               (lambda* (#:key outputs #:allow-other-keys)
@@ -112,8 +110,8 @@ exec ~a \"$@\"
                 ;; answers the pinned version.  A wrong-binary output can
                 ;; never silently pass: status must be 0, stdout must
                 ;; carry the expected version as its second token.
-                (let* ((devin (string-append
-                               (assoc-ref outputs "out") "/bin/devin"))
+                (let* ((devin (string-append (assoc-ref outputs "out")
+                                             "/bin/devin"))
                        (expected #$%devin-version)
                        (port (open-pipe* OPEN_READ devin "--version"))
                        (line (read-line port))
@@ -126,9 +124,14 @@ exec ~a \"$@\"
                   (unless (and (zero? status)
                                (>= (length tokens) 2)
                                (string=? (cadr tokens) expected))
-                    (error "devin --version does not answer the pinned version"
-                           (list 'exit status 'stdout line
-                                 'expected expected)))
+                    (error
+                     "devin --version does not answer the pinned version"
+                     (list 'exit
+                           status
+                           'stdout
+                           line
+                           'expected
+                           expected)))
                   (format #t "devin --version answered: ~a~%" line))))))))
     (inputs (list bash-minimal))
     (home-page "https://devin.ai")
