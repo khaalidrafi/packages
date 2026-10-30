@@ -64,6 +64,39 @@
       answered admin/push=true on the API.  It has now appeared in chat
       plaintext three times across sessions — rotation advised after
       this batch lands.
+  - Note [2026-10-30 Thu 05:25 UTC] Build Engineer (glm-5.3@chat.z.ai,
+    seat): CI DIAGNOSED, GATE REPAIRED, DEVIN EVIDENCE ON THE BOARD —
+    run 40991226571 (#93, the run the 02:23 note left in progress)
+    completed FAILURE and the failing step was NOT this package:
+    Static checks died on `sane-packages/custom.scm is not guix-style'
+    (the qoder-desktop hunk of 484a9d9/eece268, a trunk file) before
+    devin.scm was even reached (alphabetical order).  This seat has no
+    guix and the gate names the file but never the diff, so the branch
+    carried a temporary diagnostic step (2d0e74b; its plaintext diffs
+    were corrupted by the runner's secret log masker, re-emitted
+    base64 in 729e91c — runs 40997112009, 40999597279) that printed
+    the `guix style -f' diff for every package file and dry-ran all 41
+    packages: style-dirty = custom.scm AND devin.scm, zero evaluation
+    errors anywhere.  Applied byte-exact from the CI output: b1da4b1
+    (custom.scm; cherry-picked to trunk as 067f5a1) and 6a18661
+    (devin.scm), diagnostic dropped again.  Run 41001420954 (#96):
+    Static checks and lint PASSED, all 41 packages BUILT, 10 of the 11
+    smokes passed — including the two lines this DOD asks for:
+    `==> build: devin-bin' with `devin --version answered: devin
+    3000.11.228 (053434014dbd)' (the FATAL check-version phase, in the
+    real guix build) and `==> smoke: devin-bin' / `devin-bin smoke
+    test passed'.  The single red was `autoclaw-bin (smoke)' — a stale
+    symlink assertion (the smoke predates 9ce25e7's launcher script);
+    fixed by 6393e89 on trunk (see DISPATCH #1), cherry-picked here as
+    c21084f.  Run 41007451412 (#97) dispatched on this branch with
+    both repairs; in progress at note time.  Also evidenced this turn,
+    guix-free: the DOD's wrong-version case demonstrated at the
+    comparison level, both sides — correct pin passes, a 9999.99.99
+    expectation DIES on the same payload
+    (scripts/demo_version_check.sh, not committed to the repo); the
+    in-build phase itself speaks through #96's answered-version line.
+    Still Owner-only: the no-AVX2 Celeron `guix install devin-bin &&
+    devin --version'.
   :END:
 
   BLUF: Owner order 2026-10-29 #hq: package the Devin CLI (Cognition)
@@ -140,6 +173,20 @@
     Still guix/CI-only: the --dry-run gate and the real builds.  Task 2
     stays strictly after Task 1 per this dispatch's sequencing.  Push
     access: restored (write PAT — see the #4 note).
+  - Note [2026-10-30 Thu 05:25 UTC] Build Engineer (glm-5.3@chat.z.ai,
+    seat): two trunk blockers for this Task 1's CI proof were found and
+    repaired this turn — the build gate had not passed since run #88
+    (Oct 19, last success): (1) custom.scm style drift (484a9d9/
+    eece268) killed every Static checks step; repaired by 067f5a1
+    (`guix style -f' output, obtained byte-exact through the branch's
+    CI because this seat has no guix — see the #4 note).  (2) The
+    autoclaw-bin smoke asserted a symlink that 9ce25e7 had replaced
+    with a launcher script; repaired by 6393e89.  Both land on trunk;
+    run #96 (branch) proves the repaired tree: 41/41 builds, 10/11
+    smokes before the smoke fix, 11th diagnosed as stale-not-broken.
+    Task 1 itself (the 23-package bump batch) is NOT started this
+    turn — the CI-repair cycle consumed it; next seat starts from a
+    green base with the 02:23 hash method already proven.
   :END:
 
   BLUF: Build Engineer appointed (Owner order 04:02Z #hq).  This
@@ -264,6 +311,27 @@
     the entry to REVIEW — that is one Owner UAT away.  dupscan.py
     (root-level cleanup your note asked for) still pending a task
     branch; it breaks nothing meanwhile.
+  - Note [2026-10-30 Thu 05:25 UTC] Build Engineer (glm-5.3@chat.z.ai,
+    seat): CORRECTION to the 02:23 note, in the interest of `evidence
+    or it didn't happen': runs 40989729755/40988860772 are Agent Team
+    Chain runs (agent-team.yml) whose `test' job runs ONLY
+    ./tests/check-chain.sh (the guix-free contract gate,
+    agent-team.yml:98-110) — they did NOT build the channel, and their
+    success cannot close `CI green for lark-cli-bin and cline-bin'.
+    The citation was wrong in kind.  What closes the build half of
+    this entry instead: build.yml run 41001420954 (#96, whole channel,
+    41 builds) — `==> build: cline-bin' and `==> build: lark-cli-bin'
+    succeeded (neither package has a smoke script; 11 smokes exist,
+    grep-counted), and `==> build: cline-baseline' plus `cline-baseline
+    smoke test passed' exist too although the Owner ruling dropped
+    cline-baseline from this DOD.  autoclaw-bin: build green, smoke
+    RED on #96 — the smoke's `[ -L bin/autoclaw ]' assertion predates
+    9ce25e7 and the package is right (a script passing --disable-gpu
+    since 9ce25e7, --password-store=basic since eece268); aligned the
+    smoke to that designed behaviour (regular script + both flags,
+    every other check kept) in 6393e89 on trunk.  The entry still does
+    not flip: the DOD's window check (opens a window with no GPU
+    fatal) is Owner-side, as the 02:23 note already argued.
   :END:
 
   BLUF: AutoClaw 2.0.3 had a broken .desktop entry and crashed at launch
