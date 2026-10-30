@@ -3073,14 +3073,14 @@ build software, inspect code, and execute workflows.")
                             ;; stays in force and is not duplicated here.
                             ;; Launcher arguments still come last via "$@".
                             (call-with-output-file (string-append #$output
-                                                                  "/bin/qoder-desktop")
+                                                    "/bin/qoder-desktop")
                               (lambda (port)
                                 (format port
-                                  "#!~a/bin/bash~%exec ~a/lib/Qoder/qoder --password-store=basic \"$@\"~%"
-                                  #$bash-minimal
-                                  #$output)))
-                            (chmod (string-append #$output "/bin/qoder-desktop")
-                                   #o555))
+                                 "#!~a/bin/bash~%exec ~a/lib/Qoder/qoder --password-store=basic \"$@\"~%"
+                                 #$bash-minimal
+                                 #$output)))
+                            (chmod (string-append #$output
+                                                  "/bin/qoder-desktop") #o555))
                           (alist-cons-after 'install
                                             'patchelf-binaries
                                             (lambda* (#:key inputs
