@@ -468,15 +468,25 @@ jobs:
             echo "gomodel lane: DOWN (HTTP $CODE) — lane-fallback law active (turn proceeds on direct provider lanes; auto-reuses gomodel the moment the box answers)" >> "$SUMMARY"
           fi
 
-      - name: Build harness image (preinstalled agents — cached, no installs)
+      - name: Build harness image (MODULAR — only this run's agent bodies)
         if: steps.control.outputs.mode == 'work'
+        env:
+          SEAT: ${{ steps.control.outputs.seat }}
         run: |
-          docker buildx build --load \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            -f ci/docker/harness/Dockerfile \
-            -t agent-team-harness:local \
-            .
+          # Owner order 2026-10-30 #hq: "on each CI run, only agents needed
+          # by that run can be built/used." The seat map mirrors the
+          # .turn-inside.sh fallback chains (a seat may fall through
+          # several bodies in one segment). Unknown seat -> empty list ->
+          # harness_run_build.sh fails safe to the FULL harness build.
+          case "$SEAT" in
+            build-bench-zai|build-bench-groq) BODIES="goose qoder" ;;
+            build-bench-qoder)                BODIES="qoder goose" ;;
+            *)                                BODIES="" ;;
+          esac
+          bash ci/bin/harness_run_build.sh \
+            -b agent-team-harness-base:local \
+            -o agent-team-harness:local \
+            -- $BODIES
 
       - name: Prepare git identity
         if: steps.control.outputs.mode == 'work'
