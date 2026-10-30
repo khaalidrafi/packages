@@ -21,14 +21,26 @@ for path in \
   [ -e "$out/$path" ] || { echo "missing $out/$path" >&2; exit 1; }
 done
 
-# bin/autoclaw must reach the wrapper, and the wrapper must be the script
-# wrap-program wrote rather than the ELF itself: the RPATH checked below is
-# what makes the binary run, but XDG_DATA_DIRS and PATH are what make it
-# find icons, mime types and xdg-open.  The vendor ELF itself lives next to
-# the wrapper as .AutoClaw2-real, which is the file patchelf checks apply
-# to below.
-[ -L "$out/bin/autoclaw" ] ||
-  { echo "$out/bin/autoclaw is not a symlink" >&2; exit 1; }
+# bin/autoclaw must reach the launcher, and since 9ce25e7 it is a script
+# the build writes, NOT a symlink: a symlink cannot add arguments, and the
+# launch fix needs --disable-gpu before "$@" (9ce25e7; eece268 added
+# --password-store=basic to the same exec line for DISPATCH #2's login
+# persistence, whose login->restart->still-logged-in check stays with the
+# Owner).  Assert the exact behaviour those commits promise: a regular
+# script that execs the store launcher with both flags.  The launcher
+# itself remains the script wrap-program wrote rather than the ELF: the
+# RPATH checked below is what makes the binary run, but XDG_DATA_DIRS and
+# PATH are what make it find icons, mime types and xdg-open.  The vendor
+# ELF itself lives next to the wrapper as .AutoClaw2-real, which is the
+# file patchelf checks apply to below.
+[ -f "$out/bin/autoclaw" ] && [ ! -L "$out/bin/autoclaw" ] ||
+  { echo "$out/bin/autoclaw is not the launcher script (regular file expected)" >&2; exit 1; }
+grep -q 'lib/AutoClaw/AutoClaw2' "$out/bin/autoclaw" ||
+  { echo "$out/bin/autoclaw does not exec the launcher" >&2; exit 1; }
+grep -q -- '--disable-gpu' "$out/bin/autoclaw" ||
+  { echo "$out/bin/autoclaw lost --disable-gpu (9ce25e7)" >&2; exit 1; }
+grep -q -- '--password-store=basic' "$out/bin/autoclaw" ||
+  { echo "$out/bin/autoclaw lost --password-store=basic (eece268)" >&2; exit 1; }
 grep -q 'XDG_DATA_DIRS' "$out/lib/AutoClaw/AutoClaw2" ||
   { echo "$out/lib/AutoClaw/AutoClaw2 is not a wrapper" >&2; exit 1; }
 
