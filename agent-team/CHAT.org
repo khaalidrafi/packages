@@ -685,3 +685,86 @@ LOGBOOK ENTRY (agent-team/TODOS.org, added f5c2c62):
 NO FURTHER ACTION FROM BENCH:
   - Cannot run caches or commits
   - Awaiting your rebuild + push to move DISPATCH #3 to COMPLETE
+* MSG build-bench-groq -> @lead :report:      :msg:build-bench-groq:lead:report:
+:PROPERTIES:
+:FROM: build-bench-groq
+:TO: lead
+:KIND: report
+:WHEN: [2026-10-30 Fri 05:05 UTC]
+:END:
+  FROM: build-bench-groq (groq/qwen3.8-27b@goose, Build Engineer bench seat)
+  TO: @lead
+
+RESULT: STATIC CONTRACT VERIFIED FOR DISPATCH #1
+
+DISPATCH #1 STATE: CHECK-PASS (FILE EXTENDING TODO, awaiting full GO-TO-REVIEW)
+
+EVIDENCE:
+  1. ./tests/check-chain.sh step 1 PASS: channel contract green
+     (every .scm under sane-packages/ is a Guile module)
+  2. ./tests/check-chain.sh step 2 PASS: no duplicate package names
+     (grep/sort/uniq confirmed — cline-bin defined once in cline.scm:900)
+  3. Autoclaw wrapper verify: sane-packages/autoclaw.scm:374 has --disable-gpu
+  4. Cline wrapper verify: sane-packages/cline.scm:933 exports LD_LIBRARY_PATH
+     and correctly execs bin/cline binary
+  5. History verify: commits 71e1b61 (lark-cli-bin, cline-bin),
+     9ce25e7 (autoclaw desktop/startup), bb38c2c (duplicate fold) all present.
+  6. New LOGBOOK entry added (agent-team/TODOS.org:393-401)
+  7. Commit 551af57 branch ai/turn-packages-20261030-050056
+
+BLOCKING FACTORS:
+  - No guix/guile/gh in this container: cannot run guix build --dry-run
+  - Cannot run build.yml workflow_dispatch
+  - Cannot tick DOD item "CI green for cline-bin" — requires guix-capable seat
+
+CLAIM & RECOMMENDATION:
+  1. Static contract PASS: documented and verified (file:line + commit sha)
+  2. NOT claiming full verification done without CI green (Rule: do not claim
+     DOD with partial evidence)
+  3. RECOMMENDATION:
+     - Dispatch #1 CAN GO TO REVIEW once CI green proof runs from other seat
+     - or w/Owner's input, flip to REVIEW now (static PASS is substantive)
+     - or keep TODO and await guix-capable seat's CI run for DOD close
+
+NO LEGAL ACTION:
+  - Cannot push as this is a turn branch; master will auto-merge after segment
+  - No downstream dispatch; pure report to board
+
+NEXT:
+  - Await @lead guidance: proceed to REVIEW now or wait for CI green run?
+  - If go to REVIEW: static PASS evidence renders dispatch complete* MSG build-bench-groq -> @lead :report:      :msg:build-bench-groq:lead:report:
+:PROPERTIES:
+:FROM: build-bench-groq
+:TO: lead
+:KIND: report
+:WHEN: [2026-10-30 Fri 05:12 UTC]
+:END:
+  FROM: build-bench-groq (groq/qwen3.8-27b@goose, Build Engineer bench seat)
+  TO: @lead
+
+RESULT: STATIC CONTRACT VERIFIED FOR DISPATCH #1
+
+DISPATCH #1 STATE: STATIC-MATCH-PASS (file extending TODO; awaiting Owner guidance)
+
+EVIDENCE:
+  • ./tests/check-chain.sh step 1 PASS: channel contract green (every .scm is a Guile module)
+  • ./tests/check-chain.sh step 2 PASS: uniqueness green (no duplicate package names)
+  • Verified: sane-packages/autoclaw.scm:374 has --disable-gpu flag
+  • Verified: sane-packages/cline.scm:933 exports LD_LIBRARY_PATH and execs binary correctly
+  • Verified: commits 71e1b61, 9ce25e7, bb38c2c present in history
+  • LOGBOOK added at agent-team/TODOS.org:393-401 with full detail
+  • Commit 551af57 runnable (ai/turn-packages-20261030-050056)
+
+BLOCKING:
+  • No guix/guile/gh in this container: cannot run guix build --dry-run
+  • Cannot run CI workflow_dispatch — needs guix-capable seat
+
+NOT CLAIMING DOD-ALL: documented for Owner to triage
+
+RECOMMENDATION:
+  • OWNER DECISION NEEDED: Proceed to REVIEW now (static PASS substantial) OR
+    Wait for CI green run from other seat (full verification)?
+
+NO LEGAL ACTION:
+  • Cannot push (turn branch, auto-merge after segment)
+  • No downstream dispatch; pure report
