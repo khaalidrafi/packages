@@ -84,6 +84,7 @@ concurrency:
 
 permissions:
   contents: write
+  packages: write
   actions: write   # self-chain: finalize re-dispatches the next turn
   # NO `workflows: write` — GitHub rejects the KEY at workflow-creation
   # time: every run startup-FAILS with zero jobs (agent-team.el runs
@@ -468,6 +469,14 @@ jobs:
             echo "gomodel lane: DOWN (HTTP $CODE) — lane-fallback law active (turn proceeds on direct provider lanes; auto-reuses gomodel the moment the box answers)" >> "$SUMMARY"
           fi
 
+      - name: Log in to GHCR (prebuilt image reuse)
+        if: steps.control.outputs.mode == 'work'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
       - name: Build harness image (MODULAR — only this run's agent bodies)
         if: steps.control.outputs.mode == 'work'
         env:
@@ -486,6 +495,7 @@ jobs:
           bash ci/bin/harness_run_build.sh \
             -b agent-team-harness-base:local \
             -o agent-team-harness:local \
+            -r ghcr.io/khaalidrafi/packages-harness \
             -- $BODIES
 
       - name: Prepare git identity
