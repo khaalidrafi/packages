@@ -45,4 +45,14 @@
  konaito-terminal-browser-bin}; the wrapper points Puppeteer at the store's
  headless shell, and setting @code{PUPPETEER_EXECUTABLE_PATH} swaps in any
  other Chromium.")))
+ (entry (commit "7af5c8b24ffa6f4484916616251734bf37a16edf")
+        (title (en "New package: devin-bin"))
+        (body (en "The new @code{sane-packages devin} module provides
+ @code{devin-bin}, Cognition's Devin CLI repackaged from the prebuilt
+ Linux x86_64 binary in the @code{devin} npm package's platform release.
+ The binary is a static-pie ELF, so no interpreter patching is involved;
+ the build dies whenever @code{devin --version} does not answer the
+ pinned version, and no credential material appears anywhere in the
+ package, its build or its smoke test.  Install with @code{guix install
+ devin-bin}.")))
 )
