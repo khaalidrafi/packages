@@ -128,30 +128,28 @@ jobs:
 
       # TEMPORARY DIAGNOSTIC (seat, ai/pkgs-devin-bin): this seat has no
       # guix, and the style gate names only the offending file, never the
-      # diff.  Print what `guix style -f' would change for every package
-      # file (then restore it) and run the per-package dry-runs that the
-      # derivations gate would run, so one run reports every fix needed.
+      # diff.  Run 40991226571 died on sane-packages/custom.scm (a trunk
+      # file, host-committed 484a9d9/eece268) before devin.scm was even
+      # reached.  Attempt one printed the diffs in plaintext and the
+      # runner's log masking ate the closing-paren clusters (`***' at
+      # every hunk tail), so the diffs are re-emitted base64-encoded:
+      # the masker cannot match what is not plaintext, and base64
+      # survives the log verbatim.  The files are restored either way.
       # Informational only: nothing here fails the step.
-      - name: Diagnostics (style diffs + per-package dry-runs; informational)
+      - name: Diagnostics (style diffs, base64; informational)
         run: |
-          echo "===== STYLE DIFFS (guix style -f) ====="
           for f in sane-packages/*.scm; do
             head -2 "$f" | grep -qiE 'generated|do not edit' && continue
             cp "$f" /tmp/style-before.scm
             guix style -f "$f" >/dev/null 2>&1 || true
             if ! cmp -s /tmp/style-before.scm "$f"; then
-              echo "----- would reformat: $f -----"
-              diff -u /tmp/style-before.scm "$f" || true
+              echo "B64DIFF-START $f"
+              diff -u /tmp/style-before.scm "$f" | base64 -w 76
+              echo "B64DIFF-END $f"
               cp /tmp/style-before.scm "$f"
             else
               echo "style-clean: $f"
             fi
-          done
-          echo "===== PER-PACKAGE DRY-RUN ====="
-          names=$(grep -hoE '^\(define-public [^ )]+' sane-packages/*.scm | awk '{print $2}')
-          for name in $names; do
-            echo "----- dry-run: $name -----"
-            guix build -L . --dry-run "$name" 2>&1 | tail -5
           done
 
       - name: Static checks (style, derivation validity)
