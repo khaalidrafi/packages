@@ -440,10 +440,13 @@ table), a bun-workspace install does not, so the FoD is the honest, reviewed uni
 here.  TLS stays on: the builder concatenates =nss-certs=' per-root =.pem= files
 into one =SSL_CERT_FILE= bundle (the fork ships no =ca-certificates= package).
 
-The compiled binary is Bun-standalone, and patchelf corrupts Bun's large embedded
-payload, so =cline-baseline= =exec=s it through the store glibc loader with a
-pinned =--library-path= (gcc's libdir + zlib), the same trick =bun-bin= and
-=opencode= use.  =supported-systems= is =x86_64-linux= only; license is =asl2.0=
+The compiled binary is Bun-standalone.  =patchelf --set-interpreter= alone is
+safe for it: only rewriting the dynamic section (=--set-rpath=) corrupts the
+appended payload, proved on =cline-bin= (commit dcd11c6).  The interpreter is
+patched to the store glibc loader and =bin/cline= =exec=s the binary directly
+with =LD_LIBRARY_PATH= pinned (gcc's libdir + zlib) --- the hub daemon
+re-executes =process.execPath=, so the binary itself must be the process image.
+=supported-systems= is =x86_64-linux= only; license is =asl2.0=
 (Cline is Apache-2.0).
 
 ** Filling in the hash, and the local-machine caveat
