@@ -126,6 +126,34 @@ jobs:
           guix pull --fallback --allow-downgrades -C tests/channels-lock.scm
           guix describe
 
+      # TEMPORARY DIAGNOSTIC (seat, ai/pkgs-devin-bin): this seat has no
+      # guix, and the style gate names only the offending file, never the
+      # diff.  Print what `guix style -f' would change for every package
+      # file (then restore it) and run the per-package dry-runs that the
+      # derivations gate would run, so one run reports every fix needed.
+      # Informational only: nothing here fails the step.
+      - name: Diagnostics (style diffs + per-package dry-runs; informational)
+        run: |
+          echo "===== STYLE DIFFS (guix style -f) ====="
+          for f in sane-packages/*.scm; do
+            head -2 "$f" | grep -qiE 'generated|do not edit' && continue
+            cp "$f" /tmp/style-before.scm
+            guix style -f "$f" >/dev/null 2>&1 || true
+            if ! cmp -s /tmp/style-before.scm "$f"; then
+              echo "----- would reformat: $f -----"
+              diff -u /tmp/style-before.scm "$f" || true
+              cp /tmp/style-before.scm "$f"
+            else
+              echo "style-clean: $f"
+            fi
+          done
+          echo "===== PER-PACKAGE DRY-RUN ====="
+          names=$(grep -hoE '^\(define-public [^ )]+' sane-packages/*.scm | awk '{print $2}')
+          for name in $names; do
+            echo "----- dry-run: $name -----"
+            guix build -L . --dry-run "$name" 2>&1 | tail -5
+          done
+
       - name: Static checks (style, derivation validity)
         run: ./tests/check-static.sh
 
