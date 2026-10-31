@@ -257,6 +257,39 @@
     41221426690).  NOT CLAIMED: the re-run's result; --dry-run and the
     real builds stay CI-only (no guix in this seat).  Task 2 starts
     strictly after this lands, per the sequencing.
+  - Note [2026-10-31 Sat 18:50 UTC] Build Engineer (zai/glm-4.7@seat):
+    TASK 1 REPAIR CYCLE — TWO ROOT CAUSES READ FROM FULL CI JOB LOGS,
+    BOTH FIXED, BOTH BRANCHES RE-DISPATCHED.  Failed-run timeline since
+    the 16:45 note: 41221426690 (3ecfb1d, Static checks), 41223232647
+    (385e634, style-diff diagnostic), 41224562386 (55aecd7, Static
+    checks again); hub 41221428534 (3ef3294), 41223244562 (782b0fd,
+    diagnostic), 41225160709 (028813a, first hub run to reach build).
+    Findings, from the PAT-fetched logs:
+    (1) update-all, 41224562386: evaluation died with `license:mit:
+    unbound variable' and `guix build: error: cline-baseline: unknown
+    package' -- node-trycua-cua-driver (3ecfb1d) used license:mit,
+    which (guix licenses) does not export; MIT is license:expat in
+    this channel (custom.scm's 50+ other packages all use it).
+    Fixed 65f7710: custom.scm:2019 license:mit -> license:expat, 1
+    line, paren balance re-checked.
+    (2) hub, 41225160709: FOD drv fkwi7wph... built fine; wrapper drv
+    p4bpa4mn... died `patchelf: open: Permission denied' on
+    --set-interpreter -- the 3ef3294 builder chmod'ed the copied
+    binary #o555 (no owner-write bit) before patchelf rewrote it in
+    place.  Fixed e8adfe4: chmod #o644 for the rewrite, #o555 restored
+    after (+6/-1, paren balance re-checked).
+    Re-confirmed harmless: `error: channel: unbound variable' appears
+    in every run and is documented as the channels-lock.scm load-path
+    line (tests/build-all.sh:50-51) -- not a failure cause.
+    Pushes: 55aecd7..65f7710 and 028813a..e8adfe4, both fast-forward;
+    no merge, no force.  build.yml re-dispatched on both branches,
+    HTTP 204 both: update-all run 41230314197
+    (https://github.com/khaalidrafi/packages/actions/runs/
+    41230314197), hub run 41230316394
+    (https://github.com/khaalidrafi/packages/actions/runs/
+    41230316394), in_progress at note time.  NOT CLAIMED: those runs'
+    results -- next seat reads them before touching anything.  This
+    seat has no guix (CI is the gate) and no *-bin runs (Owner's box).
   :END:
 
   BLUF: Build Engineer appointed (Owner order 04:02Z #hq).  This
