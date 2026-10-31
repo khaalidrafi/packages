@@ -54,10 +54,11 @@ done
 # use because it writes a DSH_HOME.
 for file in \
     lib/profile-boot.js \
-    lib/dump-config-crgOY3tW.js \
-    lib/dump-config-BEDI-dNY.js \
-    lib/dump-config-schema-DhhNOaro.js \
-    lib/plugin-BGnVfe_D.js; do
+    lib/profile-boot-C14i-8IN.js \
+    lib/dump-config-CWs_HdOc.js \
+    lib/dump-config-CxNkSYcK.js \
+    lib/dump-config-schema-D_PxIzpe.js \
+    lib/plugin-BiveYA7h.js; do
   [ -f "$lib/$file" ] || { echo "dynamic import is missing $lib/$file" >&2; exit 1; }
 done
 
