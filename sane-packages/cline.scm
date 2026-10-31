@@ -817,29 +817,25 @@ import { type AddressInfo, createServer } from \"node:net\";"))
             (mkdir-p (dirname binary))
             (copy-file compiled binary)
             (chmod binary #o555)
+            (let ((patchelf (string-append (assoc-ref %build-inputs "patchelf")
+                                            "/bin/patchelf"))
+                  (loader (string-append (assoc-ref %build-inputs "glibc")
+                                         "/lib/ld-linux-x86-64.so.2")))
+              ;; Only the interpreter: patchelf corrupts Bun's embedded payload
+              ;; when --set-rpath is also set (verified by dcd11c6), but
+              ;; --set-interpreter alone is safe.
+              (invoke patchelf "--set-interpreter" loader binary))
             (mkdir-p (string-append out "/bin"))
             (call-with-output-file (string-append out "/bin/cline")
-              (lambda (port)
                 (format port
                         "#!~a/bin/bash
-exec ~a --library-path ~a ~a \"$@\"
+export LD_LIBRARY_PATH=~a${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+exec ~a "$@"
 "
-                        bash
-                        loader
+                        bash lib-path binary)
                         lib-path
                         binary)))
             (chmod (string-append out "/bin/cline") #o555)))))
-    ;; node is NOT optional and NOT there for the CLI's own sake -- it is what
-    ;; makes `bun run --filter ... build' work at all.
-    ;;
-    ;; Cline's SDK packages each have "build": "bun run bun.mts && bun tsc ...".
-    ;; Run from the workspace root via --filter, Bun does not resolve those the
-    ;; way a direct `bun run <script>' does, and `bun run' falls back to looking
-    ;; for node on PATH; with no node there it reports
-    ;;
-    ;; run: error while loading shared libraries: run: cannot open shared
-    ;; object file: No such file or directory
-    ;;
     ;; which reads like a missing shared library and is not one -- "run" is being
     ;; exec'd as the program.  Bisected to a single directory on PATH: adding a
     ;; dir containing only a `node' symlink flips a two-package workspace from
@@ -851,7 +847,7 @@ exec ~a --library-path ~a ~a \"$@\"
     ;; PATH setenv below, which is why 7c4a179 did not actually fix anything --
     ;; the exit-127 `run:' error came back verbatim in CI run 38101517394, one
     ;; level deeper into each SDK package's build script.
-    (inputs (list bash-minimal glibc node
+    (native-inputs (list patchelf bash-minimal glibc node
                   (list gcc "lib") zlib))
     (supported-systems '("x86_64-linux"))
     (home-page "https://cline.bot")
