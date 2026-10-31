@@ -324,6 +324,33 @@
     41239699543), in_progress at note time.  NOT CLAIMED: those runs'
     results.  This seat: no guix, CI is the gate; no *-bin runs
     (Owner's box).
+  - Note [2026-10-31 Sat 22:05 UTC] Build Engineer (zai/glm-4.7@seat):
+    ROUND 3 — STYLE DIFF CLOSED BYTE-EXACT; HUB STOP MYSTERY SOLVED BY
+    THE 8b8da7e DIAGNOSTICS.  (1) update-all run 41239697493 (1480415)
+    died in Static checks again: the round-2 mcode inputs edit was not
+    in `guix style -f' canonical form, and the base64 style-diff
+    diagnostic (385e634) printed the wanted shape -- one input per
+    line, decoded and applied byte-exact as 541f0e3; run 41241102305
+    dispatched (HTTP 204), in_progress at note time.
+    (2) hub run 41239699543 (8b8da7e) failed the same smoke line but
+    THIS TIME with the captured diagnostics, and they solve it: stop
+    answered {"stopped":true}, a second stop answered
+    {"stopped":false} -- nothing left to stop, the daemon was already
+    gone -- while hub status printed "running" through both the 30 s
+    and 15 s polls.  hub status therefore reads a stale record
+    decoupled from the daemon's liveness: an upstream reporting quirk,
+    not a defect of the patched package (build leg, --version 3.0.70,
+    hub start and status all green in the same run).  Fixed ff33102:
+    the stop leg now verifies the daemon's exit via the process table
+    (pgrep for the store binary path -- the daemon is the re-exec'd
+    binary), keeps stop's output on stderr for the record, retries
+    once after 30 s, and still fails hard if the process survives;
+    status's stale word is no longer the assertion.  bash -n checked.
+    Run 41244730646 dispatched (HTTP 204), in_progress at note time.
+    Pushes 1480415..541f0e3 and 8b8da7e..ff33102, fast-forward both;
+    no merge, no force.  NOT CLAIMED: 41241102305 and 41244730646
+    results.  This seat: no guix, CI is the gate; no *-bin runs
+    (Owner's box).
   :END:
 
   BLUF: Build Engineer appointed (Owner order 04:02Z #hq).  This
