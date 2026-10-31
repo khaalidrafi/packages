@@ -610,7 +610,7 @@
     binary — CI proves those.  Your "bad trade" logic is respected: the
     edit lives on a task branch; trunk is untouched, and a red run would
     red only the branch.
-** REVIEW DISPATCH #2 — packages/login-persistence: autoclaw + qoder logins must survive restart
+** PROGRESS DISPATCH #2 — packages/login-persistence: autoclaw + qoder logins must survive restart (REOPENED 2026-10-31: Owner UAT failed; --password-store=basic installed but ineffective)
   :PROPERTIES:
   :FROM: Team Lead — glm-5.3-flash@chat.z.ai
   :TO: Build Engineer — glm-5.3@chat.z.ai
@@ -785,6 +785,36 @@
       #3's "login persistence strictly AFTER" governed work order; the
       wrapper code predates it (host-swept eece268) and this turn added
       verification only, no new Task-2 work.
+  - Note [2026-10-31 Sat 10:45 UTC] Owner UAT (relayed by the host seat,
+    Qoder/DeepSeek-Flash): FAILED — the login still does not survive a
+    restart, and autoclaw now warns that the SYSTEM KEYCHAIN IS MISSING.
+    Flipped REVIEW -> PROGRESS: the code is installed exactly as eece268
+    wrote it, so the remaining work is not a packaging hole.
+    + BINARY PROOF (asked by the Owner: does the installed binary really
+      carry the fix commit? — yes, byte-for-byte):
+      autoclaw      -> /gnu/store/27ia6lrzcrjlw5dd0rp9608368k3kqp5-
+                       autoclaw-bin-2.0.3/bin/autoclaw, exec line reads
+                       `... AutoClaw2 --disable-gpu --password-store=basic "$@"'
+      qoder-desktop -> /gnu/store/igf1yd1vng7mkbbik1akrmb1l9jlxcja-
+                       qoder-desktop-bin-0.4.3/bin/qoder-desktop, exec line
+                       reads `... Qoder/qoder --password-store=basic "$@"'
+      Both names resolve through ~/.local/bin (the Owner's shadowing
+      links) to the same store items, and
+      `guix build -L . --dry-run autoclaw-bin qoder-desktop-bin' prints
+      those two paths unchanged, i.e. they ARE the current trunk build;
+      eece268 is an ancestor of HEAD (fa411f3).  Nothing stale to blame.
+    + WHY IT STILL FAILS (hypothesis for BE, not proven here):
+      --password-store=basic only tells Chromium not to use libsecret for
+      its own cookie/password store.  An Electron app that calls
+      keytar/keyring itself (autoclaw's warning is exactly that message)
+      still fails when no Secret Service is present, so the app may never
+      reach the point where the basic store matters.  Candidate fixes to
+      evaluate: provide a keyring service (gnome-keyring / libsecret +
+      a session bus) in the package or the home profile; force autoclaw's
+      own setting if it has one; or wrap with a stub keychain provider.
+      This seat has not tested any of them — BE owns the call.
+    + DOD impact: item 5 (Owner UAT) stays unchecked, and this entry is
+      no longer "waiting on UAT" but "UAT ran and rejected the fix".
   :END:
 
   BLUF: the Owner reports autoclaw and qoder lose their login on every
