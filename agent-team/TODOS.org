@@ -4,7 +4,7 @@
 
 * Board
 
-** PROGRESS DISPATCH #4 — packages/devin-bin: package the Devin CLI as devin-bin
+** REVIEW DISPATCH #4 — packages/devin-bin: package the Devin CLI as devin-bin
   :PROPERTIES:
   :FROM: Team Lead — glm-5.3-flash@chat.z.ai
   :TO: Build Engineer — GLM-5.3@chat.z.ai
@@ -97,6 +97,40 @@
     in-build phase itself speaks through #96's answered-version line.
     Still Owner-only: the no-AVX2 Celeron `guix install devin-bin &&
     devin --version'.
+  - Note [2026-10-30 Thu 08:15 UTC] Build Engineer (glm-5.3@chat.z.ai,
+    seat): FLIPPED TO REVIEW — FINAL INSTRUCTION executed.  Run
+    41007451412 (#97, commit c21084f, branch ai/pkgs-devin-bin) came
+    back SUCCESS in 1h1m27s: the whole channel built and every smoke
+    passed, devin-bin's included — CI-green DOD item closed, run URL
+    https://github.com/khaalidrafi/packages/actions/runs/41007451412.
+    DOD tally: defined-once/dry-run/CI-green DONE (dry-runs were the
+    diagnostic run's 41/41; CI green is #97); FATAL check DONE; no-creds
+    DONE.  Open box: the Owner's no-AVX2 Celeron install — REVIEW is
+    the state that waits on it.  DISCLOSURE: this seat's sandbox was
+    wiped again between turns (third this session) and the write PAT's
+    0600 store died with it; the value was never echoed by this seat
+    and the chat copy predates the current context, so push of THIS
+    flip is blocked — the board edit is committed locally on
+    ai/packages and lands with the next authenticated turn.  For the
+    same reason DISPATCH #3's Task-1 rebuild is deliberately NOT
+    started (no local-only heavy work after a wipe — the af3c5ea
+    lesson).  After the PAT: push this commit, then Task 1 from the
+    green base (#97 proves it).
+  - Note [2026-10-31 Sat 04:15 UTC] Build Engineer (zai/glm-4.7-flash@goose,
+    seat): PAT RESTORED, FLIPS PUSHED — the Owner re-issued the write
+    PAT in chat 04:10 UTC (stored 0600 by path outside the repo, value
+    never echoed; answers admin/push=true on the API; it has now
+    appeared in chat plaintext FOUR times — rotation after this batch
+    still advised).  Run #97 re-verified this turn via the API:
+    completed, conclusion success, head c21084f, branch
+    ai/pkgs-devin-bin.  This #4 flip and the #2 flip ride this push to
+    origin/ai/packages.  What remains Owner-side before `guix install
+    devin-bin' works from this channel: merge ai/pkgs-devin-bin into
+    ai/packages (branch law: the Owner merges; the branch already
+    carries the trunk-equivalent cherry-pick pairs b1da4b1=067f5a1 and
+    c21084f=6393e89, so those files cannot conflict), then the
+    no-AVX2 Celeron `guix install devin-bin && devin --version' — the
+    one open DOD box.
   :END:
 
   BLUF: Owner order 2026-10-29 #hq: package the Devin CLI (Cognition)
@@ -134,14 +168,17 @@
      workflow_dispatch PACKAGES="devin-bin".
 
   DEFINITION OF DONE:
-  - [ ] devin-bin defined once; dry-run green; CI build green (run URL
-        in the note).
-  - [ ] FATAL version check present and demonstrated (wrong version
-        dies).
+  - [X] devin-bin defined once; dry-run green; CI build green (run URL
+        in the note: #97).
+  - [X] FATAL version check present and demonstrated (wrong version
+        dies — comparison level; the in-build phase answered the pin in
+        #96's log line).
   - [ ] --version answers the pinned version on this box (no-AVX2
-        Celeron).
-  - [ ] No credential material anywhere in the package or its build.
-  - [ ] REVIEW note with branch/sha; ai/packages pushed.
+        Celeron).  OWNER UAT — the one open box; REVIEW waits on it.
+  - [X] No credential material anywhere in the package or its build.
+  - [X] REVIEW note with branch/sha; ai/packages pushed (flip staged
+        08:15 UTC; pushed 2026-10-31 04:15 UTC after the Owner
+        re-issued the PAT in chat).
 
   SEQUENCING: no reorder of DISPATCH #3 — slot this after the segment
   in flight; it is independent of Tasks 1/2 there.
@@ -538,7 +575,42 @@
   edit to a legacy package that could turn the next whole-channel run red is
   a bad trade; the two-file patch above is handed to @build-engineer instead
   (CHAT.org, 2026-10-30).
-** TODO DISPATCH #2 — packages/login-persistence: autoclaw + qoder logins must survive restart
+  - Note [2026-10-30 Thu 19:10 UTC] Build Engineer (zai/glm-4.7-flash@goose,
+    seat): HANDOFF ANSWERED — the two-file patch is WRITTEN AND COMMITTED on
+    the task branch ai/pkgs-cline-baseline-hub (tip 3ef3294, off trunk
+    333ac4f; branch push and CI dispatch both pending the write PAT, store
+    dead again since the 19:00 +08 round).  Your line refs all verified
+    before patching.  What landed, file by file:
+    + sane-packages/cline.scm — the stale comment your note cites
+      (cline.scm:807-809 at 333ac4f) is replaced with the dcd11c6 rationale
+      (only --set-rpath corrupts; --set-interpreter is safe); the builder
+      now runs patchelf --set-interpreter to the store loader after the
+      copy, the wrapper exports LD_LIBRARY_PATH and execs the binary
+      directly (the proven cline-bin shape), and patchelf sits on
+      (native-inputs (list patchelf)) — FOD hash untouched, builder-side
+      only, the pinned 0ynpf764... binary is copied, not rebuilt.
+    + tests/smoke/cline-baseline.sh — asserted the BROKEN loader shape
+      (your :21-24 reading was exact; that is how #96 passed while the bug
+      stood).  Now asserts the NEW shape: LD_LIBRARY_PATH export present,
+      direct exec of the store binary, and --library-path must be ABSENT;
+      then the dynamic run (--version, --help — the SIGILL/PT_INTERP proof
+      stands) and the hub round trip your note asked for: hub start with a
+      timeout, poll hub status for running (upstream's fixed 15 s wait is
+      not trusted), hub stop, confirm stopped — with a writable temp HOME
+      because the build user's home is not writable under guix.
+    + README.org — the baseline paragraph no longer advertises the loader
+      trick; it now describes the set-interpreter + direct-exec shape.
+    Gates run at commit time, guix-free, this seat: bash -n clean;
+    reader-aware net paren depth 0 on ALL sane-packages/*.scm (a naive
+    raw count shows -1 on the unpatched file too — strings/comments carry
+    stray parens; the reader-aware count is the honest gate here); the
+    smoke's three static assertions verified BIDIRECTIONALLY on synthetic
+    new-shape and old-shape wrappers — the old shape is caught twice over.
+    NOT CLAIMED: guix build, --dry-run, the hub round trip on the real
+    binary — CI proves those.  Your "bad trade" logic is respected: the
+    edit lives on a task branch; trunk is untouched, and a red run would
+    red only the branch.
+** REVIEW DISPATCH #2 — packages/login-persistence: autoclaw + qoder logins must survive restart
   :PROPERTIES:
   :FROM: Team Lead — glm-5.3-flash@chat.z.ai
   :TO: Build Engineer — glm-5.3@chat.z.ai
@@ -660,6 +732,59 @@
     nothing may claim it before he runs it — the entry stays open on
     the UAT item alone; the dry-run and CI DOD items are green with the
     run URLs above.
+  - Note [2026-10-30 Thu 16:10 UTC] Build Engineer (zai/glm-4.7-flash@goose,
+    seat): FLIPPED TO REVIEW — the last open non-UAT item (the qoder-cli
+    finding) is closed with direct binary evidence, guix-free, from the
+    upstream tarball itself.  Write-access disclosure first: the PAT
+    store died with the sandbox wipe again (same failure mode as the #4
+    note of 08:15 UTC), so THIS flip is staged locally on ai/packages on
+    top of 3915e1f and lands with the next authenticated turn.  No new
+    build or CI claims below — every cited run was already on the board;
+    the new evidence is strings-level and reproducible from the pinned
+    artifact.  EVIDENCE (qoder-cli-bin 1.1.65, tarball sha256
+    b49ebbb9c812757850047a2084f29853f6c2e242c90baf8d0c03396b1a21fc8c ->
+    nix-base32 137w44d6nf831j6sy2y98bic5xjkk3r8883s0i87hx8jr2wvp7ml,
+    byte-exact MATCH with the pin at custom.scm:2963 via the
+    scripts/gen-konaito-node-tree.py algorithm, so the examined bytes
+    are the bytes CI builds):
+    + NOT Chromium/Electron: one Bun-compiled ELF (172 MB, not stripped,
+      NEEDED = libc/pthread/dl/m only — no libsecret, no keyring
+      library); `password-store' appears NOWHERE in the binary, so
+      --password-store=basic is inapplicable to the CLI, as the 18:11
+      note of 2026-10-29 deduced from the tree alone.
+    + Storage design, from the embedded JS: import("keytar") -> native
+      keychain attempt with a functional probe (set/get/delete
+      roundtrip); on failure it logs "Using FileKeychain fallback for
+      secure storage." and keeps credentials ENCRYPTED in files:
+      <profile>/qoder-cli-credentials.json plus <profile>/.keychain-salt
+      (randomBytes salt -> derived key; profile dir created 0700; the
+      JSON written with mode 384 = 0600).  Telemetry calls this
+      storageType "encrypted_file" vs "keychain" — the fallback is
+      DESIGNED, not a degradation.
+    + Consequence for this dispatch: the CLI never needs a keyring
+      daemon; its login state lives under the ~/.qoder tree
+      (env-overridable, QODER_PROFILE_DIR et al.) and survives restarts
+      as ordinary files.  "Not broken" with evidence — the
+      restart-login loss is an Electron-app problem (autoclaw-bin,
+      qoder-desktop-bin), exactly where eece268 put the fix.
+    + Execution: the extracted binary answers `qodercli --version' with
+      "1.1.65", exit 0, in this sandbox (AVX2 present here, as measured
+      for the devin payload).  NOT claimed: anything about the Owner's
+      no-AVX2 Celeron.  DOD item 5 stays the Owner's UAT ask: `guix
+      install autoclaw-bin qoder-desktop-bin', log in, restart, confirm
+      the session survives (the CLI needs no such test — its storage is
+      file-based by design).
+    + Tally, citations already on the board: item 1 ticked — wrappers
+      re-verified at line level on origin HEAD today (autoclaw.scm:376
+      exec line; custom.scm:3061-3083 script; both carry
+      --password-store=basic); item 2 ticked — this note's strings
+      findings; item 3 ticked — check-static.sh:120 dry-runs every
+      define-public name, so the green Static checks of #96/#97 prove
+      it for all three; item 4 ticked — runs 41001420954 (#96) and
+      41007451412 (#97, SUCCESS 1h1m27s).  Sequencing note: DISPATCH
+      #3's "login persistence strictly AFTER" governed work order; the
+      wrapper code predates it (host-swept eece268) and this turn added
+      verification only, no new Task-2 work.
   :END:
 
   BLUF: the Owner reports autoclaw and qoder lose their login on every
@@ -692,13 +817,13 @@
      ai/login-persistence; CI build via workflow_dispatch.
 
   DEFINITION OF DONE:
-  - [ ] autoclaw + qoder-desktop wrappers pass --password-store=basic.
-  - [ ] qoder-cli storage investigated; finding recorded (fixed, or
+  - [X] autoclaw + qoder-desktop wrappers pass --password-store=basic.
+  - [X] qoder-cli storage investigated; finding recorded (fixed, or
         "not broken" with evidence).
-  - [ ] guix build -L . --dry-run green for all three packages.
-  - [ ] CI build green; workflow_dispatch run URL in the note.
+  - [X] guix build -L . --dry-run green for all three packages.
+  - [X] CI build green; workflow_dispatch run URL in the note.
   - [ ] Owner-side UAT: login survives an app restart — the Owner
-        runs this; the REVIEW note carries the ask.
+        runs this; the REVIEW note (16:10 UTC) carries the ask.
 
   SCOPE:
   - yours: sane-packages/autoclaw.scm, sane-packages/custom.scm
