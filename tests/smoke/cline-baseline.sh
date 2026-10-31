@@ -60,15 +60,34 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 [ -n "$hub_up" ] || { echo "hub did not reach running state" >&2; exit 1; }
-"$wrapper" hub stop >/dev/null 2>&1 || true
+# The stop leg is patient and loud: upstream waits fixed internal timeouts
+# that a loaded runner can overrun, and if the daemon never goes down the
+# smoke must say WHY, so stop's output is captured and printed (CI run
+# 41230316394 died here with zero diagnostics because both calls were
+# swallowed).  Poll 30 s, then retry the stop once and poll 15 s more; a
+# daemon that ignores all of that still fails the smoke.
+stoplog="$(mktemp)"
+"$wrapper" hub stop >"$stoplog" 2>&1 || true
 hub_down=""
-for _ in $(seq 1 10); do
+for _ in $(seq 1 30); do
   if ! "$wrapper" hub status 2>/dev/null | grep -qi running; then
     hub_down=yes
     break
   fi
   sleep 1
 done
-[ -n "$hub_down" ] || { echo "hub did not stop" >&2; exit 1; }
+if [ -z "$hub_down" ]; then
+  echo "hub still running 30 s after stop; stop said:" >&2
+  cat "$stoplog" >&2
+  "$wrapper" hub stop >>"$stoplog" 2>&1 || true
+  for _ in $(seq 1 15); do
+    if ! "$wrapper" hub status 2>/dev/null | grep -qi running; then
+      hub_down=yes
+      break
+    fi
+    sleep 1
+  done
+fi
+[ -n "$hub_down" ] || { echo "hub did not stop; stop said:" >&2; cat "$stoplog" >&2; exit 1; }
 
 echo "cline-baseline smoke test passed"
