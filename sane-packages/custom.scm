@@ -2091,7 +2091,8 @@ offline.")
                                                                 "postinstall"))
                                      meta))))))))))
     (inputs (list node-better-sqlite3 node-mariozechner-clipboard
-                  node-trycua-cua-driver node-vscode-ripgrep))
+                  node-trycua-cua-driver node-vscode-ripgrep
+                  node-ubjs-core node-ubjs-node))
     (home-page "https://www.npmjs.com/package/@minimax-ai/code")
     (synopsis "Minimax Code -- terminal coding agent")
     (description "Minimax Code -- terminal coding agent.")
