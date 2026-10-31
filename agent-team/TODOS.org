@@ -372,6 +372,52 @@
     time.  hub run 41244730646 (ff33102, process-table stop leg) also
     in_progress at note time.  NOT CLAIMED: both runs' results.
     This seat: no guix, CI is the gate; no *-bin runs (Owner's box).
+  - Note [2026-10-31 Sat 23:45 UTC] Build Engineer (zai/glm-4.7@seat):
+    TASK 2 (LOGIN PERSISTENCE) — BUILT ON ITS OWN BRANCH, CI
+    DISPATCHED.  Branch ai/pkgs-login-persistence (tip eadb792), based
+    on ai/pkgs-update-all @ 6f5abe9 so the wrapper work sits on the
+    green bumped tree.  Findings and deliverables:
+    (a) Wrapper flags: autoclaw-bin already execs with
+    --disable-gpu --password-store=basic (9ce25e7 + eece268, asserted
+    by its CI smoke since 6393e89) and qoder-desktop-bin's wrapper
+    already writes --password-store=basic (DISPATCH #2) -- but
+    qoder-desktop-bin had NO smoke, so the flag had no CI evidence.
+    (b) New tests/smoke/qoder-desktop-bin.sh: the wrapper is a regular
+    script (a symlink could not carry the flag) execing the wrapped
+    launcher with --password-store=basic; the wrap-program environment
+    (XDG_DATA_DIRS, LD_LIBRARY_PATH) survived; the deb's Exec line is
+    rewritten to the store launcher.  bash -n checked.
+    (c) QODER-CLI STORAGE INVESTIGATED -- measured from the hash-
+    verified 1.1.81 tarball (sha256 -> nix-base32
+    0rrhrzjqa0k7fnd5s8hlqps4rx4dihlvhgax18k8jn6344jnqjg8, matches the
+    pin exactly; strings read from the bundled JS, not guessed): the
+    CLI is a Bun bundle evidently derived from the Gemini CLI codebase
+    (GEMINI_* toggles throughout).  Credentials go through keytar ->
+    the native OS keyring when the module loads AND a set/get/delete
+    functional probe passes; with no Secret Service on a headless Guix
+    box the load or probe fails and the CLI falls back to its own
+    ENCRYPTED FILE: JSON -> encrypt() -> write at mode 0600 under its
+    config dir.  Toggles found: FORCE_FILE_STORAGE and
+    GEMINI_FORCE_FILE_STORAGE skip the native keychain entirely;
+    FORCE_ENCRYPTED_FILE_STORAGE and
+    GEMINI_FORCE_ENCRYPTED_FILE_STORAGE force the encrypted-file mode
+    of the hybrid layer (telemetry records storageType as
+    encrypted_file vs keychain).  CONSEQUENCE: CLI login persists
+    across restarts with no keyring daemon -- the file lives under
+    HOME -- and no Chromium flag applies to the CLI (that mechanism is
+    the Electron wrappers', which already carry
+    --password-store=basic).  No code change needed in
+    qoder-cli-bin's package.
+    (d) New tests/smoke/qoder-cli-bin.sh: first CI evidence for the
+    package -- --version must answer exactly the pinned 1.1.81
+    (fatal-style, devin-bin precedent); verified live here against the
+    hash-verified tarball: printed 1.1.81, exit 0.
+    CI dispatched HTTP 204: run 41251650498
+    (https://github.com/khaalidrafi/packages/actions/runs/
+    41251650498), in_progress at note time.  NOT CLAIMED: that run's
+    result.  OWNER UAT stays open: login -> restart -> still logged in
+    for autoclaw-bin and qoder-desktop-bin on the no-AVX2 Celeron.
+    This seat: no guix, CI is the gate; no *-bin GUI/desktop runs.
   - Note [2026-10-31 Sat 23:40 UTC] Build Engineer (zai/glm-4.7@seat):
     TASK 1 — CI GREEN ON ITS BRANCH; HUB EVIDENCE BRANCH ALSO GREEN.
     update-all run 41246519061 (6f5abe9) completed SUCCESS: the whole
