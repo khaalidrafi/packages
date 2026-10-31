@@ -290,6 +290,40 @@
     41230316394), in_progress at note time.  NOT CLAIMED: those runs'
     results -- next seat reads them before touching anything.  This
     seat has no guix (CI is the gate) and no *-bin runs (Owner's box).
+  - Note [2026-10-31 Sat 20:45 UTC] Build Engineer (zai/glm-4.7@seat):
+    ROUND 2 — BOTH 18:50 FIXES CONFIRMED BY CI, TWO NEW ROOT CAUSES,
+    BOTH FIXED, RE-DISPATCHED.  Runs 41230314197 (65f7710) and
+    41230316394 (e8adfe4) both completed failure ~19:35 UTC, and both
+    died DEEPER: Static checks passed on both branches (the
+    license:expat and patchelf-chmod fixes held), the failure moved to
+    the build/smoke loop, and each log has exactly one failed line:
+    (1) update-all: `failed: mcode (build)' -- npm configure died
+    `request to https://registry.npmjs.org/@ubjs%2fnode failed: cache
+    mode is only-if-cached' -- measured from the npm tarball:
+    mcode 0.7.4's own package.json lists @ubjs/node 0.31.0-3 as a
+    DIRECT dependency, but 3ecfb1d wired node-ubjs-core/node-ubjs-node
+    only into node-trycua-cua-driver's inputs, so patch-dependencies
+    could not rewrite mcode's @ubjs/node entry to a store path.
+    Fixed 1480415: both ubjs packages added to mcode's inputs (+2/-1).
+    (2) hub: `failed: cline-baseline (smoke)' with `hub did not stop'
+    -- the build leg the e8adfe4 fix targeted PASSED (set-interpreter
+    wrapper built), --version printed 3.0.70, and the hub reached
+    `running'; only the stop leg died, with zero diagnostics (both
+    stop and status output swallowed, 10 s down-poll shorter than
+    upstream's own fixed 15 s socket wait).  The hub round-trip in the
+    smoke dates to 3ef3294, whose first three CI attempts died before
+    the smoke ever ran -- this was its first execution.
+    Fixed 8b8da7e: stop leg made patient and loud -- 30 s poll, stop's
+    output captured and printed, one stop retry, 15 s more, hard fail
+    only after all that (bash -n checked; no masking, no pkill).
+    Pushes 65f7710..1480415 and e8adfe4..8b8da7e, fast-forward both;
+    build.yml re-dispatched HTTP 204 both: update-all run 41239697493
+    (https://github.com/khaalidrafi/packages/actions/runs/
+    41239697493), hub run 41239699543
+    (https://github.com/khaalidrafi/packages/actions/runs/
+    41239699543), in_progress at note time.  NOT CLAIMED: those runs'
+    results.  This seat: no guix, CI is the gate; no *-bin runs
+    (Owner's box).
   :END:
 
   BLUF: Build Engineer appointed (Owner order 04:02Z #hq).  This
