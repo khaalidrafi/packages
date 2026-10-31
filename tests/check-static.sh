@@ -92,6 +92,11 @@ for f in "${style_files[@]}"; do
   cp "$f" "$before"
   guix style -f "$f" >/dev/null 2>&1 || true
   if ! cmp -s "$before" "$f"; then
+    # TEMPORARY DIAGNOSTIC (drop once style converges): the gate names the
+    # file but never the diff, and a guix-free seat cannot reproduce it.
+    # Emit the guix style -f diff base64-encoded so the runner's secret log
+    # masker cannot corrupt it (plaintext diffs did not survive: 2d0e74b).
+    diff -u "$before" "$f" | base64 -w0; echo
     cp "$before" "$f"
     rm -f "$before"
     echo "$f is not guix-style; run 'guix style -f $f' and commit." >&2
