@@ -830,13 +830,11 @@ import { type AddressInfo, createServer } from \"node:net\";"))
             (call-with-output-file (string-append out "/bin/cline")
               (lambda (port)
                 (format port
-                        "#!~a/bin/bash
+                 "#!~a/bin/bash
 export LD_LIBRARY_PATH=~a${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
 exec ~a \"$@\"
 "
-                        bash
-                        lib-path
-                        binary)))
+                 bash lib-path binary)))
             (chmod (string-append out "/bin/cline") #o555)))))
     (native-inputs (list patchelf))
     ;; node is NOT optional and NOT there for the CLI's own sake -- it is what
