@@ -60,28 +60,32 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 [ -n "$hub_up" ] || { echo "hub did not reach running state" >&2; exit 1; }
-# The stop leg is patient and loud: upstream waits fixed internal timeouts
-# that a loaded runner can overrun, and if the daemon never goes down the
-# smoke must say WHY, so stop's output is captured and printed (CI run
-# 41230316394 died here with zero diagnostics because both calls were
-# swallowed).  Poll 30 s, then retry the stop once and poll 15 s more; a
-# daemon that ignores all of that still fails the smoke.
+# The stop leg verifies the daemon's EXIT, not `hub status's word: CI run
+# 41239699543 proved the two are decoupled -- after stop answered
+# {"stopped":true}, a second stop answered {"stopped":false} (nothing left
+# to stop, the daemon was gone) while status still printed "running" for
+# both polls -- status reads a stale record, so asserting on it would test
+# an upstream reporting quirk, not this package.  The daemon is the
+# re-exec'd binary itself, so poll the process table for the store binary
+# path until it is gone; stop's output is captured and printed for the
+# record, the stop is retried once after 30 s, and a daemon that survives
+# all of that still fails the smoke.
 stoplog="$(mktemp)"
 "$wrapper" hub stop >"$stoplog" 2>&1 || true
 hub_down=""
 for _ in $(seq 1 30); do
-  if ! "$wrapper" hub status 2>/dev/null | grep -qi running; then
+  if ! pgrep -f "$binary" >/dev/null 2>&1; then
     hub_down=yes
     break
   fi
   sleep 1
 done
 if [ -z "$hub_down" ]; then
-  echo "hub still running 30 s after stop; stop said:" >&2
+  echo "hub process alive 30 s after stop; stop said:" >&2
   cat "$stoplog" >&2
   "$wrapper" hub stop >>"$stoplog" 2>&1 || true
   for _ in $(seq 1 15); do
-    if ! "$wrapper" hub status 2>/dev/null | grep -qi running; then
+    if ! pgrep -f "$binary" >/dev/null 2>&1; then
       hub_down=yes
       break
     fi
