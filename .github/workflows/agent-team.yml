@@ -192,6 +192,8 @@ jobs:
       seg_result: ${{ steps.seg.outputs.result }}
       base_sha: ${{ steps.control.outputs.base_sha }} # chain ref tip before this segment — the chat-mirror diff base
       commits: ${{ steps.push.outputs.commits }}      # post-turn commit count — EMPTY-SEGMENT law signal
+      turn_next: ${{ steps.push.outputs.next }}       # next #+TURN — folded into the finalize stall commit when no work landed
+      turn_lane: ${{ steps.push.outputs.lane }}       # lane that launched (spam law: subjects name the lane, never "unknown")
     runs-on: ubuntu-latest
     timeout-minutes: 35
     continue-on-error: true
@@ -964,31 +966,54 @@ jobs:
             build-bench-qoder)  NEXT='zai/glm-4.7-flash@goose (Build Engineer, bench)' ;;
             *)                  NEXT="${TURN}" ;;
           esac
+          # SPAM LAW (Owner 2026-10-31 #hq: "spammy CI commits... The
+          # commits should describe the changes they contain, and they
+          # should be written simply"): the lane that launched is a
+          # property of the SEAT — resolve it HERE, never "unknown" (the
+          # result text loses it on failure).
+          case "${{ steps.control.outputs.seat }}" in
+            build-bench-zai)    LANE='zai/glm-4.7-flash@goose' ;;
+            build-bench-groq)   LANE='groq/qwen3.8-27b@goose' ;;
+            build-bench-qoder)  LANE='qwen3.8-flash@qoder' ;;
+            *)                  LANE="${TURN_AGENT:-${{ steps.control.outputs.seat }}}" ;;
+          esac
+          echo "lane=${LANE}" >> "$GITHUB_OUTPUT"
+          echo "next=${NEXT}" >> "$GITHUB_OUTPUT"
           # R-2-69 POINTER ADVANCE: ai/packages keeps the classic checkout+sed
           # +push; a task branch is THIN — rebuilt as trunk tip + this
           # task's control file (fetched fresh, carrying the new TURN
           # pointer in its CONTENT), then force-pushed. State lives in the
           # file; the per-ref concurrency group serializes the chain.
-          git checkout -f "${CHAIN_REF:-ai/packages}" 2>/dev/null || true
-          CPUSH=no
-          for i in 1 2 3; do
-            git fetch origin +refs/heads/ai/packages:refs/remotes/origin/ai/packages
-            git reset --hard origin/ai/packages
-            if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
-              git show "origin/${CHAIN_REF}:agent-team/CONTROL.org" > "$CTL" 2>/dev/null || true
-            fi
-            sed -i "s|^\#+TURN:.*|\#+TURN: ${NEXT}|" "$CTL"
-            git add "$CTL"
-            git commit -m "ci-turn: ${TURN_AGENT:-${TURN_SEAT:-unknown}} done — next turn ${NEXT}" \
-              -m "result: ${TURN_RESULT:-unknown}" || { CPUSH=uptodate; break; }
-            if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
-              if git push --force origin "$CHAIN_REF"; then CPUSH=yes; break; fi
-            else
-              if git push origin "ai/packages"; then CPUSH=yes; break; fi
-            fi
-            sleep 10
-          done
-          [ "$CPUSH" = "yes" ] || echo "::warning::control push failed after 3 attempts"
+          # A segment that landed NO work rotates nothing here — finalize
+          # folds the rotation into its single stall control commit (spam
+          # law: one bookkeeping commit max per dead segment). A work
+          # segment keeps the rotation commit, plain and descriptive, and
+          # self-gates it through the kit commit guard before pushing.
+          CPUSH=skipped
+          if [ -n "${TURN_BRANCH:-}" ] && [ "${COMMITS:-0}" -gt 0 ]; then
+            git checkout -f "${CHAIN_REF:-ai/packages}" 2>/dev/null || true
+            CPUSH=no
+            for i in 1 2 3; do
+              git fetch origin +refs/heads/ai/packages:refs/remotes/origin/ai/packages
+              git reset --hard origin/ai/packages
+              if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
+                git show "origin/${CHAIN_REF}:agent-team/CONTROL.org" > "$CTL" 2>/dev/null || true
+              fi
+              sed -i "s|^\#+TURN:.*|\#+TURN: ${NEXT}|" "$CTL"
+              git add "$CTL"
+              git commit -m "control: rotate #+TURN to ${NEXT%% *} after ${LANE} segment landed" \
+                -m "result: ${TURN_RESULT:-none}" || { CPUSH=uptodate; break; }
+              bash ci/bin/commit_msg_guard.sh "origin/ai/packages..HEAD" || { git reset --hard origin/ai/packages; CPUSH=guard; break; }
+              if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
+                if git push --force origin "$CHAIN_REF"; then CPUSH=yes; break; fi
+              else
+                if git push origin "ai/packages"; then CPUSH=yes; break; fi
+              fi
+              sleep 10
+            done
+          fi
+          [ "$CPUSH" = "yes" ] || [ "$CPUSH" = "skipped" ] || [ "$CPUSH" = "uptodate" ] \
+            || echo "::warning::control push failed after 3 attempts (${CPUSH})"
 
   # SELF-CHAIN — the last link of every turn (Owner order 2026-10-20 #hq
   # 14:52: unlimited runs, agents decide how many runs an objective takes).
@@ -1340,7 +1365,12 @@ jobs:
           if [ "$OUTCOME" = "merged" ] && [ "$GATE" = "green" ]; then PROGRESS=yes; fi
           case "$RESULT" in *BLOCKED*) PROGRESS=no ;; esac
           if [ "$PROGRESS" = "yes" ]; then NEW=0; else NEW=$((STALL+1)); fi
-          if [ "$NEW" != "$STALL" ]; then
+          # SPAM LAW: at most ONE control commit per no-progress segment,
+          # carrying both facts (rotation + stall) in plain words, and the
+          # treadmill FREEZES at stall 8 — backoff dispatch continues, the
+          # repo stops collecting identical bookkeeping commits. A stall
+          # RESET always lands (recovery must un-freeze the chain).
+          if [ "$NEW" != "$STALL" ] && { [ "$PROGRESS" = "yes" ] || [ "${STALL:-0}" -lt 8 ]; }; then
             # Race-proof (Lead pushes can move ai/packages mid-run — same class
             # as the 15:57Z fetch-first rejection): reset, re-apply, commit.
             git fetch origin +refs/heads/ai/packages:refs/remotes/origin/ai/packages
@@ -1349,9 +1379,20 @@ jobs:
               git show "origin/${CHAIN_REF}:agent-team/CONTROL.org" > "$CTL" 2>/dev/null || true
             fi
             sed -i "s|^\#+STALL-COUNT:.*|\#+STALL-COUNT: ${NEW}|" "$CTL"
+            TURN_NEXT="${{ needs.turn.outputs.turn_next }}"
+            if [ "$PROGRESS" != "yes" ] && [ -n "$TURN_NEXT" ]; then
+              sed -i "s|^\#+TURN:.*|\#+TURN: ${TURN_NEXT}|" "$CTL"
+            fi
             git add "$CTL"
-            git commit -m "ci-chain: stall=${NEW} (segment ${OUTCOME}, result ${RESULT:-none})" \
-              || echo "::notice::stall commit empty"
+            if [ "$PROGRESS" = "yes" ]; then
+              git commit -m "control: reset stall to 0 — ${TURN_LANE:-the} segment landed work" \
+                || echo "::notice::stall commit empty"
+            else
+              NEXTBIT=""
+              [ -n "$TURN_NEXT" ] && NEXTBIT=", next ${TURN_NEXT%% *}"
+              git commit -m "control: ${TURN_LANE:-the} segment delivered no work — stall ${NEW}${NEXTBIT}" \
+                || echo "::notice::stall commit empty"
+            fi
             if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
               git push --force origin "${CHAIN_REF}" || echo "::warning::stall push failed"
             else
