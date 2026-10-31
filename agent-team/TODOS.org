@@ -224,6 +224,39 @@
     Task 1 itself (the 23-package bump batch) is NOT started this
     turn — the CI-repair cycle consumed it; next seat starts from a
     green base with the 02:23 hash method already proven.
+  - Note [2026-10-31 Sat 16:45 UTC] Build Engineer (glm-5.3@chat.z.ai,
+    seat): TASK 1 — BUMP BATCH ON ITS BRANCH, CI REPAIR CYCLE IN
+    FLIGHT.  Branch ai/pkgs-update-all, a88b083: 20 packages bumped
+    (bun 1.4.4, opencode 1.19.5, opencode2 2.2.5, copilot 1.0.105, dsh
+    0.2.1-rc.5, goose 1.57.0, terminal-browser 0.15.3, pi 1.4.0,
+    oh-my-pi 18.14.1, mcode 0.7.4, esbuild 0.28.2 on node-esbuild +
+    node-esbuild-linux-x64, codebuddy 2.179.0, cua-driver 0.38.0,
+    kilocode 7.8.18, cloudflared 2026.10.7, qoder-cli 1.1.81,
+    qoder-desktop 0.5.1, cline-bin 3.0.74, zcode-bin 3.16.2,
+    purple-discord ef5993d / 1.0.2026.10.25; %cline-version 3.0.70
+    legacy untouched per the Owner ruling; the ten stale version
+    strings synced with their hashes).  Hashes re-derived through the
+    calibrated download->sha256->nix-base32 pipeline (15/15 old-hash
+    calibration; cline-bin 3.0.74 and zcode 3.16.2 x64+arm64 also
+    match the pre-wipe survivor hashes).  CI on the branch: run
+    41204642123 completed FAILURE — exactly 2 of the channel's builds:
+    (1) cline-baseline 3.0.70 FOD hash mismatch, expected 0ynpf764...,
+    actual 0sq50kgy... — the batch's bun 1.4.3 -> 1.4.4 input shift
+    moved the fixed output; repaired by pinning the actual value (the
+    same method as the original all-zeros pin; provenance comment
+    updated in cline.scm).  (2) mcode 0.7.4 configure: npm --offline
+    died ENOTCACHED @trycua/cua-driver — 0.7.4 adds @trycua/cua-driver
+    0.34.1 (which depends on @ubjs/node + @ubjs/core, both 0.31.0-3)
+    over 0.6.8's closure; repaired by new node-trycua-cua-driver,
+    node-ubjs-node, node-ubjs-core definitions (hashes derived from
+    the npm tarballs with this repo's converter) wired into mcode's
+    inputs; their platform prebuilds stay optionalDependencies — npm
+    silently skips those offline, as upstream intends.  Repairs pushed
+    as 3ecfb1d; re-run 41221426690 dispatched and in_progress at note
+    time (https://github.com/khaalidrafi/packages/actions/runs/
+    41221426690).  NOT CLAIMED: the re-run's result; --dry-run and the
+    real builds stay CI-only (no guix in this seat).  Task 2 starts
+    strictly after this lands, per the sequencing.
   :END:
 
   BLUF: Build Engineer appointed (Owner order 04:02Z #hq).  This
@@ -610,6 +643,19 @@
     binary — CI proves those.  Your "bad trade" logic is respected: the
     edit lives on a task branch; trunk is untouched, and a red run would
     red only the branch.
+- Note [2026-10-31 Sat 16:45 UTC] Build Engineer (glm-5.3@chat.z.ai,
+    seat): CI DISPATCHED on ai/pkgs-cline-baseline-hub — tip 3ef3294
+    (the two-file hub fix from the 19:10 note; push had been pending
+    the PAT and the branch is now confirmed on origin): run
+    41221428534 in_progress at note time
+    (https://github.com/khaalidrafi/packages/actions/runs/41221428534).
+    Landing note for whoever lands branches: the hub branch predates
+    ai/pkgs-update-all, which re-pins the cline-baseline FOD hash
+    0ynpf764... -> 0sq50kgy... (bun 1.4.4 input shift, run 41204642123
+    evidence).  The hub fix is builder-side and FOD-hash-neutral, but
+    a rebase of the hub branch onto update-all must carry that
+    re-pin.  NOT CLAIMED: the run's result; the flip to REVIEW waits
+    for it, per the FINAL INSTRUCTION.
 ** PROGRESS DISPATCH #2 — packages/login-persistence: autoclaw + qoder logins must survive restart (REOPENED 2026-10-31: Owner UAT failed; --password-store=basic installed but ineffective)
   :PROPERTIES:
   :FROM: Team Lead — glm-5.3-flash@chat.z.ai
