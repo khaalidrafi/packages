@@ -351,6 +351,27 @@
     no merge, no force.  NOT CLAIMED: 41241102305 and 41244730646
     results.  This seat: no guix, CI is the gate; no *-bin runs
     (Owner's box).
+  - Note [2026-10-31 Sat 22:25 UTC] Build Engineer (zai/glm-4.7@seat):
+    ROUND 4 — UPDATE-ALL DOWN TO ONE STALE SMOKE LIST; HUB R4 IN
+    FLIGHT.  update-all run 41241102305 (541f0e3): Static checks green
+    (the byte-exact style form held), mcode built (the ubjs-inputs fix
+    held), the whole channel built, and the only red line is
+    `failed: dsh (smoke)' with `dynamic import is missing ...
+    lib/dump-config-crgOY3tW.js'.  Read tests/smoke/dsh.sh: its
+    dynamic-import existence check pins literal chunk names -- the
+    0.2.0-rc.2 rolldown hashes -- and the 0.2.1-rc.5 bump renamed
+    every chunk.  Verified against the published tarball (downloaded
+    and inspected, not guessed): bin.js imports ./profile-boot.js,
+    ./plugin-BiveYA7h.js, ./dump-config-CxNkSYcK.js,
+    ./dump-config-schema-D_PxIzpe.js, and the dump-config chunks chain
+    to profile-boot-C14i-8IN.js -- all six exist in the tarball; the
+    smoke's pinned names exist in neither the new tarball nor any
+    other file in it.  Fixed 6f5abe9: the check list now carries the
+    six real 0.2.1-rc.5 chunk names (bash -n checked; the rest of the
+    smoke untouched).  Run dispatched HTTP 204, in_progress at note
+    time.  hub run 41244730646 (ff33102, process-table stop leg) also
+    in_progress at note time.  NOT CLAIMED: both runs' results.
+    This seat: no guix, CI is the gate; no *-bin runs (Owner's box).
   :END:
 
   BLUF: Build Engineer appointed (Owner order 04:02Z #hq).  This
