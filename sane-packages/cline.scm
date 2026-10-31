@@ -764,11 +764,13 @@ import { type AddressInfo, createServer } from \"node:net\";"))
   ;; the whole FOD (bun install, the build.ts substitution chain, the smoke
   ;; phases inside it, the compile) with the #o644 output fix in place, and
   ;; the daemon's hash comparison then failed against the all-zeros
-  ;; placeholder exactly as designed, printing
+  ;; placeholder exactly as designed.  The update-all batch bumped the FOD's
+  ;; bun input 1.4.3 -> 1.4.4, which shifted the output again: CI run
+  ;; 41204642123 (branch ai/pkgs-update-all) printed
   ;;
   ;; sha256 hash mismatch for /gnu/store/...-cline-baseline-3.0.70:
-  ;; expected hash: 0000000000000000000000000000000000000000000000000000
-  ;; actual hash: 0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g
+  ;; expected hash: 0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g
+  ;; actual hash: 0sq50kgybdyw19b5vq8ck3lcdzn0lcj2b850w71kxp1vglhn1p08
   ;;
   ;; The actual value is pasted in below.  For this to converge, the next
   ;; build of the FOD must produce a byte-identical file -- same pinned
@@ -781,7 +783,7 @@ import { type AddressInfo, createServer } from \"node:net\";"))
     (method cline-baseline-build)
     (uri (list %cline-url %cline-tag))
     (file-name (string-append "cline-baseline-" %cline-version))
-    (sha256 (base32 "0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g"))))
+    (sha256 (base32 "0sq50kgybdyw19b5vq8ck3lcdzn0lcj2b850w71kxp1vglhn1p08"))))
 
 (define-public cline-baseline
   (package
