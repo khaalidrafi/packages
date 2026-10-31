@@ -1940,8 +1940,8 @@ own SQLite build.")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "https://registry.npmjs.org/@ubjs/core"
-                           "/-/core-" version ".tgz"))
+       (uri (string-append "https://registry.npmjs.org/@ubjs/core" "/-/core-"
+                           version ".tgz"))
        (sha256
         (base32 "0lbiiizbgycm2lbw0iq6vnpl6nh5vkav4m77m1llbixxk039bmvl"))))
     (build-system node-build-system)
@@ -1969,8 +1969,8 @@ that @ubjs/node sits on.  Pure JavaScript.")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "https://registry.npmjs.org/@ubjs/node"
-                           "/-/node-" version ".tgz"))
+       (uri (string-append "https://registry.npmjs.org/@ubjs/node" "/-/node-"
+                           version ".tgz"))
        (sha256
         (base32 "02bsa1cf8dy9vjm8aqwyf9iar3y1r529chr3mbwp5l26zhy8zhg5"))))
     (build-system node-build-system)
