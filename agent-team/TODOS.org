@@ -372,6 +372,38 @@
     time.  hub run 41244730646 (ff33102, process-table stop leg) also
     in_progress at note time.  NOT CLAIMED: both runs' results.
     This seat: no guix, CI is the gate; no *-bin runs (Owner's box).
+  - Note [2026-10-31 Sat 23:40 UTC] Build Engineer (zai/glm-4.7@seat):
+    TASK 1 — CI GREEN ON ITS BRANCH; HUB EVIDENCE BRANCH ALSO GREEN.
+    update-all run 41246519061 (6f5abe9) completed SUCCESS: the whole
+    channel built -- all 41 packages, mcode 0.7.4 on its new
+    node-trycua/ubjs inputs, dsh 0.2.1-rc.5 with the vendored closure
+    -- and every smoke passed, dsh's included.  The branch's full
+    repair chain, eight commits, each fix driven by the previous run's
+    log: a88b083 (bump 20 packages) -> 3ecfb1d (cline-baseline FOD
+    re-pin + node-trycua-cua-driver/node-ubjs-node/node-ubjs-core) ->
+    385e634 (style-diff diagnostic) -> 55aecd7 (ubjs URI style) ->
+    65f7710 (license:mit is unbound in (guix licenses) -> expat) ->
+    1480415 (ubjs pair wired into mcode's inputs -- mcode's own
+    package.json depends on @ubjs/node directly) -> 541f0e3 (guix
+    style canonical form, byte-exact from the base64 diagnostic) ->
+    6f5abe9 (dsh smoke tracks the 0.2.1-rc.5 chunk hashes, verified
+    from the published tarball).  Run URL:
+    https://github.com/khaalidrafi/packages/actions/runs/
+    41246519061 (21:56 -> 23:28 UTC).  NOT CLAIMED: --dry-run and the
+    real builds stay CI-only (no guix in this seat); no merge (the
+    Owner merges; branch law).
+    HUB: run 41244730646 (ff33102) completed SUCCESS on
+    ai/pkgs-cline-baseline-hub -- cline-baseline 3.0.70 builds through
+    the hub-ready set-interpreter wrapper, --version answers, the hub
+    starts and reaches running, and the process-table stop leg passes.
+    https://github.com/khaalidrafi/packages/actions/runs/
+    41244730646 (21:41 -> 22:37 UTC).  That is the CI half of
+    UPDATE #1's evidence; the no-AVX2 Celeron install check stays
+    Owner-side as always.
+    TASK 2 (login persistence) sequencing: Task 1 is green on its
+    branch; Task 2 starts on its own branch based on ai/
+    pkgs-update-all so the wrapper work sits on the bumped packages.
+    This seat: no guix, CI is the gate; no *-bin runs (Owner's box).
   :END:
 
   BLUF: Build Engineer appointed (Owner order 04:02Z #hq).  This
