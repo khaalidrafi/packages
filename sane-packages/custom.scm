@@ -2016,7 +2016,7 @@ only the JavaScript runtime ships.")
 contract and FFI surface mcode 0.7.4 uses to talk to the Cua driver.  Its
 platform prebuilds are optionalDependencies, which npm silently skips
 offline.")
-    (license license:mit)))
+    (license license:expat)))
 
 (define %mcode-version
   "0.7.4")
