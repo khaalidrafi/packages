@@ -86,7 +86,7 @@
 ;; the newest tag is still v3.14.3.  Keeping one variable per delivery means
 ;; bumping the desktop app cannot drag the source package's git tag along.
 (define %bin-version
-  "3.15.3")
+  "3.16.2")
 
 ;;; Tag v3.14.3.  Pinned by commit rather than tag: a tag can be moved, and
 ;;; git-fetch has to resolve the object name anyway.
@@ -506,11 +506,11 @@ plugin, MCP and search tooling.")
 ;;; is not cross-compilation: binary-build systems of this kind want the
 ;;; matching .deb on the matching machine.
 (define %zcode-bin-builds
-  `(("x86_64-linux" "linux-x64" . "05b0srb6zscbh238sa073kw9dscf3s82198ckq99jf2bnv2nrcxw")
+  `(("x86_64-linux" "linux-x64" . "1g5b4q640pdw1nar7yimn78q2q6jyqpfbhgpc6xjswyxrlcpbfii")
     ;; Declared because upstream serves the arm64 .deb, and the URL and payload
     ;; layout are the same; no runner here can verify it, since binary packages
     ;; of this kind do not cross-compile.
-    ("aarch64-linux" "linux-arm64" . "05cxqqi13a195zdphgk7f3jj5rjgwv00dm6rdz4qsbrmxpl3j3av")))
+    ("aarch64-linux" "linux-arm64" . "1w3wq418a0z2sbm26i1llg4l15x3hvj3dwrml7n06rrip6l75g1m")))
 
 (define (zcode-bin-source)
   (let* ((entry (or (assoc (%current-system) %zcode-bin-builds)

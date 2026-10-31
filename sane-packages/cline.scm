@@ -887,7 +887,7 @@ without AVX2 support.")
 ;;; verified), so it was not compiled for the AVX2 target.
 
 (define %cline-bin-version
-  "3.0.73")
+  "3.0.74")
 
 (define %cline-bin-source
   (origin
@@ -895,7 +895,7 @@ without AVX2 support.")
     (uri (string-append
           "https://registry.npmjs.org/@cline/cli-linux-x64/-/cli-linux-x64-"
           %cline-bin-version ".tgz"))
-    (sha256 (base32 "06mm3ibazw2ajpdk66wszfzx54818m39r40xq2d7nbj63wibwb08"))))
+    (sha256 (base32 "1z0v4431sxi99qdldmfijj66av8i67mz53f3aq8lb2npm0w28l2j"))))
 
 (define-public cline-bin
   (package
