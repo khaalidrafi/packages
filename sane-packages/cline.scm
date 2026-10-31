@@ -823,9 +823,14 @@ import { type AddressInfo, createServer } from \"node:net\";"))
                  (bash (assoc-ref %build-inputs "bash-minimal")))
             (mkdir-p (dirname binary))
             (copy-file compiled binary)
-            (chmod binary #o555)
+            ;; patchelf rewrites the file in place; the copy made from the
+            ;; read-only FOD output carries no owner-write bit, so patchelf
+            ;; died with "open: Permission denied" (CI run 41225160709).
+            ;; Grant owner-write for the rewrite, restore 555 afterwards.
+            (chmod binary #o644)
             (invoke (string-append patchelf "/bin/patchelf")
                     "--set-interpreter" loader binary)
+            (chmod binary #o555)
             (mkdir-p (string-append out "/bin"))
             (call-with-output-file (string-append out "/bin/cline")
               (lambda (port)
