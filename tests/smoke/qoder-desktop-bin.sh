@@ -20,17 +20,28 @@ for path in \
 done
 
 # bin/qoder-desktop must be a regular script, not a symlink: a symlink
-# cannot carry arguments, and the login persistence fix NEEDS its flag.
-# This box runs no keyring daemon, so Chromium finds no Secret Service to
-# write the login token to and the session would be lost when the app
-# exits; --password-store=basic keeps the credentials in the profile
-# directory on disk instead (DISPATCH #2, eece268's autoclaw precedent).
+# cannot carry arguments.  Login persistence (DISPATCH #2, reopened by the
+# 2026-10-31 Owner UAT failure): the ZAI-family Electron stack rejects
+# Chromium's basic_text backend (autoclaw's main.cjs does so in plain
+# text), so the wrapper provides a real Secret Service instead of the
+# basic flag -- session bus, blank-password login keyring seeded under the
+# user's HOME, gnome-keyring-daemon secrets component -- and execs the
+# wrapped launcher with no password-store flag (without a service
+# Chromium falls back to basic_text on its own, so absence of the flag is
+# never worse than the status quo).
 [ -f "$out/bin/qoder-desktop" ] && [ ! -L "$out/bin/qoder-desktop" ] ||
   { echo "$out/bin/qoder-desktop is not the launcher script (regular file expected)" >&2; exit 1; }
 grep -q "lib/Qoder/qoder" "$out/bin/qoder-desktop" ||
   { echo "$out/bin/qoder-desktop does not exec the wrapped launcher" >&2; exit 1; }
-grep -q -- '--password-store=basic' "$out/bin/qoder-desktop" ||
-  { echo "$out/bin/qoder-desktop lost --password-store=basic (DISPATCH #2 login persistence)" >&2; exit 1; }
+if grep -q -- '--password-store=basic' "$out/bin/qoder-desktop"; then
+  { echo "$out/bin/qoder-desktop still carries --password-store=basic (rejected by the app: basic_text)" >&2; exit 1; }
+fi
+grep -q 'DBUS_SESSION_BUS_ADDRESS' "$out/bin/qoder-desktop" ||
+  { echo "$out/bin/qoder-desktop lost the session-bus wiring" >&2; exit 1; }
+grep -q 'gnome-keyring-daemon' "$out/bin/qoder-desktop" ||
+  { echo "$out/bin/qoder-desktop lost the gnome-keyring wiring" >&2; exit 1; }
+grep -q -- '--unlock --daemonize' "$out/bin/qoder-desktop" ||
+  { echo "$out/bin/qoder-desktop lost the login-keyring seeding" >&2; exit 1; }
 
 # The wrapped launcher must still carry the environment the payload needs:
 # XDG_DATA_DIRS is what wrap-program wrote (icons, mime types), LD_LIBRARY_PATH
