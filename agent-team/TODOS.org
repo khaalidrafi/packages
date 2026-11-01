@@ -186,7 +186,7 @@
   FINAL INSTRUCTION: work on ai/packages; flip this entry to REVIEW
   with branch/sha and the CI run URL.
 
-** PROGRESS DISPATCH #3 — packages/update-all + login-persistence (consolidated)
+** REVIEW DISPATCH #3 — packages/update-all + login-persistence (consolidated)
   :PROPERTIES:
   :FROM: Team Lead — glm-5.3-flash@chat.z.ai
   :TO: Build Engineer — GLM-5.3@chat.z.ai
@@ -418,6 +418,36 @@
     result.  OWNER UAT stays open: login -> restart -> still logged in
     for autoclaw-bin and qoder-desktop-bin on the no-AVX2 Celeron.
     This seat: no guix, CI is the gate; no *-bin GUI/desktop runs.
+  - Note [2026-11-01 Sun 02:05 UTC] Build Engineer (zai/glm-4.7@seat):
+    TASK 2 — CI GREEN WITH BOTH NEW SMOKES EXECUTED; DISPATCH #3
+    FLIPPED TO REVIEW.  Run 41255960275 (3afbb38) completed SUCCESS on
+    ai/pkgs-login-persistence, and this time the log carries the two
+    lines the correction note demanded: `==> smoke: qoder-cli-bin' /
+    `qoder-cli-bin smoke test passed (1.1.81)' (the FATAL-style
+    version check answered the pin in the real guix build) and `==>
+    smoke: qoder-desktop-bin' / `qoder-desktop-bin smoke test passed'
+    (wrapper is a regular script execing the wrapped launcher with
+    --password-store=basic, wrap-program environment intact, desktop
+    Exec on the store).  12 smokes passed total, zero failed lines.
+    https://github.com/khaalidrafi/packages/actions/runs/
+    41255960275 (00:51 -> 01:52 UTC).  Branch/sha: ai/
+    pkgs-login-persistence @ 3afbb38 (eadb792 smokes + exec bits),
+    based on ai/pkgs-update-all @ 6f5abe9.  NOT CLAIMED: --dry-run
+    and the real builds stay CI-only (no guix in this seat); no merge
+    (the Owner merges; branch law).
+    DOD TALLY, both tasks: Task 1 -- 20 packages bumped, versions and
+    hashes re-derived through the calibrated pipeline, whole channel
+    green on its branch (41246519061 @ 6f5abe9); the review-table
+    material is the 16:45 note's bump list plus the eight-commit
+    repair chain.  Task 2 -- wrapper flags present and CI-asserted
+    (autoclaw-bin since eece268/6393e89; qoder-desktop-bin as of this
+    run), qoder-cli storage investigated from the hash-verified
+    artifact (23:45 note), CI evidence green (this run).  OPEN BOX,
+    Owner-side only: the no-AVX2 Celeron UATs -- login -> restart ->
+    still logged in for autoclaw-bin and qoder-desktop-bin (and the
+    devin-bin install check from DISPATCH #4).  Entry flips to REVIEW;
+    REVIEW without a note is invalid, and these notes carry branch,
+    sha and run URLs for both tasks.
   - Note [2026-11-01 Sun 00:55 UTC] Build Engineer (zai/glm-4.7@seat):
     TASK 2 CORRECTION — THE GREEN RUN SKIPPED BOTH NEW SMOKES; EXEC
     BITS FIXED; RE-RUN IN FLIGHT.  Run 41251650498 (eadb792)
