@@ -1104,6 +1104,56 @@
       This seat has not tested any of them — BE owns the call.
     + DOD impact: item 5 (Owner UAT) stays unchecked, and this entry is
       no longer "waiting on UAT" but "UAT ran and rejected the fix".
+  - Note [2026-11-01 Sun 01:25 UTC] Build Engineer (zai/glm-4.7@seat):
+    REOPENED DISPATCH #2 — ROOT CAUSE READ FROM THE PAYLOADS, FIX ON
+    ITS BRANCH, CI DISPATCHED.  (1) Root cause, from the hash-verified
+    artifacts (both base32 pins matched byte-exact via the repo
+    converter): autoclaw 2.0.3's main.cjs carries in PLAIN TEXT
+    isElectronProductAccountEncryptionAvailable(), which returns false
+    on Linux when safeStorage.getSelectedStorageBackend() ===
+    'basic_text' -- and basic_text is EXACTLY what eece268's
+    --password-store=basic forces.  The app then refuses to persist and
+    warns 'The system keychain is unavailable' -- the Owner's 10:45
+    relay note observed precisely this.  libsecret is already on the
+    RUNPATH (%autoclaw-rpath-inputs), so the missing piece was never a
+    library: it is a Secret Service ANSWERING on the session bus; with
+    none, Chromium self-falls-back to basic_text and the app rejects
+    it.  The 10:45 hypothesis is confirmed and sharpened: no Chromium
+    flag can fix this app.
+    (2) Fix df9a652 on ai/pkgs-login-persistence (on top of the green
+    3afbb38): both desktop wrappers now provide the service -- start a
+    session dbus-daemon when the session lacks one, seed a
+    blank-password login keyring once (printf '' | gnome-keyring-daemon
+    --unlock --daemonize; the keyring file lives under the user's HOME,
+    so the session survives restarts), run gnome-keyring-daemon
+    --start --components=secrets and export its env, then exec.
+    gnome-keyring joins the inputs (dbus was already there).  The
+    --password-store=basic flag is REMOVED from both exec lines:
+    without a service Chromium falls back to basic_text on its own, so
+    removal is never worse than the status quo; with the service up,
+    Chromium selects gnome_libsecret, which the app accepts.
+    (3) Evidence limits, stated plainly: qoder-desktop 0.5.1's payload
+    is obfuscated -- 'basic_text' appears nowhere in plaintext and the
+    safeStorage shim forwards getSelectedStorageBackend on Linux behind
+    a string-decode table -- so the same-root-cause call for qoder is
+    an inference from the shared ZAI-family stack shape plus the same
+    UAT failure, not a plaintext proof; removal of the flag is a
+    no-regression change for it either way.  autoclaw's rejection is
+    plaintext proof.
+    (4) Gates run here: reader-aware paren balance on both .scm files
+    (net depth 0), bash -n on both smokes, and the rendered wrapper
+    scripts (format strings with store paths substituted) verified
+    byte-for-byte with bash -n.  Smokes flipped to the new contract:
+    the basic flag must be ABSENT; session-bus wiring, keyring seeding
+    and the secrets daemon must be present.
+    (5) CI dispatched HTTP 204: run 41260236869
+    (https://github.com/khaalidrafi/packages/actions/runs/
+    41260236869), in_progress at note time.  NOT CLAIMED: that run's
+    result.  OWNER UAT remains the final gate: guix pull/install the
+    new builds, log in, restart, confirm the session survives -- and
+    if the blank-password keyring feels too permissive for the Owner's
+    taste, the seed step is the only line to revisit (the app works
+    with any unlocked keyring).
   :END:
 
   BLUF: the Owner reports autoclaw and qoder lose their login on every
