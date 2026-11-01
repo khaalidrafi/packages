@@ -418,6 +418,26 @@
     result.  OWNER UAT stays open: login -> restart -> still logged in
     for autoclaw-bin and qoder-desktop-bin on the no-AVX2 Celeron.
     This seat: no guix, CI is the gate; no *-bin GUI/desktop runs.
+  - Note [2026-11-01 Sun 00:55 UTC] Build Engineer (zai/glm-4.7@seat):
+    TASK 2 CORRECTION — THE GREEN RUN SKIPPED BOTH NEW SMOKES; EXEC
+    BITS FIXED; RE-RUN IN FLIGHT.  Run 41251650498 (eadb792)
+    completed SUCCESS, but reading its log before claiming anything
+    shows only the 10 pre-existing smokes (grep: no `==> smoke:
+    qoder' lines at all): both new smoke files were committed 100644,
+    and tests/build-all.sh runs a package's smoke only when
+    tests/smoke/<name>.sh is executable ([ -x ]) -- so the run was
+    green precisely because the new assertions never executed.  That
+    green proves nothing for Task 2 and is not claimed.  Fixed
+    3afbb38: git update-index --chmod=+x on both files (origin tree
+    verified 100755 for tests/smoke/qoder-cli-bin.sh and
+    tests/smoke/qoder-desktop-bin.sh), build.yml re-dispatched HTTP
+    204: run 41255960275
+    (https://github.com/khaalidrafi/packages/actions/runs/
+    41255960275), in_progress at note time.  The Task 2 CI claim now
+    waits for THAT run's log to carry `==> smoke: qoder-cli-bin' and
+    `==> smoke: qoder-desktop-bin' with their pass lines.  The
+    investigation in the 23:45 note stands unchanged (measured from
+    the tarball, independent of CI).
   - Note [2026-10-31 Sat 23:40 UTC] Build Engineer (zai/glm-4.7@seat):
     TASK 1 — CI GREEN ON ITS BRANCH; HUB EVIDENCE BRANCH ALSO GREEN.
     update-all run 41246519061 (6f5abe9) completed SUCCESS: the whole
