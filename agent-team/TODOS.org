@@ -757,7 +757,7 @@
   FINAL INSTRUCTION: verify the three packages, fix anything I missed,
   push ai/packages, and flip this entry to REVIEW with the evidence.
 
-** TODO UPDATE #1 — packages/autoclaw-cline: cline-bin hub fix; cline-baseline needs the same, CI-only
+** REVIEW UPDATE #1 — packages/autoclaw-cline: cline-bin hub fix; cline-baseline needs the same, CI-only
   :PROPERTIES:
   :FROM: Qoder session — Qwen3.8-Flash@qoder
   :TO: Build Engineer — GLM-5.3-Flash@chat.z.ai
@@ -899,6 +899,36 @@
     a rebase of the hub branch onto update-all must carry that
     re-pin.  NOT CLAIMED: the run's result; the flip to REVIEW waits
     for it, per the FINAL INSTRUCTION.
+- Note [2026-11-01 Sun 01:35 UTC] Build Engineer (zai/glm-4.7@seat,
+    seat): FLIPPED TO REVIEW — THE ASKED-FOR FIX IS CI-PROVEN.  The
+    16:45 note's run 41221428534 (3ef3294) failed on the way, but the
+    repair chain on ai/pkgs-cline-baseline-hub closed every gap and
+    the final run is GREEN: 41244730646 (ff33102) completed SUCCESS --
+    cline-baseline 3.0.70 builds through the hub-ready set-interpreter
+    wrapper, --version answers, hub start reaches running, and the
+    process-table stop leg passes (the two-file patch this entry's
+    Task 2 asked for: builder patchelf --set-interpreter only + direct
+    exec wrapper exporting LD_LIBRARY_PATH + the hub
+    start/status/stop smoke).  Full chain: 3ef3294 (the fix) ->
+    028813a (style, byte-exact from CI diff) -> e8adfe4 (chmod #o644
+    before patchelf, #o555 restored -- the store copy has no
+    owner-write bit, run 41225160709 'open: Permission denied') ->
+    8b8da7e (stop leg diagnostics: stop answers {"stopped":true}, a
+    second stop answers {"stopped":false}, while hub status keeps
+    saying running -- status reads a stale record, so the smoke now
+    verifies the daemon's exit via pgrep, not status's word) ->
+    ff33102.  https://github.com/khaalidrafi/packages/actions/runs/
+    41244730646 (21:41 -> 22:37 UTC 2026-10-31).  Landing note still
+    applies: the hub branch predates ai/pkgs-update-all, whose bump
+    moves cline-baseline's input bun (FOD re-pin 0ynpf764... ->
+    0sq50kgy... already committed as part of 3ecfb1d THERE); the Owner
+    merges and must carry that re-pin when folding.  Task 1 of this
+    entry (verify dcd11c6's cline-bin on CI): cline-bin 3.0.73 builds
+    and its smoke passes in every whole-channel run since #96,
+    including 41246519061 (update-all @ 6f5abe9, SUCCESS) and
+    41255960275 (login-persistence @ 3afbb38, SUCCESS).  NOT CLAIMED:
+    the no-AVX2 Celeron hub round trip stays Owner-side, as the entry
+    says.
 ** PROGRESS DISPATCH #2 — packages/login-persistence: autoclaw + qoder logins must survive restart (REOPENED 2026-10-31: Owner UAT failed; --password-store=basic installed but ineffective)
   :PROPERTIES:
   :FROM: Team Lead — glm-5.3-flash@chat.z.ai
