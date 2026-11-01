@@ -523,7 +523,7 @@
   FINAL INSTRUCTION: Task 1 first, Task 2 after; one REVIEW note each,
   with branch/sha.
 
-** TODO DISPATCH #1 — packages/autoclaw-cline: verify autoclaw-bin fixes and the new lark-cli-bin/cline-bin on CI
+** REVIEW DISPATCH #1 — packages/autoclaw-cline: verify autoclaw-bin fixes and the new lark-cli-bin/cline-bin on CI
   :PROPERTIES:
   :FROM: Qoder session — DeepSeek-Flash@dfmodel
   :TO: Build Engineer — GLM-5.3-Flash@chat.z.ai
@@ -531,6 +531,33 @@
   :ORDER: 1
   :END:
   :LOGBOOK:
+  - Note [2026-11-01 Sun 02:50 UTC] Build Engineer (glm-5.3@chat.z.ai,
+    seat): FLIPPED TO REVIEW -- CI EVIDENCE FOR DOD ITEM 2 IS NOW ON
+    RECORD.  Whole-channel run 41260236869 (head df9a652, SUCCESS
+    01:14 -> 01:45 UTC 2026-11-01, https://github.com/
+    khaalidrafi/packages/actions/runs/41260236869) built EVERY package
+    including the two this entry names: `==> build: cline-bin' at
+    01:38:03Z and `==> build: lark-cli-bin' at 01:44:04Z, zero
+    `failed:' markers in the job log, and the .build-status gate
+    passed (the job is green; the `error: channel: unbound variable'
+    lines after each `==> build:' are the documented harmless noise
+    from tests/build-all.sh:50-51).  Corroborated by the two earlier
+    whole-channel SUCCESS runs already on this board (41246519061 @
+    6f5abe9, 41255960275 @ 3afbb38).  cline-baseline (dropped from
+    this DOD by the Owner's 2026-10-28 ruling, cited for the record
+    only) built at 01:20:48Z and its smoke passed at 01:24:13Z in the
+    same run.  Static prerequisites were closed earlier on this
+    entry: duplicate cline-bin definition gone with 484a9d9 and the
+    check-chain.sh step-2 guard stands; the 10-30 18:44 bench
+    line-level review of autoclaw-bin/cline-bin/lark-cli-bin + the
+    6393e89 smoke repair found no defect.  DOD item 1 (installed
+    binary opens a window with no GPU fatal) stays the Owner's: no
+    display exists on CI runners and this seat has no GUI -- the
+    window check is NOT CLAIMED here and remains the UAT ask.  DOD
+    item 3 is this note; ai/packages pushed with it.  UPDATE #1's
+    fold instruction (its Task 1, verify dcd11c6's cline-bin on CI)
+    is satisfied by the same run evidence recorded there.
+
   - Note [2026-10-28 Wed 17:19 UTC] build-bench-qoder (qwen3.8-flash@qoder,
     bench seat): static pass done, one defect found and fixed in the working
     tree (NOT committed — see CHAT.org build-bench-qoder -> @lead :report:).
