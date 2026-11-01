@@ -360,21 +360,44 @@
                                                  ;; appended, so flags given on the
                                                  ;; command line come after the default.
                                                  ;;
-                                                 ;; --password-store=basic is the login
-                                                 ;; persistence fix (DISPATCH #2): this
-                                                 ;; machine runs no keyring daemon, so
-                                                 ;; Chromium's auto-detection finds no
-                                                 ;; Secret Service to write the token to
-                                                 ;; and the login is lost when the app
-                                                 ;; exits.  `basic' stores the
-                                                 ;; credentials in the profile directory
-                                                 ;; on disk instead.
+                                                 ;; Login persistence (DISPATCH #2, reopened
+                                                 ;; after the 2026-10-31 Owner UAT failure):
+                                                 ;; the app's own credential layer reads
+                                                 ;; safeStorage.getSelectedStorageBackend()
+                                                 ;; and REFUSES the basic_text backend on
+                                                 ;; Linux (main.cjs:
+                                                 ;; isElectronProductAccountEncryptionAvailable),
+                                                 ;; so --password-store=basic selected
+                                                 ;; exactly the one backend the app will
+                                                 ;; not use -- the flag is gone and a real
+                                                 ;; Secret Service is provided instead.
+                                                 ;; dbus and gnome-keyring ship as package
+                                                 ;; inputs; the wrapper makes sure a
+                                                 ;; session bus is up, seeds a
+                                                 ;; blank-password login keyring once (it
+                                                 ;; lives under the user's HOME, so the
+                                                 ;; session survives restarts), and starts
+                                                 ;; the secrets daemon before exec.
                                                  (call-with-output-file (string-append #$output
                                                                          "/bin/autoclaw")
                                                    (lambda (port)
                                                      (format port
-                                                      "#!~a/bin/bash~%exec ~a/lib/AutoClaw/AutoClaw2 --disable-gpu --password-store=basic \"$@\"~%"
+                                                      "#!~a/bin/bash~%
+if [ -z \"${DBUS_SESSION_BUS_ADDRESS:-}\" ]; then
+  addr=\"$(~a/bin/dbus-daemon --session --fork --print-address 2>/dev/null)\" && export DBUS_SESSION_BUS_ADDRESS=\"$addr\"
+fi
+keyrings=\"${XDG_DATA_HOME:-$HOME/.local/share}/keyrings\"
+if [ ! -e \"$keyrings/default\" ]; then
+  mkdir -p \"$keyrings\"
+  printf '' | \"~a/bin/gnome-keyring-daemon\" --unlock --daemonize >/dev/null 2>&1 || true
+fi
+eval \"$(\"~a/bin/gnome-keyring-daemon\" --start --components=secrets 2>/dev/null)\" || true
+export GNOME_KEYRING_CONTROL SSH_AUTH_SOCK
+exec ~a/lib/AutoClaw/AutoClaw2 --disable-gpu \"$@\"~%"
                                                       #$bash-minimal
+                                                      #$dbus
+                                                      #$gnome-keyring
+                                                      #$gnome-keyring
                                                       #$output)))
                                                  (chmod (string-append #$output
                                                          "/bin/autoclaw")
@@ -430,6 +453,7 @@
                   fontconfig
                   freetype
                   glib
+                  gnome-keyring
                   gsettings-desktop-schemas
                   gtk+
                   libnotify
