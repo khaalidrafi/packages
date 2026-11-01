@@ -1255,6 +1255,40 @@
     if the blank-password keyring feels too permissive for the Owner's
     taste, the seed step is the only line to revisit (the app works
     with any unlocked keyring).
+  - Note [2026-11-01 Sun 06:44 UTC] Host seat (Owner's box,
+    Aa-coding@qoder): ROUND-2 UAT RE-RAN — BUT AGAINST THE OLD BUILDS,
+    NOT df9a652.  The Owner's order "test autoclaw and qoder-desktop
+    login issues with cua-driver" was executed as fresh-launch probes of
+    the INSTALLED packages, and binary proof shows those are still the
+    eece268 shape: `guix package -I' -> autoclaw-bin-2.0.3 @
+    27ia6lrzcrjlw5dd0rp9608368k3kqp5, qoder-desktop-bin-0.4.3 @
+    igf1yd1vng7mkbbik1akrmb1l9jlxcja; live /proc cmdline 13472
+    (qoder-desktop) carries --password-store=basic
+    --force-renderer-accessibility.  CRITICAL CORRECTION for the 02:40
+    flip: df9a652 (the CI-proven keyring fix, run 41260236869) is NOT
+    an ancestor of trunk ai/packages — `git branch --contains' finds it
+    only on origin/ai/pkgs-login-persistence — so NO `guix pull' can
+    deliver it.  The 02:40 UAT ask ("guix pull, install the new
+    autoclaw-bin + qoder-desktop-bin") is IMPOSSIBLE until that branch
+    lands on trunk; merging is the Owner's per branch law.
+    + TEST RESULTS (fresh launches of the OLD shape, no login attempt —
+      a restart-survival probe): autoclaw (pid 11049) opens straight to
+      "Welcome to AutoClaw" -> NOT logged in; qoder-desktop (pid 13472)
+      opens to "Welcome, my friend" + "Log in immediately", and
+      main.sqlite's account_profiles table is EMPTY -> NOT logged in.
+      Exactly consistent with the 01:25 root cause (no Secret Service
+      answering on the session bus -> basic_text -> the app rejects
+      persistence); the installed old build was never going to pass.
+    + CONSEQUENCE: this round does NOT test df9a652, so DOD item 5
+      (session survives restart) stays UNVERIFIED and the entry stays
+      REVIEW.  Genuine round-2 UAT order of operations: (1) Owner merges
+      ai/pkgs-login-persistence to trunk (or orders its fold per the
+      7b898c1 fold notes — the turn-branch cline.scm hunk is flagged
+      broken, DISCARD it, take ff33102's shape), (2) guix pull + guix
+      install autoclaw-bin qoder-desktop-bin, (3) log in, restart,
+      confirm the session survives.  Faster alternative for the Owner:
+      `guix package -i autoclaw-bin qoder-desktop-bin -L <checkout of
+      the fix branch>` UATs the fix without waiting on a merge.
   :END:
 
   BLUF: the Owner reports autoclaw and qoder lose their login on every
@@ -1307,6 +1341,57 @@
   FINAL INSTRUCTION: re-read the DOD before reporting; work on
   ai/login-persistence; flip this entry to REVIEW with branch/sha,
   dry-run + CI evidence, and the qoder-cli finding.
+
+** BLOCKED UPDATE #2 — accounts/daily-free-credits: claim paths mapped for autoclaw/qoder/zcode; zcode CLI verified, quota 1113
+  :PROPERTIES:
+  :FROM: Host seat (Owner's box) — Aa-coding@qoder
+  :TO: Owner
+  :PRIORITY: P2
+  :OWN: Owner — all three claims need Owner-side auth (credentials/QR scan)
+  :END:
+
+  BLUF: Owner order "Claim their daily free credits, including zcode.
+  Test zcode cli." — zcode CLI verified WORKING end-to-end; its only
+  failure is provider quota (Z.AI 1113: no active resource package).
+  All three credit claims are mapped to exact URLs but blocked on
+  Owner-side auth: this seat has no credential (secret law) and no claim
+  flow accepts automation.
+
+  FINDINGS (2026-11-01, host seat):
+  - zcode CLI (zcode-bin 3.15.3 -> cli 0.16.9): version/help/doctor all
+    functional; the `--prompt' round-trip reaches
+    https://api.z.ai/api/paas/v4 AUTHENTICATED (~/.zcode/v2/credentials.json
+    exists, 0600, logged-in state confirmed by existence only) and fails
+    ONLY on provider error 1113 "Insufficient balance or no resource
+    package. Please recharge." (modelId glm-5.3-flashx, retryable:false;
+    cli log ~/.zcode/cli/log/zcode-2026-11-01.jsonl).  Root: the
+    desktop balance endpoint (zcode.z.ai/api/v1/zcode-plan/billing/balance)
+    returns {plans:[],balances:[],hasActiveStartPlan:false,planCount:0,
+    balanceCount:0} on Oct 30 AND Oct 31 — the free daily-credit start
+    plan is NOT active on this account, so the CLI is healthy but
+    unquota'd.
+  - CLAIM PATHS (each verified against the installed payloads):
+    + zcode/Z.AI -> https://z.ai/manage-apikey/subscription (string in
+      zcode-bin 3.15.3's app.asar; also chat.z.ai/api/oauth/authorize).
+    + autoclaw/AutoGLM -> https://bigmodel.cn/coding-plan/personal/overview
+      (string in autoclaw-bin 2.0.3's unpacked app/).
+    + qoder -> NO standalone claim URL found: login + credits flow
+      through the app itself (origins api2.qoder.sh / center.qoder.sh /
+      api.qoder.com from qoder-desktop-bin 0.4.3's app.asar); the qoder
+      CLI's help shows no credits/plan subcommand.
+  - STATUS per app (all left running for the Owner):
+    + autoclaw (pid 11049) sits at the Zai "Security verification" QR
+      screen — screenshot /tmp/autoclaw-zai-login.png for the Owner to
+      complete the login and reach the plan page.
+    + qoder-desktop (pid 13472) sits at the welcome screen ("Log in
+      immediately") — needs Owner login first, then credits live inside
+      the app.
+    + zcode: account already logged in; the Owner only needs to open
+      z.ai/manage-apikey/subscription and (re)activate the start plan.
+
+  NEXT (Owner-side): complete the three logins/claims above; then the
+  1113 block lifts and the zcode CLI quota round-trip can be re-run.
+  This entry flips REVIEW/DONE on Owner confirmation.
 
 * Org cheat sheet
 
