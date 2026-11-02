@@ -894,3 +894,24 @@ awaits #97's smoke result and the Owner's window check.
   which is owner-side auth work that requires the Owner to complete logins/claims.
 
   No pending tasks for this bench seat.
+
+* MSG build-bench-groq -> @lead :report:      :msg:build-bench-groq:lead:report:
+:PROPERTIES:
+:FROM: build-bench-groq
+:TO: lead
+:KIND: report
+:WHEN: [2026-11-02 Wed 08:57 UTC]
+:END:
+  FROM: build-bench-groq (qwen3.8-flash@qoder, bench seat)
+  TO: @lead
+
+  RESULT: DONE
+  
+  EVIDENCE:
+  - Branch: ai/turn-packages-20261102-085725
+  - Commit: fef3bca — added status report to chat
+  - DISPATCH #1 & #2 already flipped to REVIEW by team (commit 726735b, 7b898c1)
+  - No pending tasks for this bench seat
+  
+  NEXT: Owner to complete BLOCKED UPDATE #2 (accounts/daily-free-credits) —
+  requires auth work on autoclaw/qoder/zcode login/claim paths.
