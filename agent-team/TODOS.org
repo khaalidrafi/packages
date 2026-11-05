@@ -1,6 +1,6 @@
 #+TITLE: TODOS.org — team board (single source of truth)
 #+TODO: TODO PROGRESS BLOCKED REVIEW | DONE CANCELLED DEFERRED
-# DISPATCH counter: 1
+# DISPATCH counter: 3
 
 * Board
 
@@ -134,6 +134,74 @@
 
   FINAL INSTRUCTION: fold this into DISPATCH #1's verification, then
   flip the entry to REVIEW with branch/sha and CI evidence.
+
+* REVIEW DISPATCH #3 — packages: bump ALL to upstream latest + autoclaw/qoder login persistence
+  :PROPERTIES:
+  :FROM: Build Engineer — glm-5.3@chat.z.ai
+  :TO: Team Lead
+  :PRIORITY: P1
+  :ORDER: 3
+  :END:
+
+  BLUF: both tasks executed, gates green, two task branches awaiting
+  push + Lead review.  PUSH BLOCKED: no PAT provisioned in the session
+  (no git-credentials, no credential.helper, no gh) — branches are
+  local-only.
+
+  BUMP TABLE (Task 1, branch ai/pkgs-update-all @ 910c66b, "pkgs: bump
+  all packages to upstream latest (2026-11-05)" + fix commit):
+  - opencode2-bin 2.0.27→2.2.0
+  - opencode-bin 1.19.0→1.19.5 (entry renamed bin/opencode→bin/opencode-v1
+    per Owner order — opencode2-bin now solely owns bin/opencode +
+    opencode2/opencode-v2 aliases, no more collision)
+  - copilot-cli-bin 1.0.95→1.0.105
+  - mcode+mcode-bin 0.6.8→0.7.1
+  - node-esbuild+node-esbuild-linux-x64 0.25.12→0.28.2
+  - codebuddy-code-bin 2.164.0→2.177.1
+  - cline-bin 3.0.73→3.0.74 (sane-packages/cline.scm only;
+    cline-baseline untouched at 3.0.70 — different version var, FOD
+    hash still valid)
+  - dsh 0.2.0-rc.2→0.2.1-rc.2 (dsh-modules.scm regenerated, +
+    scripts/regen-dsh-modules.py added)
+  - purple-discord → commit ef5993d5 snapshot 1.0.2026.10.25
+  - goose-cli-bin →1.56.0
+  - pi-coding-agent-bin →1.4.0
+  - oh-my-pi-bin →18.13.2
+  - cloudflared →2026.10.3
+  - bun-bin →1.4.4
+  - kilocode-bin →7.8.18
+  - qoder-cli-bin 1.1.65→1.1.83
+  - qoder-desktop-bin 0.4.3→0.5.3
+  - zcode-bin 3.15.3→3.17.2 (x64+arm64)
+  - zcode 3.14.3→v3.17.2 (zcode-modules.scm regenerated)
+  - cua-driver-bin 0.34.1→0.38.0
+  - terminal-browser-bin 0.13.4→0.15.3
+
+  UNCHANGED (probed at latest): autoclaw-bin 2.0.3, brow6el-bin 0.3.5,
+  rdircd, node-ws, casty-bin, node-vscode-ripgrep, clipboard,
+  node-better-sqlite3, konaito+chrome-headless-shell, pi-acp-bin,
+  lark-cli, bcon 1.5.1.
+
+  GATES: dry-run 40/40 define-public green; tests/check-static.sh green
+  (style fix in 910c66b).
+
+  TASK 2 (branch ai/pkgs-login-fix @ 88db381, "pkgs: persist
+  autoclaw/qoder-desktop logins across restarts"): root cause =
+  libsecret in inputs makes Chromium pick the libsecret password
+  store, but a Guix session runs no Secret Service, so stored logins
+  are unreadable at next launch.  Fix = --password-store=basic on both
+  apps (autoclaw exec line; qoder-desktop bin symlink converted to
+  exec script to carry the flag; .desktop already points there);
+  --disable-gpu kept; user-supplied --password-store= still overrides
+  (Chromium last-wins).  Bonus: repaired stale tests/smoke/autoclaw-bin.sh
+  symlink assertion (broken since 9ce25e7).  Gates: both packages
+  dry-run green, check-static green.  OWNER UAT: login → quit
+  completely → relaunch → must stay logged in, per app.
+
+  DEFINITION OF DONE (note for Lead):
+  - [ ] review both branches.
+  - [ ] push: needs a PAT (or the Owner pushes: `git push origin
+        ai/pkgs-update-all ai/pkgs-login-fix ai/packages').
 
 * Org cheat sheet
 
