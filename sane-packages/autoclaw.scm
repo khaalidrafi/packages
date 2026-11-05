@@ -359,11 +359,24 @@
                                                  ;; start.  User arguments are still
                                                  ;; appended, so flags given on the
                                                  ;; command line come after the default.
+                                                 ;;
+                                                 ;; --password-store=basic is here for
+                                                 ;; login persistence: a Guix session
+                                                 ;; runs no Secret Service, so the
+                                                 ;; default libsecret backend Electron
+                                                 ;; picks fails, and the token stored
+                                                 ;; at login cannot be read back after
+                                                 ;; a restart, logging the user out on
+                                                 ;; every relaunch.  With the basic
+                                                 ;; store Chromium keeps its obfuscated
+                                                 ;; credentials on disk under the
+                                                 ;; userData dir in ~/.config, which
+                                                 ;; persists like any other user file.
                                                  (call-with-output-file (string-append #$output
                                                                          "/bin/autoclaw")
                                                    (lambda (port)
                                                      (format port
-                                                      "#!~a/bin/bash~%exec ~a/lib/AutoClaw/AutoClaw2 --disable-gpu \"$@\"~%"
+                                                      "#!~a/bin/bash~%exec ~a/lib/AutoClaw/AutoClaw2 --disable-gpu --password-store=basic \"$@\"~%"
                                                       #$bash-minimal
                                                       #$output)))
                                                  (chmod (string-append #$output

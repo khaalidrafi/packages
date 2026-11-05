@@ -21,14 +21,19 @@ for path in \
   [ -e "$out/$path" ] || { echo "missing $out/$path" >&2; exit 1; }
 done
 
-# bin/autoclaw must reach the wrapper, and the wrapper must be the script
-# wrap-program wrote rather than the ELF itself: the RPATH checked below is
-# what makes the binary run, but XDG_DATA_DIRS and PATH are what make it
-# find icons, mime types and xdg-open.  The vendor ELF itself lives next to
-# the wrapper as .AutoClaw2-real, which is the file patchelf checks apply
-# to below.
-[ -L "$out/bin/autoclaw" ] ||
-  { echo "$out/bin/autoclaw is not a symlink" >&2; exit 1; }
+# bin/autoclaw is the exec script the package writes (not a symlink, and
+# not the ELF): --disable-gpu is what makes the app start (GPU process
+# error_code=1002 otherwise), and --password-store=basic is what keeps the
+# login token readable across restarts (no Secret Service runs on Guix, so
+# the default libsecret store loses it and every relaunch logs out).  Both
+# flags sit before "$@" so a user's own value still wins.  The wrap-program
+# script at lib/AutoClaw/AutoClaw2, checked next, is where XDG_DATA_DIRS
+# and PATH come from; the vendor ELF lives beside it as .AutoClaw2-real,
+# which is the file patchelf checks apply to below.
+[ -f "$out/bin/autoclaw" ] && [ ! -L "$out/bin/autoclaw" ] ||
+  { echo "$out/bin/autoclaw is not the exec script" >&2; exit 1; }
+grep -q -- '--disable-gpu --password-store=basic' "$out/bin/autoclaw" ||
+  { echo "$out/bin/autoclaw lacks the gpu/persistence flags" >&2; exit 1; }
 grep -q 'XDG_DATA_DIRS' "$out/lib/AutoClaw/AutoClaw2" ||
   { echo "$out/lib/AutoClaw/AutoClaw2 is not a wrapper" >&2; exit 1; }
 

@@ -3116,12 +3116,28 @@ build software, inspect code, and execute workflows.")
                               `("PATH" suffix
                                 (,(string-append #$xdg-utils "/bin"))))
                             ;; Entry point named `qoder-desktop` (the desktop app), distinct
-                            ;; from the `qoder` command owned by qoder-cli-bin.
+                            ;; from the `qoder` command owned by qoder-cli-bin.  A script
+                            ;; rather than a symlink so the flag below can be passed:
+                            ;; login persistence needs it, because a Guix session runs
+                            ;; no Secret Service and Electron's default libsecret
+                            ;; backend (what the keytar addon above talks to) fails,
+                            ;; so the token stored at login cannot be read back after
+                            ;; a restart, which logs the user out.  With
+                            ;; --password-store=basic Chromium keeps its obfuscated
+                            ;; credentials on disk under the userData dir in
+                            ;; ~/.config, which persists like any other user file;
+                            ;; user arguments still come after the flag, so a
+                            ;; Secret Service the user does run can override it.
                             (mkdir-p (string-append #$output "/bin"))
-                            (symlink (string-append #$output
-                                                    "/lib/Qoder/qoder")
-                                     (string-append #$output
-                                                    "/bin/qoder-desktop")))
+                            (call-with-output-file (string-append #$output
+                                                    "/bin/qoder-desktop")
+                              (lambda (port)
+                                (format port
+                                 "#!~a/bin/bash~%exec ~a/lib/Qoder/qoder --password-store=basic \"$@\"~%"
+                                 #$bash-minimal
+                                 #$output)))
+                            (chmod (string-append #$output
+                                                  "/bin/qoder-desktop") #o555))
                           (alist-cons-after 'install
                                             'patchelf-binaries
                                             (lambda* (#:key inputs
