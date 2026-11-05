@@ -408,8 +408,7 @@ if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a --library-path ~a ~a \
                                      loader
                                      lib-path
                                      baseline)))
-                                (chmod (string-append out
-                                                      "/bin/opencode-v1")
+                                (chmod (string-append out "/bin/opencode-v1")
                                        #o555)))
                             (alist-replace 'unpack unpack-variants
                                            %standard-phases)))))
