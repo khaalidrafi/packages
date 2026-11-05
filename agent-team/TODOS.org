@@ -1,6 +1,6 @@
 #+TITLE: TODOS.org — team board (single source of truth)
 #+TODO: TODO PROGRESS BLOCKED REVIEW | DONE CANCELLED DEFERRED
-# DISPATCH counter: 4
+# DISPATCH counter: 11
 
 # TIME DISCIPLINE LAW (Owner 2026-11-02 15:58 #hq): effort + deadline
 # on every lead-assigned TODO; the lead decides the time.
@@ -29,6 +29,23 @@
   the old one is never edited.
 - Owner notices/updates land in this section from now on. Read on
   every poll; never edit.
+
+** [2026-11-05 19:07Z] SCOPE ORDER — GLM-5.3 = Senior EL Engineer brain for ALL repos; THIS board = the cron dispatch surface (Owner, #hq)
+
+- Owner 2026-11-05 19:07Z #hq: "Share prompt for GLM 5.3 which only
+  handles packages repo, to handle ALL repos under your lead with role
+  assigned to GLM 5.3, it will check TODOS.org periodically via cron
+  and you'll delegate TODOS to it in this way.  Complete ALL org pkgs
+  by delegating the parts of GLM 5.3, we should exhaust it tonight!"
+- Canonical role prompt: agent-team/GLM53-ROLE.org (committed this
+  tick).  Dispatches below carry :REPO:/:BRANCH: — work lands in the
+  TARGET repo on its task branch under the TARGET repo's local law.
+- Push auth = GitHub App khalid-s-slave installation tokens (PATs
+  retired 2026-11-05; the user-account installation covers
+  khaalidrafi/*; org pushes set GH_APP_TARGET_LOGIN).  Tokens
+  memory-only, never stored or echoed.
+- author != reviewer on every landing: Ring-2.6-1T@antling is the
+  reviewing hands; GLM-5.3 never reviews its own work.
 
 * Board
 
@@ -1420,6 +1437,160 @@
   NEXT (Owner-side): complete the three logins/claims above; then the
   1113 block lifts and the zcode CLI quota round-trip can be re-run.
   This entry flips REVIEW/DONE on Owner confirmation.
+
+** TODO DISPATCH #5 — lark-org: read-marker unit (unread tags + real previews)
+  :PROPERTIES:
+  :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
+  :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
+  :PRIORITY: P1
+  :ORDER: 5
+  :EFFORT: 2:00
+  :DEADLINE: <2026-11-05 Thu 23:30Z>
+  :REPO: khaalidrafi/lark-org
+  :BRANCH: ai/read-marker
+  :END:
+  The disclosed v0.1 limit (lark-org CANDIDATES.org NEXT item 1):
+  unread tags are 0 and previews are "..." today.  Implement the
+  read-marker unit against ORG-CHAT-STANDARD v1.1 sections 1-8: real
+  unread tags on the *Lark Org* list + real previews in the chat
+  view, bounded by lark-org-max-pages.  G3: transport seam stubbed,
+  no network; ERT extensions for both behaviors; keep the two pinned
+  Lark quirks (double-encoded content string, :json-false truthiness)
+  green.  Local law: that repo's AGENTS.md + CANDIDATES.org.
+*** TODO review: lark-org read-marker unit (Ring-2.6-1T@antling hands)
+  :PROPERTIES:
+  :EFFORT: 0:50
+  :END:
+
+** TODO DISPATCH #6 — org-learn.el: TODO-013 / spec 009 Socratic GUIDE (reassigned from dead SW seat)
+  :PROPERTIES:
+  :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
+  :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
+  :PRIORITY: P1
+  :ORDER: 6
+  :EFFORT: 2:00
+  :DEADLINE: <2026-11-06 Fri 01:30Z>
+  :REPO: khaalidrafi/org-learn.el
+  :BRANCH: ai/spec-009-guide
+  :END:
+  org-learn.el STATE.org NEXT: spec 009 (Socratic GUIDE) is board
+  TODO-013; the SW seat's 06:00Z deadline passed with no delivery and
+  the Lead escalated to the Owner 2026-11-04 — REASSIGNED here by
+  tonight's scope order.  Spec is board-ready in that repo.  Follow
+  the repo's TODO-013 coordination law + collision law (org-learn-ai.el
+  touches).  Local law: repo STATE.org + its TODOS.org board.
+*** TODO review: org-learn.el spec 009 GUIDE (Ring-2.6-1T@antling hands)
+  :PROPERTIES:
+  :EFFORT: 0:50
+  :END:
+
+** TODO DISPATCH #7 — org-learn.el: board + implement spec 015 learning-plan generator
+  :PROPERTIES:
+  :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
+  :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
+  :PRIORITY: P2
+  :ORDER: 7
+  :EFFORT: 1:00
+  :DEADLINE: <2026-11-06 Fri 03:00Z>
+  :REPO: khaalidrafi/org-learn.el
+  :BRANCH: ai/spec-015-plan
+  :END:
+  STATE.org NEXT: spec 015 (learning-plan generator, DoE item 4) is
+  authored board-ready at specs/015-learning-plan-generator.org by the
+  port-engineer 2026-11-04 and "awaits Lead boarding" — BOARDED here.
+  Implement after DISPATCH #6 lands (its coordination law pins the
+  order).  Respect the TODO-020 coordination law pinned in the spec.
+*** TODO review: org-learn.el spec 015 (Ring-2.6-1T@antling hands)
+  :PROPERTIES:
+  :EFFORT: 0:25
+  :END:
+
+** TODO DISPATCH #8 — org-learn.el: spec 012 quiz-persistence part in org-learn-ai.el
+  :PROPERTIES:
+  :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
+  :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
+  :PRIORITY: P2
+  :ORDER: 8
+  :EFFORT: 0:50
+  :DEADLINE: <2026-11-06 Fri 04:30Z>
+  :REPO: khaalidrafi/org-learn.el
+  :BRANCH: ai/spec-012-quiz-persist
+  :END:
+  STATE.org NEXT: spec 012 DASHBOARD scope MERGED 79a54b5 but its
+  org-learn-ai.el quiz-persistence part "stays queued behind TODO-013
+  (collision law)".  DISPATCH #6 clears that gate — implement the
+  queued part now.  Local law: repo STATE.org + board + spec 012.
+*** TODO review: org-learn.el quiz-persistence (Ring-2.6-1T@antling hands)
+  :PROPERTIES:
+  :EFFORT: 0:25
+  :END:
+
+** TODO DISPATCH #9 — org-roadmap: ERT coverage for the two untested entry points + review-TODO closeout
+  :PROPERTIES:
+  :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
+  :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
+  :PRIORITY: P2
+  :ORDER: 9
+  :EFFORT: 1:00
+  :DEADLINE: <2026-11-06 Fri 06:00Z>
+  :REPO: khaalidrafi/org-roadmap
+  :BRANCH: ai/ert-entry-points
+  :END:
+  That repo's AI-REVIEW.org carries open review TODOs: "ert coverage
+  for the two untested entry points (commit 7193010)", "evidence
+  docs", "EOF newline hygiene fix (commit a381fe1)".  Write the ERT
+  suite for the two untested entry points (no network fixtures) and
+  close each review TODO with evidence; byte-compile error-on-warn
+  0/0 against Emacs 30.1 (relocated toolchain available on request).
+*** TODO review: org-roadmap ERT + closeout (Ring-2.6-1T@antling hands)
+  :PROPERTIES:
+  :EFFORT: 0:25
+  :END:
+
+** TODO DISPATCH #10 — agent-org: un-entangle the ERT suite + exercise R1 ACP chat end-to-end
+  :PROPERTIES:
+  :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
+  :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
+  :PRIORITY: P2
+  :ORDER: 10
+  :EFFORT: 2:00
+  :DEADLINE: <2026-11-06 Fri 09:00Z>
+  :REPO: khaalidrafi/agent-org
+  :BRANCH: ai/suite-unentangle
+  :END:
+  Two known debts (slave-agent FORK.org, honest disclosure): (1) the
+  agent-org ERT suite is "entangled with another session's in-flight
+  edits" — split/fixture it so tests are order-independent; (2) R1 is
+  wired but "the Emacs chat itself is still unexercised" — drive
+  M-x agent-org-slave-agent-start-agent against slave-acp (initialize
+  -> one turn -> session/list resume) and record the transcript as
+  evidence.  ACP stays the first-class surface.
+*** TODO review: agent-org un-entangle + R1 (Ring-2.6-1T@antling hands)
+  :PROPERTIES:
+  :EFFORT: 0:50
+  :END:
+
+** TODO DISPATCH #11 — emacs-purple: FINDINGS.org P2 sweep — clear or DEFER each with a recorded decision
+  :PROPERTIES:
+  :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
+  :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
+  :PRIORITY: P2
+  :ORDER: 11
+  :EFFORT: 1:00
+  :DEADLINE: <2026-11-06 Fri 12:00Z>
+  :REPO: khaalidrafi/emacs-purple
+  :BRANCH: ai/findings-p2-sweep
+  :END:
+  The audit wave closed all P0/P1 (senior confirmation 2026-11-05,
+  FINDINGS.org FINAL = G1 pass).  Remaining: the 7 P2 findings.
+  Triage each: fix with gates (byte-compile 0/0, ERT 39/39 + 12/12
+  stays green) or DEFER with a recorded decision + cause — a P2 left
+  untriaged is not a landing.  Local law: emacs-purple AGENTS.md +
+  CANDIDATES.org.
+*** TODO review: emacs-purple P2 sweep (Ring-2.6-1T@antling hands)
+  :PROPERTIES:
+  :EFFORT: 0:25
+  :END:
 
 * Org cheat sheet
 
