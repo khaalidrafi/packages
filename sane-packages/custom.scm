@@ -244,7 +244,7 @@
 ")))
 
 (define %bun-version
-  "1.4.3")
+  "1.4.4")
 (define %bun-github
   "https://github.com/oven-sh/bun/releases/download/bun-v")
 
@@ -252,13 +252,13 @@
   (origin
     (method url-fetch)
     (uri (string-append %bun-github %bun-version "/bun-linux-x64.zip"))
-    (sha256 (base32 "063fh4iwnadqwx9g5wrp1afhkx2dgiw0cp7hhwzz0xcpv0l0awry"))))
+    (sha256 (base32 "0p1rrgy55nry189wdnrlfl3xib8pag2iavcs1yg1b00b5gxwp35z"))))
 
 (define bun-baseline-source
   (origin
     (method url-fetch)
     (uri (string-append %bun-github %bun-version "/bun-linux-x64-baseline.zip"))
-    (sha256 (base32 "0yrric7zwkqz4f47xrkly0f0giich3cxiq8v7ag900iihjnfvhhz"))))
+    (sha256 (base32 "0xnxxr39jvs84khiw9xrm22xjs73dfdaxssbi6wjwxwmb6snwi70"))))
 
 (define-public bun-bin
   (package
@@ -329,7 +329,7 @@ release binaries are used instead.")
     (license license:expat)))
 
 (define %opencode-version
-  "1.19.0")
+  "1.19.5")
 (define %opencode-url
   "https://github.com/anomalyco/opencode/releases/download/v")
 
@@ -338,14 +338,14 @@ release binaries are used instead.")
     (method url-fetch)
     (uri (string-append %opencode-url %opencode-version
                         "/opencode-linux-x64.tar.gz"))
-    (sha256 (base32 "1v3a0w31iwqhf7ya22xm1cif8g8fhk0s59hhkklg5b7ysqdfdfbv"))))
+    (sha256 (base32 "0yk4q4zfyl9ndkbg635dz8z4b7b7dyr2a0izdgrrsfzs6sii10sq"))))
 
 (define opencode-baseline-source
   (origin
     (method url-fetch)
     (uri (string-append %opencode-url %opencode-version
                         "/opencode-linux-x64-baseline.tar.gz"))
-    (sha256 (base32 "0f4402vzzjsjknpnjxxd4ianij3k4p7yjms38pm221wrnc6xfd33"))))
+    (sha256 (base32 "0g9kaqb4jkqlakmvbprdgcayq0vdkfgmalhmq169b2929gyh1hhp"))))
 
 (define-public opencode-bin
   (package
@@ -394,7 +394,7 @@ release binaries are used instead.")
                                                 "/lib/opencode/opencode-baseline")))
                                 (mkdir-p (string-append out "/bin"))
                                 (call-with-output-file (string-append out
-                                                        "/bin/opencode")
+                                                        "/bin/opencode-v1")
                                   (lambda (port)
                                     (format port
                                      "#!~a
@@ -408,7 +408,8 @@ if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a --library-path ~a ~a \
                                      loader
                                      lib-path
                                      baseline)))
-                                (chmod (string-append out "/bin/opencode")
+                                (chmod (string-append out
+                                                      "/bin/opencode-v1")
                                        #o555)))
                             (alist-replace 'unpack unpack-variants
                                            %standard-phases)))))
@@ -417,10 +418,12 @@ if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a --library-path ~a ~a \
     (synopsis "AI coding agent for the terminal")
     (description
      "OpenCode is an open-source AI coding agent built for the terminal.
-This package installs the official prebuilt binaries (both the AVX2 and
+This package installs the official prebuilt V1 binaries (both the AVX2 and
 baseline variants) and a wrapper that picks the right one for the CPU at
 runtime.  The binaries need only glibc and are exec'd via the store glibc
-loader, so no FHS emulation is required.")
+loader, so no FHS emulation is required.  The command is installed as
+`opencode-v1', since the plain `opencode' name belongs to opencode2-bin,
+upstream's default line.")
     (home-page "https://opencode.ai")
     (license license:expat)))
 
@@ -457,7 +460,7 @@ loader, so no FHS emulation is required.")
 ;;; runs, so an interpreter rewrite is the only thing that makes it startable.
 ;;; ---------------------------------------------------------------------------
 (define %opencode2-version
-  "2.0.27")
+  "2.2.0")
 
 (define opencode2-avx2-source
   (origin
@@ -465,7 +468,7 @@ loader, so no FHS emulation is required.")
     (uri (string-append
           "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-"
           %opencode2-version ".tgz"))
-    (sha256 (base32 "0fc1km18bzcybvyhhcpzgdpqcykj3p095xfmy6545ckvg8i18dbn"))))
+    (sha256 (base32 "0a50ihdqk313i2ckl44kq7zyzwd10548y1b84bv29rkjd2w4cc7y"))))
 
 (define opencode2-baseline-source
   (origin
@@ -473,7 +476,7 @@ loader, so no FHS emulation is required.")
     (uri (string-append
           "https://registry.npmjs.org/@opencode/cli-linux-x64-baseline/-/"
           "cli-linux-x64-baseline-" %opencode2-version ".tgz"))
-    (sha256 (base32 "0mvjpy6xis8laxfwcxril42aja9bk8h0jfv8w5pxc9p1p9pc5c5c"))))
+    (sha256 (base32 "1pw5s7m0l11wzd9sf1vhyydyjwd1ywih6486fa4hg8fjwvxsc55w"))))
 
 (define-public opencode2-bin
   (package
@@ -532,9 +535,10 @@ loader, so no FHS emulation is required.")
                                      (baseline (string-append out
                                                 "/lib/opencode2/opencode-baseline"))
                                      ;; `opencode' is the command upstream's own
-                                     ;; installer uses, and V2 is the default line
-                                     ;; now, so this package claims it; the alias
-                                     ;; comment below covers the v1 collision.
+                                     ;; installer uses, and V2 is the default
+                                     ;; line now, so this package claims it;
+                                     ;; opencode-bin no longer competes for it:
+                                     ;; it installs `opencode-v1' instead.
                                      (wrapper (string-append out
                                                              "/bin/opencode")))
                                 ;; V2 re-executes ITSELF as a `serve' child
@@ -593,10 +597,11 @@ loader, so no FHS emulation is required.")
                                 ;; /lib64 path.
                                 ;;
                                 ;; V1 needs none of this: it runs the server
-                                ;; in-process, so `opencode debug config' works
-                                ;; through the loader wrapper alone.  Preferring a
-                                ;; shell wrapper over patchelf -- which both Guix
-                                ;; and nonguix do -- costs exactly this much.
+                                ;; in-process, so `opencode-v1 debug config'
+                                ;; works through the loader wrapper alone.
+                                ;; Preferring a shell wrapper over patchelf --
+                                ;; which both Guix and nonguix do -- costs
+                                ;; exactly this much.
                                 (for-each (lambda (binary)
                                             (chmod binary #o755)
                                             (invoke (string-append (assoc-ref
@@ -628,13 +633,10 @@ if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a \"$@\"; else exec ~a \
                                 ;; as its default CLI, and this channel's *-bin
                                 ;; rule (README: "*-bin entry points") is to
                                 ;; install the name upstream's own installer uses.
-                                ;; That makes opencode-bin (v1) and opencode2-bin
-                                ;; collide on bin/opencode exactly like
-                                ;; cline-bin/cline-baseline do: same program, two
-                                ;; majors, one belongs in a profile at a time, and
-                                ;; guix package's collision refusal is the correct
-                                ;; outcome.  To run both, install them in separate
-                                ;; profiles.
+                                ;; opencode-bin (v1) answers to `opencode-v1'
+                                ;; instead, so the two no longer collide on
+                                ;; bin/opencode and both majors can sit in one
+                                ;; profile.
                                 (for-each (lambda (alias)
                                             (copy-file wrapper alias)
                                             (chmod alias #o555))
@@ -658,8 +660,8 @@ variants, published as the npm packages @opencode/cli-linux-x64 and
 @opencode/cli-linux-x64-baseline) and a wrapper that picks the right one for
 the CPU at runtime.  It installs the command as `opencode' (plus the
 `opencode2' and `opencode-v2' aliases), because V2 is upstream's default
-line; V1 is packaged separately as opencode-bin and the two collide on
-bin/opencode, so only one belongs in a profile at a time.")
+line; V1 is packaged separately as opencode-bin and installs `opencode-v1',
+so the two can share a profile.")
     (home-page "https://opencode.ai")
     (license license:expat)))
 
@@ -776,14 +778,14 @@ its library path, so no FHS emulation is needed.")
               "Proprietary Cursor license — unfree, non-redistributable."))))
 
 (define %copilot-version
-  "1.0.95")
+  "1.0.105")
 
 (define copilot-loader-source
   (origin
     (method url-fetch)
     (uri (string-append "https://registry.npmjs.org/@github/copilot/-/"
                         "copilot-" %copilot-version ".tgz"))
-    (sha256 (base32 "0ya7hlfcivxj4cygzhzjkhj5kd8afxim0m9fgiy0zgdqgm9yb2w3"))))
+    (sha256 (base32 "1197sgzpkdlf2lmxa9mvy0q9p0dfqg43ywjynn1ln3gp3lc0qf7s"))))
 
 (define copilot-platform-source
   (origin
@@ -791,7 +793,7 @@ its library path, so no FHS emulation is needed.")
     (uri (string-append
           "https://registry.npmjs.org/@github/copilot-linux-x64/-/"
           "copilot-linux-x64-" %copilot-version ".tgz"))
-    (sha256 (base32 "1fhzlx1i3kxm6z965iq0s1216bsilnl4mhsld9js6mjxmgh38zpf"))))
+    (sha256 (base32 "1ly29sgyg0j8cyvzxgqp7wxs2f2zvvrzw9h7xgl86sqc9inq8rda"))))
 
 (define-public copilot-cli-bin
   (package
@@ -899,7 +901,7 @@ FHS emulation is needed.  Requires a GitHub account to authenticate.")
               "Proprietary GitHub/Microsoft license - unfree."))))
 
 (define %goose-version
-  "1.54.0")
+  "1.56.0")
 
 (define goose-source
   (origin
@@ -907,7 +909,7 @@ FHS emulation is needed.  Requires a GitHub account to authenticate.")
     (uri (string-append
           "https://github.com/aaif-goose/goose/releases/download/v"
           %goose-version "/goose-x86_64-unknown-linux-gnu.tar.gz"))
-    (sha256 (base32 "1qappv4ihiky616b5k77jq6fm8ylx15j6xf1716qplmvmsanqfdb"))))
+    (sha256 (base32 "10f2367qz4vm6ybm76q1a2hw1winw85vbzgaj6v0y4xm6ndr4ni2"))))
 
 (define-public goose-cli-bin
   (package
@@ -994,7 +996,7 @@ live under ~/.config/goose.")
 ;;; can find all shared libraries on a non-FHS Guix system.
 
 (define %terminal-browser-version
-  "0.13.4")
+  "0.15.3")
 
 (define %terminal-browser-source
   (origin
@@ -1002,7 +1004,7 @@ live under ~/.config/goose.")
     (uri (string-append
           "https://github.com/zenbu-labs/terminal-browser/releases/download/v"
           %terminal-browser-version "/terminal-browser-linux-x64.tar.gz"))
-    (sha256 (base32 "196k97b9cr68w9v50pf51bkwbylympzwsq8r7ymi2rxipamdlxv2"))))
+    (sha256 (base32 "0hcma05gn2wqagn3s8zslvk5m23n1a1pyzzhdkv2knsfamdrjki4"))))
 
 (define-public terminal-browser-bin
   (package
@@ -1190,7 +1192,7 @@ remote server while rendering locally.")
 ;;; FHS emulation, no patchelf.
 
 (define %pi-version
-  "1.1.0")
+  "1.4.0")
 
 (define %pi-source
   (origin
@@ -1198,7 +1200,7 @@ remote server while rendering locally.")
     (uri (string-append
           "https://github.com/earendil-works/pi/releases/download/v"
           %pi-version "/pi-linux-x64.tar.gz"))
-    (sha256 (base32 "12g221p8cc3yr0hg954vgaq720kx814zf3rjmwvrv16kdik99aiz"))))
+    (sha256 (base32 "1lhmw536brdjkn9vi2m57gvw3g9x0gaqpnqc4q1ks8h3jqrf9r7j"))))
 
 (define-public pi-coding-agent-bin
   (package
@@ -1441,7 +1443,7 @@ vendored into node_modules.")
     (license license:expat)))
 
 (define %oh-my-pi-version
-  "18.10.1")
+  "18.13.2")
 
 (define %oh-my-pi-source
   (origin
@@ -1449,7 +1451,7 @@ vendored into node_modules.")
     (uri (string-append
           "https://github.com/can1357/oh-my-pi/releases/download/v"
           %oh-my-pi-version "/omp-linux-x64"))
-    (sha256 (base32 "06sgmlk4pc3icpf2m0y1avkhkvvnn9r7dxdd9hmk88wba4nx564p"))))
+    (sha256 (base32 "1i6nl2y0l49d36xgf7hrq1y4wf843zb9g8g56i3il64262k9wjfw"))))
 
 (define-public oh-my-pi-bin
   (package
@@ -1920,7 +1922,7 @@ own SQLite build.")
     (license license:expat)))
 
 (define %mcode-version
-  "0.6.8")
+  "0.7.1")
 
 ;;; The npm tarball IS the prebuilt artifact (bundled JS + wasm + native
 ;;; helpers); both `mcode' (node-build-system install) and `mcode-bin'
@@ -1930,7 +1932,7 @@ own SQLite build.")
     (method url-fetch)
     (uri (string-append "https://registry.npmjs.org/@minimax-ai/code"
                         "/-/code-" %mcode-version ".tgz"))
-    (sha256 (base32 "0xdl4h2kzj4qr5gbm1dhqrprx8wwspgv7k6qwb9c8zjnd8ppnkrr"))))
+    (sha256 (base32 "0fiwrrv2id7jp07d9cfl105ng7n9mbi92sap5irdffk6rm7yyn50"))))
 
 (define-public mcode
   (package
@@ -2117,7 +2119,7 @@ around Node.js.")
 ;;; and it keeps the two packages independent of who consumes them.
 ;;; ---------------------------------------------------------------------------
 (define %esbuild-version
-  "0.25.12")
+  "0.28.2")
 
 (define-public node-esbuild-linux-x64
   (package
@@ -2129,7 +2131,7 @@ around Node.js.")
        (uri (string-append "https://registry.npmjs.org/@esbuild/linux-x64"
                            "/-/linux-x64-" %esbuild-version ".tgz"))
        (sha256
-        (base32 "0pxxa0xiv98ay9invgdcngbgbs2fh00hn8flm76qs44aclkw3vzp"))))
+        (base32 "1xl88jw4szr62xmxcqfyd0bwq4v1falwrma7fvmgkc5a6cibnwwm"))))
     (build-system node-build-system)
     (arguments
      (list
@@ -2159,7 +2161,7 @@ linux-x64 npm package.")
        (uri (string-append "https://registry.npmjs.org/esbuild/-/esbuild-"
                            %esbuild-version ".tgz"))
        (sha256
-        (base32 "1ya3wm6rsgba1q3wzmkn52hnm75lj5xzpcrl4xwc9r99b0a88x92"))))
+        (base32 "124sjlciwz2zhjkw6ivbdd4ipi5yqxwsb8kvwx8dqyjw4d6gjig0"))))
     (build-system node-build-system)
     (arguments
      (list
@@ -2192,7 +2194,7 @@ node-esbuild-linux-x64 input.")
     (license license:expat)))
 
 (define %codebuddy-version
-  "2.164.0")
+  "2.177.1")
 
 (define-public codebuddy-code-bin
   (package
@@ -2205,7 +2207,7 @@ node-esbuild-linux-x64 input.")
              "https://registry.npmjs.org/@tencent-ai/codebuddy-code/-/codebuddy-code-"
              %codebuddy-version ".tgz"))
        (sha256
-        (base32 "1vc10amwn5x1cmr3lw4nlwwy10lywwkhw49myv43qlqai575jvvd"))))
+        (base32 "1rw90qb1dxy076ll3jq6bzqaw8dd10gm0vpxkg5w8hxm71qi2v0h"))))
     ;; copy-build-system, like mcode-bin: the tree is already bundled JS, and
     ;; running npm over it would only add offline optionalDependencies and
     ;; install scripts that a sandbox cannot honour.
@@ -2281,7 +2283,7 @@ and the five CLI names start through wrappers around Node.js.")
 ;;; skipped since the plugin loads fine without them.
 ;;; ---------------------------------------------------------------------------
 (define %purple-discord-commit
-  "2ae1e6147cef73ad38079c38dba28b25179567b8")
+  "ef5993d5677978c08df845601b385f42a23132a9")
 
 (define-public purple-discord
   (package
@@ -2289,7 +2291,7 @@ and the five CLI names start through wrappers around Node.js.")
     ;; Upstream declares DISCORD_PLUGIN_VERSION "1.0" in libdiscord.c at the
     ;; commit pinned below; the date suffix is that commit's date, since this
     ;; is a snapshot of a repository that tags nothing.
-    (version "1.0.2026.09.18") ;unstable-2026-09-18
+    (version "1.0.2026.10.25") ;unstable-2026-10-25
     (source
      (origin
        (method url-fetch)
@@ -2297,7 +2299,7 @@ and the five CLI names start through wrappers around Node.js.")
              "https://github.com/EionRobb/purple-discord/archive/"
              %purple-discord-commit ".tar.gz"))
        (sha256
-        (base32 "10c7gal60gpc92izxg60v1ri6cq21jg9ngyfa21qcyw1y5n22x9f"))))
+        (base32 "0lmfqv09in8vx3sws4b8g9nqg93pjm8qb9h79qgnsdryk1yy0fq3"))))
     (build-system gnu-build-system)
     (supported-systems '("x86_64-linux"))
     (arguments
@@ -3011,7 +3013,7 @@ linux-x64 binary distribution.")
 (define-public qoder-cli-bin
   (package
     (name "qoder-cli-bin")
-    (version "1.1.65")
+    (version "1.1.83")
     (source
      (origin
        (method url-fetch)
@@ -3019,7 +3021,7 @@ linux-x64 binary distribution.")
              "https://qoder-ide.oss-accelerate.aliyuncs.com/qodercli/releases/"
              version "/qodercli-linux-x64.tar.gz"))
        (sha256
-        (base32 "137w44d6nf831j6sy2y98bic5xjkk3r8883s0i87hx8jr2wvp7ml"))))
+        (base32 "13kpxv56grvy3pv03v3j0jpcp1skwdzr3akg4jyzsyqz2kpbpshq"))))
     (build-system trivial-build-system)
     (arguments
      (list
@@ -3060,14 +3062,14 @@ build software, inspect code, and execute workflows.")
 (define-public qoder-desktop-bin
   (package
     (name "qoder-desktop-bin")
-    (version "0.4.3")
+    (version "0.5.3")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "https://download.qoder.com/qoder-app/releases/"
                            version "/Qoder-linux-amd64.deb"))
        (sha256
-        (base32 "02q50dxhj7xynms1h1h3jcvnsvb9qmr3h3jfiizmiv6wkx1v938y"))))
+        (base32 "0kfhzqchix4x2rgkz5fv7dbv6cg1cfxbwx8n9b1ia09g12chskg7"))))
     (build-system copy-build-system)
     (supported-systems '("x86_64-linux"))
     (arguments
@@ -3279,7 +3281,7 @@ and is not endorsed by Guix upstream.")
 (define-public dsh
   (package
     (name "dsh")
-    (version "0.2.0-rc.2")
+    (version "0.2.1-rc.2")
     (source
      (origin
        (method url-fetch)
@@ -3287,7 +3289,7 @@ and is not endorsed by Guix upstream.")
              "https://registry.npmjs.org/@deepseek-ai/dsh/-/dsh-" version
              ".tgz"))
        (sha256
-        (base32 "0nc8yfpypiarpdwgcw9hz6g67ixwpc31ryf1b9b8mmjw8iy889xx"))))
+        (base32 "079fylmfsxkhni1hb8df73xw02bpvjzfkpj2zwb46314q0jx1qs0"))))
     (build-system trivial-build-system)
     (inputs (list bash node procps))
     (native-inputs (append (list (list "tar" tar)
@@ -3418,7 +3420,7 @@ and is not endorsed by Guix upstream.")
 ;;; cua-cursor-theme helper relative to its own executable.
 
 (define %cua-driver-version
-  "0.34.1")
+  "0.38.0")
 
 (define %cua-driver-source
   (origin
@@ -3431,7 +3433,7 @@ and is not endorsed by Guix upstream.")
           "https://github.com/trycua/cua/releases/download/cua-driver-rs-v"
           %cua-driver-version "/cua-driver-rs-" %cua-driver-version
           "-linux-x86_64.tar.gz"))
-    (sha256 (base32 "0d0qvjj9g4ylxqfq8ijcq6i9ga3k79y6lxngw1y57jy6rzsq254i"))))
+    (sha256 (base32 "18qzrgvcaig6z1661fcjifzavqv8vwrhqc6vql9n8kgr67awn1d3"))))
 
 (define-public cua-driver-bin
   (package
@@ -3520,7 +3522,7 @@ state live in @file{~/.cua-driver}.")
 ;;; reports no avx2 flag in /proc/cpuinfo at all.
 ;;; ---------------------------------------------------------------------------
 (define %cloudflared-version
-  "2026.10.0")
+  "2026.10.3")
 
 (define %cloudflared-source
   (origin
@@ -3528,7 +3530,7 @@ state live in @file{~/.cua-driver}.")
     (uri (string-append
           "https://github.com/cloudflare/cloudflared/releases/download/"
           %cloudflared-version "/cloudflared-linux-amd64"))
-    (sha256 (base32 "1nwr989x79wqy4crar17xmfsr2bkm3mnpif228h8s5vm8k8z4gyk"))))
+    (sha256 (base32 "1c5s1pyglgrqsxqpk9ia2lgqyazqb4zhfg5zzlwa0c9hlaq80fq5"))))
 
 (define-public cloudflared
   (package
@@ -3618,7 +3620,7 @@ nothing is written at install time.")
 ;;; kernel enables.
 ;;; ---------------------------------------------------------------------------
 (define %kilocode-version
-  "7.8.8")
+  "7.8.18")
 
 (define %kilocode-url
   "https://github.com/Kilo-Org/kilocode/releases/download/v")
@@ -3628,14 +3630,14 @@ nothing is written at install time.")
     (method url-fetch)
     (uri (string-append %kilocode-url %kilocode-version
                         "/kilo-linux-x64.tar.gz"))
-    (sha256 (base32 "16s2qrv3bg89hf10hzkbsymsgdskad32frgpmhf00kymm1x9jwhh"))))
+    (sha256 (base32 "0an0nmv7dkqq6ygn8qc9ksf8rwccp49ajmrlf0kdx3jbikxn2dah"))))
 
 (define kilocode-baseline-source
   (origin
     (method url-fetch)
     (uri (string-append %kilocode-url %kilocode-version
                         "/kilo-linux-x64-baseline.tar.gz"))
-    (sha256 (base32 "0sbsqcswzmbinvg40zs7pa4i69b6l99chz4br6i4bdh7jfp7b5bx"))))
+    (sha256 (base32 "15i0x4fjn5dzm94ivv54lvz8yf6yywa7bw7zm3si7h2abmqzrpk5"))))
 
 (define-public kilocode-bin
   (package
