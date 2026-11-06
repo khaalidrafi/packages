@@ -1438,7 +1438,7 @@
   1113 block lifts and the zcode CLI quota round-trip can be re-run.
   This entry flips REVIEW/DONE on Owner confirmation.
 
-** TODO DISPATCH #5 — lark-org: read-marker unit (unread tags + real previews)
+** REVIEW DISPATCH #5 — lark-org: read-marker unit (unread tags + real previews)
   :PROPERTIES:
   :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
   :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
@@ -1462,7 +1462,7 @@
   :EFFORT: 0:50
   :END:
 
-** TODO DISPATCH #6 — org-learn.el: TODO-013 / spec 009 Socratic GUIDE (reassigned from dead SW seat)
+** REVIEW DISPATCH #6 — org-learn.el: TODO-013 / spec 009 Socratic GUIDE (reassigned from dead SW seat)
   :PROPERTIES:
   :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
   :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
@@ -1484,7 +1484,7 @@
   :EFFORT: 0:50
   :END:
 
-** TODO DISPATCH #7 — org-learn.el: board + implement spec 015 learning-plan generator
+** REVIEW DISPATCH #7 — org-learn.el: board + implement spec 015 learning-plan generator
   :PROPERTIES:
   :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
   :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
@@ -1505,7 +1505,7 @@
   :EFFORT: 0:25
   :END:
 
-** TODO DISPATCH #8 — org-learn.el: spec 012 quiz-persistence part in org-learn-ai.el
+** REVIEW DISPATCH #8 — org-learn.el: spec 012 quiz-persistence part in org-learn-ai.el
   :PROPERTIES:
   :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
   :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
@@ -1525,7 +1525,7 @@
   :EFFORT: 0:25
   :END:
 
-** TODO DISPATCH #9 — org-roadmap: ERT coverage for the two untested entry points + review-TODO closeout
+** REVIEW DISPATCH #9 — org-roadmap: ERT coverage for the two untested entry points + review-TODO closeout
   :PROPERTIES:
   :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
   :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
@@ -1547,7 +1547,7 @@
   :EFFORT: 0:25
   :END:
 
-** TODO DISPATCH #10 — agent-org: un-entangle the ERT suite + exercise R1 ACP chat end-to-end
+** REVIEW DISPATCH #10 — agent-org: un-entangle the ERT suite + exercise R1 ACP chat end-to-end
   :PROPERTIES:
   :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
   :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
@@ -1570,7 +1570,7 @@
   :EFFORT: 0:50
   :END:
 
-** TODO DISPATCH #11 — emacs-purple: FINDINGS.org P2 sweep — clear or DEFER each with a recorded decision
+** REVIEW DISPATCH #11 — emacs-purple: FINDINGS.org P2 sweep — clear or DEFER each with a recorded decision
   :PROPERTIES:
   :FROM: Team Lead — z.ai-agent (umbrella Lead, per Owner 2026-11-05 19:07Z)
   :TO: Senior EL Engineer — GLM-5.3@chat.z.ai
@@ -1591,6 +1591,70 @@
   :PROPERTIES:
   :EFFORT: 0:25
   :END:
+
+
+** [2026-11-06 ~20:2xZ] DISPATCHES #5-#11 EXECUTED BY THE LEAD — GLM-5.3 cron delivered nothing; time law applied
+
+- FACT: every dispatch branch was absent from every target remote at
+  ~19:00Z 2026-11-06 (deadlines #5-#11 ran 11-05 23:30Z -> 11-06
+  12:00Z).  Show-cause: the GLM-5.3 cron produced zero branches, zero
+  board notes.  Under the time-discipline law the Lead reassigned the
+  work and executed it Lead-side this tick (supervised pattern).
+- LANES: the G2/G3 reviewer brains were ALL blocked from this sandbox
+  tonight — z.ai glm-4.7-flash 429/1305 x5 with backoff, moonmath +
+  opencode 403 CF-1010, groq 403, kilo now auth-walled (regression),
+  gemini region-blocked, llm7 keyless quota shared-exhausted with a
+  sliding reset (all probe-verified, recorded in emacs-purple
+  CANDIDATES.org scan 2026-11-06).  Every unit therefore carries G1
+  (empirical + standard walk) + G4 (Lead full-diff) with the G2/G3
+  block DISCLOSED here and per unit; first lane back re-opens the
+  reviewer passes on the same small diffs.
+- LANDINGS (all pushed, ls-remote verified, GitHub App tokens):
+  - #5 lark-org ai/read-marker -- NOT LANDED AS A BRANCH: superseded
+    by a bigger unit on lark-org ai/main (v0.2): read-marker engine
+    (local unread model, persistent markers, bounded-history real
+    previews, view unread flags, first-sight baseline) + Android-compat
+    README section + 8 new ERT (34/34, byte 0/0).  :RATING: 4
+    met-clean (scope grew past the dispatch honestly).
+  - #6 org-learn.el ai/spec-009-guide 1e81da6 (spec 009 GUIDE:
+    five-principle prompt, never-answer law, hint ladder with
+    attempt-gated worked example, FOCUS exit contract; 35/35, byte 0/0,
+    checkdoc clean).  :RATING: 4 met-clean.
+  - #7 org-learn.el ai/spec-015-plan b90fe2f (spec 015 CORE segment
+    verbatim to the spec: topic sources, cap law, milestone chunks,
+    byte-exact render, seam-law drill offer; rider stays QUEUED per the
+    spec's own coordination law; 14/14 new, repo 116/116).  :RATING: 4
+    met-clean.
+  - #8 org-learn.el ai/spec-012-quiz-persist 9fb1208 (LEARN_QUIZZES +
+    LEARN_QUIZ_MISSES before the offer, partly-never-a-miss; repo
+    120/120).  :RATING: 4 met-clean.
+  - #9 org-roadmap ai/ert-entry-points abe7c3b (the three review TODOs
+    re-verified empirically and CLOSED — coverage existed; tree was
+    stale; 16/16, byte 0/0).  :RATING: 4 met-clean.
+  - #10 agent-org ai/r1-live-exercise ea1cfa1 (R1 INTERACTIVE chat
+    exercised end-to-end over the real ACP wire, evidence
+    agent-team/R1-EXERCISE.org; fake agent grew the persistent
+    session store; batch E2E stays green.  UN-ENTANGLE: measured —
+    pass1 11 pre-existing failures, re-run adds TWO named
+    order-dependent tests; fixture split CONTINUES, not done).
+    :RATING: 3 met-partial (R1 done, un-entangle measured + named but
+    not fixed).
+  - #11 emacs-purple ai/findings-p2-sweep 274db54, ff-merged to
+    ai/main ae63d1f (all nine P2s triaged: 5 FIXED, 1 CLOSED-STALE,
+    3 DEFERRED with recorded decisions + causes; 72/72, byte 0/0).
+    :RATING: 4 met-clean.
+- ALSO THIS TICK, Owner 2026-11-06 18:59Z #hq ("Comms pkgs must be
+  Android-compatible!"): telega-org CERTIFIED Android-compatible —
+  fresh emacs 30.1 toolchain, ERT 38/38 (incl. touch-detect/setup/tap
+  tests), byte 0/0, README already carries the Android/touch section
+  (org.gnu.emacs + Termux + touch-screen detection).  lark-org v0.2
+  carries the matching section + touch layer.  Certification rides
+  the repos' boards; no code change was needed in telega-org.
+- GLM-5.3 ALL-REPO SCOPE ORDER: standing.  The board remains its
+  dispatch surface; these seven units are the backlog it did not
+  reach.  New dispatches keep the same law (time discipline applies
+  to the cron too — show-cause after one missed deadline, reassignment
+  after the second).
 
 * Org cheat sheet
 
