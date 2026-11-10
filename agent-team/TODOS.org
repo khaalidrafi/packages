@@ -1132,56 +1132,6 @@ edit the notice itself>
   :ORDER: 2
   :END:
   :LOGBOOK:
-  - Note [2026-11-11 Tue 02:5x UTC] Build Engineer (glm-5.3@chat.z.ai,
-    seat): FIX FOLDED ONTO THE CURRENT TRUNK STATE -- BRANCH
-    ai/pkgs-login-keyring PUSHED, CI DISPATCHED.  The 06:44 correction
-    said it plainly: df9a652 could never reach `guix pull' until it
-    lands on the pull trunk, so this seat merged ai/pkgs-login-
-    persistence (df9a652) into ai/main (02a3b45) and pushed the result
-    as ai/pkgs-login-keyring @ 3e9a298 (merge parents 02a3b45 + df9a652,
-    commit law-compliant).  The 7b898c1 fold note's flagged turn-branch
-    cline.scm hunk is ALREADY MOOT: branch and trunk carry the same
-    cline.scm, so nothing to discard.  Merge resolved with ZERO textual
-    conflicts (the branch forks from 6f5abe9, an ancestor of ai/main);
-    one SEMANTIC conflict fixed by hand: the branch's new
-    tests/smoke/qoder-cli-bin.sh pinned version 1.1.81 and now expects
-    the trunk's 1.1.83.  Byte audits after the merge: both desktop
-    wrappers carry the session bus + seeded keyring + secrets daemon and
-    NO --password-store=basic (only comments and the smokes' refusal
-    assertions mention the flag); trunk pins intact (opencode-v1 rename,
-    qoder-cli-bin 1.1.83 @ 13kpxv56..., qoder-desktop-bin 0.5.3 @
-    0kfhzqc..., zcode 3.17.2); autoclaw.scm is byte-identical to the
-    CI-green df9a652 version; custom.scm's delta vs 0c9878f (the tree
-    CI is testing right now) is exactly the keyring hunks.  Gates: bash
-    -n green on all three smokes; in-namespace dry-runs pass 39/43 with
-    4 eval failures (bcon, brow6el-bin, cline-baseline, rdircd --
-    unbound cargo-inputs/libsixel/nss-certs/python-aiohappyeyeballs)
-    that are a SANDBOX ARTIFACT, not fold regressions: this namespace
-    was re-bootstrapped from the plain guix-binary tarball (guix 1.4.0)
-    because the brix store was wiped, and 1.4.0 lacks symbols CI's brix
-    guix has -- the same references are in the tree CI is building this
-    hour (run 42867819796 @ 0c9878f, in_progress at note time).  CI
-    dispatched on the fold branch: HTTP 204, workflow_dispatch of
-    build.yml @ ai/pkgs-login-keyring -- result NOT claimed; the run
-    doubles as the first-ever CI proof of the merge content on ai/main
-    (no build run has ever targeted ai/main).  UAT ROUND 2 remains the
-    closing gate and now needs ONE Owner action first: see the
-    pull-delivery gap below.  ** PULL-DELIVERY GAP (Owner, needs your
-    merge or a fiat): `.guix-channel' carries no branch field and the
-    README pins branch "ai/packages", so `guix pull' delivers the
-    DEFAULT branch ai/packages -- which is 15 commits BEHIND ai/main
-    (ai/packages is a strict ancestor).  Everything from DISPATCH #3
-    (20-package bump round, mcode ubjs wiring, gate repairs, the
-    opencode-v1 rename, qoder 1.1.83/0.5.3, zcode 3.17.2 repair) exists
-    ONLY on ai/main and NO guix pull can deliver it; the Qoder
-    teammates' testing therefore must have run off a branch checkout.
-    Fix is one fast-forward (ai/packages has nothing ai/main lacks, so
-    merging ai/main into ai/packages cannot conflict) or switching the
-    default branch -- both are Owner moves under the branch law.  The
-    keyring fold rides the same landing: once ai/main is merged to
-    ai/packages (or the fold branch is), `guix pull' delivers the fix
-    and UAT round 2 can run: guix pull, install autoclaw-bin +
-    qoder-desktop-bin, log in, restart, confirm the session survives.
   - Note [2026-11-01 Sun 02:40 UTC] Build Engineer (glm-5.3@chat.z.ai,
     seat): FLIPPED TO REVIEW -- THE df9a652 KEYRING FIX IS CI-PROVEN.
     Run 41260236869 (head df9a65278b7e0c8d19531c1c7900e9de9dc52ebc,
