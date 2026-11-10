@@ -84,6 +84,7 @@ concurrency:
 
 permissions:
   contents: write
+  packages: write
   actions: write   # self-chain: finalize re-dispatches the next turn
   # NO `workflows: write` — GitHub rejects the KEY at workflow-creation
   # time: every run startup-FAILS with zero jobs (agent-team.el runs
@@ -389,6 +390,9 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
           GOMODEL_MASTER_KEY: ${{ secrets.GOMODEL_MASTER_KEY }}
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           set -u
           if [ -z "${GH_PAT:-}" ]; then
@@ -402,8 +406,14 @@ jobs:
           docker rm -f gomodel >/dev/null 2>&1 || true
           # Tuned env block = llmfisher docker-compose.yml gomodel service
           # verbatim (field types checked per the GoModel source; a wrong
-          # shape is a crash loop, not a warning). Keys ride as env only
-          # (env-var law): nothing baked, nothing printed, nothing in git.
+          # shape is a crash loop, not a warning). Provider keys ride as
+          # env only (env-var law) — compose passes them via env_file
+          # .env; without them the providers never configure and their
+          # models vanish from the gateway catalog (run 40645162293:
+          # "unsupported model: glm-4.7-flash"). Retry tuning is the
+          # compose law (Owner 2026-10-23: zai is very rate limited but
+          # works after a few retries — same-model RETRY absorbs the 429
+          # before failover sweeps on).
           export JEV_API_KEY="${TYPESAFE_API_KEY:-}"
           docker run -d --name gomodel -p 127.0.0.1:8080:8080 \
             -v /tmp/llmfisher-src/config:/app/config:ro \
@@ -412,8 +422,8 @@ jobs:
             -e CONFIGURED_PROVIDER_MODELS_MODE=allowlist \
             -e FAILOVER_RETRY_ON_STATUSES=4xx,5xx \
             -e FAILOVER_MAX_ATTEMPTS=5 \
-            -e RETRY_MAX_RETRIES=1 \
-            -e RETRY_INITIAL_BACKOFF=3s \
+            -e RETRY_MAX_RETRIES=3 \
+            -e RETRY_INITIAL_BACKOFF=5s \
             -e CIRCUIT_BREAKER_SCOPE=model \
             -e HTTP_RESPONSE_HEADER_TIMEOUT=30 \
             -e CACHE_REFRESH_INTERVAL=21600 \
@@ -422,6 +432,7 @@ jobs:
             -e PROVIDER_PROMPT_CACHE_PLANNER_ENABLED=false \
             -e GOMODEL_DEMO_MODE=false \
             -e GOMODEL_MASTER_KEY -e JEV_API_KEY \
+            -e ZAI_API_KEY -e GROQ_API_KEY -e OPENROUTER_API_KEY \
             enterpilot/gomodel >/dev/null
           ok=""
           for i in $(seq 1 30); do
@@ -458,15 +469,34 @@ jobs:
             echo "gomodel lane: DOWN (HTTP $CODE) — lane-fallback law active (turn proceeds on direct provider lanes; auto-reuses gomodel the moment the box answers)" >> "$SUMMARY"
           fi
 
-      - name: Build harness image (preinstalled agents — cached, no installs)
+      - name: Log in to GHCR (prebuilt image reuse)
         if: steps.control.outputs.mode == 'work'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build harness image (MODULAR — only this run's agent bodies)
+        if: steps.control.outputs.mode == 'work'
+        env:
+          SEAT: ${{ steps.control.outputs.seat }}
         run: |
-          docker buildx build --load \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            -f ci/docker/harness/Dockerfile \
-            -t agent-team-harness:local \
-            .
+          # Owner order 2026-10-30 #hq: "on each CI run, only agents needed
+          # by that run can be built/used." The seat map mirrors the
+          # .turn-inside.sh fallback chains (a seat may fall through
+          # several bodies in one segment). Unknown seat -> empty list ->
+          # harness_run_build.sh fails safe to the FULL harness build.
+          case "$SEAT" in
+            build-bench-zai|build-bench-groq) BODIES="goose qoder" ;;
+            build-bench-qoder)                BODIES="qoder goose" ;;
+            *)                                BODIES="" ;;
+          esac
+          bash ci/bin/harness_run_build.sh \
+            -b agent-team-harness-base:local \
+            -o agent-team-harness:local \
+            -r ghcr.io/khaalidrafi/packages-harness \
+            -- $BODIES
 
       - name: Prepare git identity
         if: steps.control.outputs.mode == 'work'
@@ -833,17 +863,19 @@ jobs:
           sed -n '1,80p' /tmp/.turn-out.txt || true
 
           TURN_RESULT=$(sed 's/^TURN_RESULT=//' "$PWD/.turn-result.txt" | tail -1)
+          # OWNER LAW 2026-10-29 #hq: changes made by agents on CI are
+          # committed by THAT AGENT's author, never by the CI model. The
+          # lane that actually ran is embedded in TURN_RESULT ("lane:
+          # <agent-id>...") — resolve it once; the host commit below uses
+          # it as the git AUTHOR (committer stays the CI machine).
+          TURN_AGENT=$(printf '%s' "$TURN_RESULT" | sed -nE 's/.*lane: ([A-Za-z0-9._/-]+@[A-Za-z0-9._-]+).*/\1/p' | tail -1)
           # HOST-SIDE COMMIT (run 39488529938: the seat EDITED + VERIFIED but
-          # its sandbox denied git/pytest — the edits died in the container,
-          # branch pushed empty, work lost). The host commits the workspace
-          # diff so a segment's work ALWAYS reaches the branch.
-          if ! git diff --quiet || ! git diff --cached --quiet; then
-            git add -A
-            git commit -m "turn(${SEAT}): segment work — host-committed" \
-              -m "result: ${TURN_RESULT}" || echo "::notice::workspace commit failed"
-          else
-            echo "workspace clean — no host commit needed"
-          fi
+          # its sandbox denied git/pytest — work died in the container). The
+          # host commits the workspace diff so segment work ALWAYS reaches
+          # the branch. Logic lives in .github/scripts/host_commit.sh: the
+          # seg run block sits near GitHub's 21000-char expression limit
+          # (startup failure measured 2026-10-30), so it stays lean.
+          bash .github/scripts/host_commit.sh "$SEAT" "${TURN_AGENT:-}" "$TURN_RESULT"
           echo "result=${TURN_RESULT}" >> "$GITHUB_OUTPUT"
           echo "## Turn — ${SEAT} @ ${GITHUB_SHA::7}" >> "$SUMMARY"
           echo "" >> "$SUMMARY"
@@ -852,6 +884,7 @@ jobs:
           echo "branch: ${BRANCH}" >> "$SUMMARY"
           echo "result: ${TURN_RESULT}" >> "$SUMMARY"
           echo "TURN_SEAT=$SEAT" >> "$GITHUB_ENV"
+          echo "TURN_AGENT=${TURN_AGENT:-}" >> "$GITHUB_ENV"
           rm -f "$PWD/.turn-inside.sh" "$PWD/.turn-result.txt" /tmp/.turn-out.txt /tmp/.turn-result.tmp
 
       # SESSION FILES (Owner order 2026-10-21 18:27Z "how will you handle
@@ -946,7 +979,7 @@ jobs:
             fi
             sed -i "s|^\#+TURN:.*|\#+TURN: ${NEXT}|" "$CTL"
             git add "$CTL"
-            git commit -m "ci-turn: ${TURN_SEAT:-unknown} done — next turn ${NEXT}" \
+            git commit -m "ci-turn: ${TURN_AGENT:-${TURN_SEAT:-unknown}} done — next turn ${NEXT}" \
               -m "result: ${TURN_RESULT:-unknown}" || { CPUSH=uptodate; break; }
             if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
               if git push --force origin "$CHAIN_REF"; then CPUSH=yes; break; fi
@@ -1190,6 +1223,9 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
           GOMODEL_MASTER_KEY: ${{ secrets.GOMODEL_MASTER_KEY }}
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           set -u
           if [ -z "${GH_PAT:-}" ]; then
@@ -1203,8 +1239,14 @@ jobs:
           docker rm -f gomodel >/dev/null 2>&1 || true
           # Tuned env block = llmfisher docker-compose.yml gomodel service
           # verbatim (field types checked per the GoModel source; a wrong
-          # shape is a crash loop, not a warning). Keys ride as env only
-          # (env-var law): nothing baked, nothing printed, nothing in git.
+          # shape is a crash loop, not a warning). Provider keys ride as
+          # env only (env-var law) — compose passes them via env_file
+          # .env; without them the providers never configure and their
+          # models vanish from the gateway catalog (run 40645162293:
+          # "unsupported model: glm-4.7-flash"). Retry tuning is the
+          # compose law (Owner 2026-10-23: zai is very rate limited but
+          # works after a few retries — same-model RETRY absorbs the 429
+          # before failover sweeps on).
           export JEV_API_KEY="${TYPESAFE_API_KEY:-}"
           docker run -d --name gomodel -p 127.0.0.1:8080:8080 \
             -v /tmp/llmfisher-src/config:/app/config:ro \
@@ -1213,8 +1255,8 @@ jobs:
             -e CONFIGURED_PROVIDER_MODELS_MODE=allowlist \
             -e FAILOVER_RETRY_ON_STATUSES=4xx,5xx \
             -e FAILOVER_MAX_ATTEMPTS=5 \
-            -e RETRY_MAX_RETRIES=1 \
-            -e RETRY_INITIAL_BACKOFF=3s \
+            -e RETRY_MAX_RETRIES=3 \
+            -e RETRY_INITIAL_BACKOFF=5s \
             -e CIRCUIT_BREAKER_SCOPE=model \
             -e HTTP_RESPONSE_HEADER_TIMEOUT=30 \
             -e CACHE_REFRESH_INTERVAL=21600 \
@@ -1223,6 +1265,7 @@ jobs:
             -e PROVIDER_PROMPT_CACHE_PLANNER_ENABLED=false \
             -e GOMODEL_DEMO_MODE=false \
             -e GOMODEL_MASTER_KEY -e JEV_API_KEY \
+            -e ZAI_API_KEY -e GROQ_API_KEY -e OPENROUTER_API_KEY \
             enterpilot/gomodel >/dev/null
           ok=""
           for i in $(seq 1 30); do

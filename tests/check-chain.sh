@@ -26,7 +26,33 @@ EOF
   exit 1
 done < <(find . -path ./.git -prune -o -name '*.scm' -print)
 
-# 2. Paren balance: every .scm stays well-formed.  A parenthesis slip is
+# 2. One package name, one definition.  `guix build -L . NAME' resolves a
+#    name to a SINGLE definition, so a second `define-public' with the same
+#    name does not build twice -- it silently shadows one of the two.  This
+#    channel harvests the CI build list from the define-public forms
+#    themselves (tests/build-all.sh, tests/check-static.sh) with no
+#    de-duplication, so a duplicate puts the same name on the list twice and
+#    no CI run can ever show both definitions: "CI green for NAME" stops
+#    meaning anything.  71e1b61 moved cline-bin into its own module but left
+#    the 3.0.70 copy in custom.scm, which is exactly how this was found.
+#    Same pattern as those two scripts, so all three see the same name set.
+#    Deliberately grep/sort/uniq only: it runs in a bare container, where
+#    the guile step below cannot.
+echo "==> names: no package defined twice"
+dups=$(grep -hoE '^\(define-public [^ )]+' sane-packages/*.scm | sort | uniq -d)
+if [ -n "$dups" ]; then
+  echo "these package names have more than one define-public:" >&2
+  while IFS= read -r line; do
+    name=${line##* }
+    echo "  $name:" >&2
+    grep -rn "^$line" sane-packages/ >&2 || true
+  done <<<"$dups"
+  echo "keep one definition per name: the shadowed copy is never built." >&2
+  exit 1
+fi
+echo "    all unique"
+
+# 3. Paren balance: every .scm stays well-formed.  A parenthesis slip is
 #    a parse error for every guix pull too; this catches it with a
 #    comment/string/char-literal-aware scanner.  Plain guile's reader is
 #    NOT used directly: Guix's gexp reader macros (#~ #\$ #$@) need the
@@ -77,17 +103,17 @@ if ! guile -c '
 fi
 echo "    all balanced"
 
-# 3. Generated zcode dependency tables: the one check they admit.
+# 4. Generated zcode dependency tables: the one check they admit.
 echo "==> generated tables: zcode dependency links resolve"
 ./tests/check-zcode-links.py
 
-# 4. Shell syntax across the test/script surface.
+# 5. Shell syntax across the test/script surface.
 echo "==> shell: bash -n over tests/*.sh and scripts/*.sh"
 for sh in tests/*.sh scripts/*.sh; do
   bash -n "$sh"
 done
 
-# 5. Python syntax across scripts/.
+# 6. Python syntax across scripts/.
 echo "==> python: py_compile over scripts/*.py"
 python3 -m py_compile scripts/*.py
 

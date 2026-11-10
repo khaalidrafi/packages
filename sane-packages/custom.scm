@@ -1,8 +1,9 @@
 (define-module (sane-packages custom)
   ;; The one non-package name this module exports.  (sane-packages cline)
-  ;; already imports this module for bun-bin, and cline's CLI release number
-  ;; covers all three deliveries (see %cline-version below); exporting it lets
-  ;; that number be written once.  It goes through #:export rather than
+  ;; already imports this module for bun-bin, so the cline CLI release number
+  ;; is written here and read from there (see %cline-version below); it is
+  ;; cline-baseline's tag today, and cline-bin's version should be folded back
+  ;; into it at the next bump.  It goes through #:export rather than
   ;; `define-public' because tests/check-static.sh harvests package names by
   ;; grepping `define-public' forms -- a version *string* must not show up
   ;; there.
@@ -417,7 +418,7 @@ if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a --library-path ~a ~a \
     (synopsis "AI coding agent for the terminal")
     (description
      "OpenCode is an open-source AI coding agent built for the terminal.
-This package installs the official prebuilt V1 binaries (both the AVX2 and
+This package installs the official prebuilt binaries (both the AVX2 and
 baseline variants) and a wrapper that picks the right one for the CPU at
 runtime.  The binaries need only glibc and are exec'd via the store glibc
 loader, so no FHS emulation is required.  The command is installed as
@@ -459,7 +460,7 @@ upstream's default line.")
 ;;; runs, so an interpreter rewrite is the only thing that makes it startable.
 ;;; ---------------------------------------------------------------------------
 (define %opencode2-version
-  "2.2.0")
+  "2.2.5")
 
 (define opencode2-avx2-source
   (origin
@@ -467,7 +468,7 @@ upstream's default line.")
     (uri (string-append
           "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-"
           %opencode2-version ".tgz"))
-    (sha256 (base32 "0a50ihdqk313i2ckl44kq7zyzwd10548y1b84bv29rkjd2w4cc7y"))))
+    (sha256 (base32 "1x186v2ihmbrx3x5spaf3fmrxpkq72j2p80cfv5x70560zp0wscj"))))
 
 (define opencode2-baseline-source
   (origin
@@ -475,7 +476,7 @@ upstream's default line.")
     (uri (string-append
           "https://registry.npmjs.org/@opencode/cli-linux-x64-baseline/-/"
           "cli-linux-x64-baseline-" %opencode2-version ".tgz"))
-    (sha256 (base32 "1pw5s7m0l11wzd9sf1vhyydyjwd1ywih6486fa4hg8fjwvxsc55w"))))
+    (sha256 (base32 "023sj4x14c8a1zcbkpydwa32mj50vw9f6cv4vzc5w757pan5cf47"))))
 
 (define-public opencode2-bin
   (package
@@ -534,8 +535,8 @@ upstream's default line.")
                                      (baseline (string-append out
                                                 "/lib/opencode2/opencode-baseline"))
                                      ;; `opencode' is the command upstream's own
-                                     ;; installer uses, and V2 is the default
-                                     ;; line now, so this package claims it;
+                                     ;; installer uses, and V2 is the default line
+                                     ;; now, so this package claims it;
                                      ;; opencode-bin no longer competes for it:
                                      ;; it installs `opencode-v1' instead.
                                      (wrapper (string-append out
@@ -596,11 +597,10 @@ upstream's default line.")
                                 ;; /lib64 path.
                                 ;;
                                 ;; V1 needs none of this: it runs the server
-                                ;; in-process, so `opencode-v1 debug config'
-                                ;; works through the loader wrapper alone.
-                                ;; Preferring a shell wrapper over patchelf --
-                                ;; which both Guix and nonguix do -- costs
-                                ;; exactly this much.
+                                ;; in-process, so `opencode-v1 debug config' works
+                                ;; through the loader wrapper alone.  Preferring a
+                                ;; shell wrapper over patchelf -- which both Guix
+                                ;; and nonguix do -- costs exactly this much.
                                 (for-each (lambda (binary)
                                             (chmod binary #o755)
                                             (invoke (string-append (assoc-ref
@@ -900,7 +900,7 @@ FHS emulation is needed.  Requires a GitHub account to authenticate.")
               "Proprietary GitHub/Microsoft license - unfree."))))
 
 (define %goose-version
-  "1.56.0")
+  "1.57.0")
 
 (define goose-source
   (origin
@@ -908,7 +908,7 @@ FHS emulation is needed.  Requires a GitHub account to authenticate.")
     (uri (string-append
           "https://github.com/aaif-goose/goose/releases/download/v"
           %goose-version "/goose-x86_64-unknown-linux-gnu.tar.gz"))
-    (sha256 (base32 "10f2367qz4vm6ybm76q1a2hw1winw85vbzgaj6v0y4xm6ndr4ni2"))))
+    (sha256 (base32 "1qwqvzplxhx53y7r94ddi8b2ikb4mgvbxvgf70fnx6qmdb5rdsqh"))))
 
 (define-public goose-cli-bin
   (package
@@ -1442,7 +1442,7 @@ vendored into node_modules.")
     (license license:expat)))
 
 (define %oh-my-pi-version
-  "18.13.2")
+  "18.14.1")
 
 (define %oh-my-pi-source
   (origin
@@ -1450,7 +1450,7 @@ vendored into node_modules.")
     (uri (string-append
           "https://github.com/can1357/oh-my-pi/releases/download/v"
           %oh-my-pi-version "/omp-linux-x64"))
-    (sha256 (base32 "1i6nl2y0l49d36xgf7hrq1y4wf843zb9g8g56i3il64262k9wjfw"))))
+    (sha256 (base32 "1l5hrwbxg93vl9yfd0scd121rpmhg01wyl3z73x3yizfzq66mmq2"))))
 
 (define-public oh-my-pi-bin
   (package
@@ -1920,8 +1920,106 @@ synchronous API.  Unlike node-sqlite3 it is fully synchronous and ships its
 own SQLite build.")
     (license license:expat)))
 
+;;; ---------------------------------------------------------------------------
+;;; node-ubjs-core / node-ubjs-node / node-trycua-cua-driver -- the dependency
+;;; closure mcode 0.7.4 added over 0.6.8 (dependencies: @trycua/cua-driver
+;;; 0.34.1, which itself depends on @ubjs/node and @ubjs/core, both 0.31.0-3).
+;;; Without them mcode's `npm --offline install' dies with ENOTCACHED for
+;;; @trycua%2fcua-driver: patch-dependencies rewrites only what the inputs
+;;; cover, and each node package rewrites its own deps during its own build,
+;;; so the file: paths node-trycua-cua-driver installs into its package.json
+;;; point at the store outputs below and resolve inside mcode's build via the
+;;; transitive input closure.  The native platform prebuilds of all three are
+;;; optionalDependencies, which npm silently skips offline (see the
+;;; promote-better-sqlite3 phase in mcode) -- nothing to add for them.
+;;; ---------------------------------------------------------------------------
+(define-public node-ubjs-core
+  (package
+    (name "node-ubjs-core")
+    (version "0.31.0-3")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://registry.npmjs.org/@ubjs/core" "/-/core-"
+                           version ".tgz"))
+       (sha256
+        (base32 "0lbiiizbgycm2lbw0iq6vnpl6nh5vkav4m77m1llbixxk039bmvl"))))
+    (build-system node-build-system)
+    (arguments
+     (list
+      #:tests? #f
+      #:phases
+      #~(modify-phases %standard-phases
+          (delete 'build)
+          (add-after 'patch-dependencies 'delete-dev-dependencies
+            (lambda _
+              (modify-json (delete-dev-dependencies)))))))
+    (home-page "https://github.com/jhugman/uniffi-bindgen-react-native")
+    (synopsis "Runtime support for uniffi-bindgen-javascript bindings")
+    (description
+     "Runtime support library for bindings generated by
+uniffi-bindgen-javascript: the shared async-callback and Rust-call plumbing
+that @ubjs/node sits on.  Pure JavaScript.")
+    (license license:mpl2.0)))
+
+(define-public node-ubjs-node
+  (package
+    (name "node-ubjs-node")
+    (version "0.31.0-3")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://registry.npmjs.org/@ubjs/node" "/-/node-"
+                           version ".tgz"))
+       (sha256
+        (base32 "02bsa1cf8dy9vjm8aqwyf9iar3y1r529chr3mbwp5l26zhy8zhg5"))))
+    (build-system node-build-system)
+    (arguments
+     (list
+      #:tests? #f
+      #:phases
+      #~(modify-phases %standard-phases
+          (delete 'build))))
+    (home-page
+     "https://github.com/jhugman/uniffi-bindgen-react-native/tree/main/runtimes/napi")
+    (synopsis "N-API runtime backend for uniffi-bindgen-react-native")
+    (description
+     "Call Rust libraries from Node.js without hand-written glue: the N-API
+runtime backend of uniffi-bindgen-react-native.  Its native platform
+prebuilds are optionalDependencies, which npm silently skips offline, so
+only the JavaScript runtime ships.")
+    (license license:mpl2.0)))
+
+(define-public node-trycua-cua-driver
+  (package
+    (name "node-trycua-cua-driver")
+    (version "0.34.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://registry.npmjs.org/@trycua/cua-driver"
+                           "/-/cua-driver-" version ".tgz"))
+       (sha256
+        (base32 "0fwa06cwq8wm7b5rj6q6vligsq5svig6g99r3vgmhdpbnmrpg1jz"))))
+    (build-system node-build-system)
+    (arguments
+     (list
+      #:tests? #f
+      #:phases
+      #~(modify-phases %standard-phases
+          (delete 'build))))
+    (inputs (list node-ubjs-core node-ubjs-node))
+    (home-page "https://github.com/trycua/cua")
+    (synopsis "Rust-backed Cua Driver SDK and embedded Node host")
+    (description
+     "Rust-backed Cua Driver SDK and embedded Node host: the JavaScript
+contract and FFI surface mcode 0.7.4 uses to talk to the Cua driver.  Its
+platform prebuilds are optionalDependencies, which npm silently skips
+offline.")
+    (license license:expat)))
+
 (define %mcode-version
-  "0.7.1")
+  "0.7.4")
 
 ;;; The npm tarball IS the prebuilt artifact (bundled JS + wasm + native
 ;;; helpers); both `mcode' (node-build-system install) and `mcode-bin'
@@ -1931,7 +2029,7 @@ own SQLite build.")
     (method url-fetch)
     (uri (string-append "https://registry.npmjs.org/@minimax-ai/code"
                         "/-/code-" %mcode-version ".tgz"))
-    (sha256 (base32 "0fiwrrv2id7jp07d9cfl105ng7n9mbi92sap5irdffk6rm7yyn50"))))
+    (sha256 (base32 "1z6wwxgxr4l0jk8np7iyh6mkg8ipzk79b4bbmhp8y5prj3c27h63"))))
 
 (define-public mcode
   (package
@@ -1992,8 +2090,12 @@ own SQLite build.")
                                                  (assoc-remove! s
                                                                 "postinstall"))
                                      meta))))))))))
-    (inputs (list node-better-sqlite3 node-mariozechner-clipboard
-                  node-vscode-ripgrep))
+    (inputs (list node-better-sqlite3
+                  node-mariozechner-clipboard
+                  node-trycua-cua-driver
+                  node-vscode-ripgrep
+                  node-ubjs-core
+                  node-ubjs-node))
     (home-page "https://www.npmjs.com/package/@minimax-ai/code")
     (synopsis "Minimax Code -- terminal coding agent")
     (description "Minimax Code -- terminal coding agent.")
@@ -2193,7 +2295,7 @@ node-esbuild-linux-x64 input.")
     (license license:expat)))
 
 (define %codebuddy-version
-  "2.177.1")
+  "2.179.0")
 
 (define-public codebuddy-code-bin
   (package
@@ -2206,7 +2308,7 @@ node-esbuild-linux-x64 input.")
              "https://registry.npmjs.org/@tencent-ai/codebuddy-code/-/codebuddy-code-"
              %codebuddy-version ".tgz"))
        (sha256
-        (base32 "1rw90qb1dxy076ll3jq6bzqaw8dd10gm0vpxkg5w8hxm71qi2v0h"))))
+        (base32 "00wsv2k1zdhjcpi949dbm9059wxfnsv220dpxlq97bfpfw10gff5"))))
     ;; copy-build-system, like mcode-bin: the tree is already bundled JS, and
     ;; running npm over it would only add offline optionalDependencies and
     ;; install scripts that a sandbox cannot honour.
@@ -2935,79 +3037,19 @@ kitty, ghostty, mlterm, xterm, etc.).")
     (home-page "https://tangled.org/janantos.tngl.sh/brow6el.git")
     (license license:expat)))
 
-;; One version for one upstream release line.  Cline tags the CLI as
-;; cli-vX.Y.Z, publishes X.Y.Z to npm as @cline/* (which is what cline-bin
-;; repackages) and the same number drives cline-baseline's git tag, so the
-;; number is written exactly once here and (sane-packages cline) reads it back
-;; through the module import it already has -- via the #:export at the top of
-;; this module, since a plain `define' is private to its module in Guile and
-;; cline.scm would otherwise see an unbound variable.  Importing the other way
-;; would have made the dependency between the two modules circular.
+;; Cline's version, kept here rather than in (sane-packages cline) because that
+;; module already imports this one for bun-bin and importing the other way would
+;; make the dependency between the two modules circular.  A plain `define' is
+;; private to its module in Guile, hence the #:export at the top of this module:
+;; without it cline.scm reads an unbound variable.
+;;
+;; It feeds cline-baseline's `cli-v<version>' git tag only.  cline-bin now lives
+;; in (sane-packages cline) with its own %cline-bin-version (3.0.73), so the two
+;; deliveries of one upstream no longer share one number written down once; they
+;; must be bumped together, or the next update-all pass folds %cline-bin-version
+;; back into this variable.
 (define %cline-version
   "3.0.70")
-
-(define-public cline-bin
-  (package
-    (name "cline-bin")
-    (version %cline-version)
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append
-             "https://registry.npmjs.org/@cline/cli-linux-x64/-/cli-linux-x64-"
-             version ".tgz"))
-       (sha256
-        (base32 "18x6cl1wbi22gzjl960anqbmhbv7lr5djfk6dslhbpm2ss0m51js"))))
-    (build-system trivial-build-system)
-    (arguments
-     (list
-      #:modules '((guix build utils))
-      #:builder
-      #~(begin
-          (use-modules (guix build utils))
-          (let ((tar (string-append #$tar "/bin/tar"))
-                (gzip (string-append #$gzip "/bin/gzip"))
-                (patchelf (string-append #$patchelf "/bin/patchelf"))
-                (output #$output))
-            (setenv "PATH"
-                    (string-append #$gzip "/bin"))
-            (mkdir-p output)
-            (mkdir-p (string-append output "/bin"))
-            (invoke tar "xzf"
-                    #$source)
-            (copy-recursively "package"
-                              (string-append output "/libexec/cline"))
-            (let ((bin (string-append output "/bin/cline"))
-                  (target (string-append output "/libexec/cline/bin/cline")))
-              (symlink target bin)
-              (chmod target #o755)
-              (invoke patchelf "--set-interpreter"
-                      (string-append #$glibc "/lib/ld-linux-x86-64.so.2")
-                      target)
-              (rename-file bin
-                           (string-append output "/bin/cline-bin"))
-              (call-with-output-file bin
-                (lambda (port)
-                  (format port
-                   "#!~a~%
-if ! grep -qw avx2 /proc/cpuinfo 2>/dev/null; then
-  echo \"Error: Cline v3.0+ requires a CPU with AVX2 support (e.g., Haswell or newer).\" >&2
-  echo \"Your CPU appears to be missing AVX2 instructions.\" >&2
-  exit 1
-fi
-exec ~a/bin/cline-bin \"$@\"
-"
-                   (string-append #$bash-minimal "/bin/bash") output)))
-              (chmod bin #o555))))))
-    (native-inputs (list tar gzip patchelf))
-    (inputs (list glibc))
-    (synopsis "Autonomous coding agent CLI (Cline)")
-    (description
-     "Cline is an autonomous coding agent CLI capable of creating/editing files,
-running commands, using the browser, and more.  This package wraps the prebuilt
-linux-x64 binary distribution.")
-    (home-page "https://cline.bot")
-    (license license:asl2.0)))
 
 (define-public qoder-cli-bin
   (package
@@ -3119,10 +3161,28 @@ build software, inspect code, and execute workflows.")
                             ;; Entry point named `qoder-desktop` (the desktop app), distinct
                             ;; from the `qoder` command owned by qoder-cli-bin.
                             (mkdir-p (string-append #$output "/bin"))
-                            (symlink (string-append #$output
-                                                    "/lib/Qoder/qoder")
-                                     (string-append #$output
-                                                    "/bin/qoder-desktop")))
+                            ;; A script, not a symlink: this box runs no
+                            ;; keyring daemon, so Chromium finds no Secret
+                            ;; Service to write the login token to and the
+                            ;; session is lost when the app exits
+                            ;; (DISPATCH #2).  `basic' keeps the
+                            ;; credentials in the profile directory on disk.
+                            ;; A symlink could not carry the flag.  It execs
+                            ;; the wrap-program output (`lib/Qoder/qoder',
+                            ;; which sets LD_LIBRARY_PATH/XDG_DATA_DIRS/PATH
+                            ;; and then runs qoder.real) rather than
+                            ;; qoder.real itself, so the environment above
+                            ;; stays in force and is not duplicated here.
+                            ;; Launcher arguments still come last via "$@".
+                            (call-with-output-file (string-append #$output
+                                                    "/bin/qoder-desktop")
+                              (lambda (port)
+                                (format port
+                                 "#!~a/bin/bash~%exec ~a/lib/Qoder/qoder --password-store=basic \"$@\"~%"
+                                 #$bash-minimal
+                                 #$output)))
+                            (chmod (string-append #$output
+                                                  "/bin/qoder-desktop") #o555))
                           (alist-cons-after 'install
                                             'patchelf-binaries
                                             (lambda* (#:key inputs
@@ -3280,7 +3340,7 @@ and is not endorsed by Guix upstream.")
 (define-public dsh
   (package
     (name "dsh")
-    (version "0.2.1-rc.2")
+    (version "0.2.1-rc.5")
     (source
      (origin
        (method url-fetch)
@@ -3288,7 +3348,7 @@ and is not endorsed by Guix upstream.")
              "https://registry.npmjs.org/@deepseek-ai/dsh/-/dsh-" version
              ".tgz"))
        (sha256
-        (base32 "079fylmfsxkhni1hb8df73xw02bpvjzfkpj2zwb46314q0jx1qs0"))))
+        (base32 "1qf47q8mqz39snzy0zlpyljylmlwq5jhmh0qg4gys3cyy5k7b630"))))
     (build-system trivial-build-system)
     (inputs (list bash node procps))
     (native-inputs (append (list (list "tar" tar)
@@ -3521,7 +3581,7 @@ state live in @file{~/.cua-driver}.")
 ;;; reports no avx2 flag in /proc/cpuinfo at all.
 ;;; ---------------------------------------------------------------------------
 (define %cloudflared-version
-  "2026.10.3")
+  "2026.10.7")
 
 (define %cloudflared-source
   (origin
@@ -3529,7 +3589,7 @@ state live in @file{~/.cua-driver}.")
     (uri (string-append
           "https://github.com/cloudflare/cloudflared/releases/download/"
           %cloudflared-version "/cloudflared-linux-amd64"))
-    (sha256 (base32 "1c5s1pyglgrqsxqpk9ia2lgqyazqb4zhfg5zzlwa0c9hlaq80fq5"))))
+    (sha256 (base32 "0whqz6wpm8abfp9a75b237k7fanqj74pq2l7inxc5pl3id8zp68z"))))
 
 (define-public cloudflared
   (package
