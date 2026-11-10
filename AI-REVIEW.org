@@ -387,6 +387,30 @@ bare =/download=.  Any of them plus a pinned sha256 is a version label with no
 relationship to the artifact.  Prefer a path that contains =version=; if
 upstream publishes no such path, say so in a comment next to the hash.
 
+* TODO =cline=: the version lives in two files again
+
+Re-opens the point closed by =DONE cline: the version lived in two files=
+(2026-10-03).  =cline-baseline= reads =%cline-version= --- =custom.scm:2949=,
+="3.0.70"= --- while =cline-bin= reads its own =%cline-bin-version= ---
+=cline.scm:889=, ="3.0.73"=.  One upstream release number, written down twice,
+already out of step by three releases.
+
+How it came back: 71e1b61 moved =cline-bin= into its own module and gave it the
+npm version, and 484a9d9 then deleted the stale duplicate definition left in
+=custom.scm=.  Both were correct moves; neither re-unified the number.
+
+Why no test catches it: a version is a string, not a dependency.  Each delivery
+resolves its own URI and its own sha256, so both derivations build green while
+the baseline silently lags.  The only record is the comment at
+=custom.scm:2944-2948=.
+
+Review point: on the next update-all pass (DISPATCH #3 Task 1) decide one ---
+either fold =cline.scm='s =version= back onto =%cline-version= as the 2026
+design did, or state in that comment that the two deliveries are deliberately
+separate numbers.  Confirm both sides before bumping:
+=npm view @cline/cli-linux-x64 versions= for the npm wrapper, and
+=git ls-remote --tags https://github.com/cline/cline= for the =cli-vX.Y.Z= tag.
+
 * How this file is used
 Add an entry whenever AI-written code encodes an assumption that a compiler or
 a test suite cannot check (transcribed constants, upstream layouts, implicit
