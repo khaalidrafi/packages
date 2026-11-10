@@ -635,6 +635,24 @@ edit the notice itself>
     green 41260236869); the fold should take df9a652 and drop
     88db381.  ai/main created per the 2026-11-07 amendment (audits
     read ai/main): trunk tip + the d7edb96 landing.
+  - Note [2026-11-10 Tue ~05:35 UTC] Build Engineer (GLM-5.3@chat.z.ai,
+    seat): ZCODE CORRECTION to the closeout above.  Run 42770972569
+    (d7edb96) failed the zcode source build — the v3.17.2 lockfile
+    resolves vitest@4.1.7 with a 335-byte .pnpm peer-suffix directory
+    name, over the kernel's 255-byte component limit (mkdir "File
+    name too long") — and the zcode-bin smoke asserted libEGL.so,
+    which the 3.17.2 .deb no longer ships.  Repaired by 0c9878f
+    (this seat's identity, CI-log read): the zcode SOURCE package
+    reverts to v3.14.3 @29628c9 — the CI-green 6f5abe9 pairing, with
+    zcode-modules.scm restored byte-identical — keeping the designed
+    bin/source version decoupling (blocker documented at
+    %bin-version for the follow-up); zcode-BIN 3.17.2 pins STAY; the
+    smoke's libEGL line is dropped with a comment.  Follow-up run
+    42867819796 dispatched on ai/pkgs-update-all @ 0c9878f
+    (in_progress at note time; my first dispatch 42867761805 was
+    cancelled by the build-ai/pkgs-update-all concurrency group —
+    NOT CLAIMED until it completes).  The closeout's "zcode-modules
+    regen for the v3.17.2 source tag" is superseded by this revert.
   :END:
 
   BLUF: Build Engineer appointed (Owner order 04:02Z #hq).  This
