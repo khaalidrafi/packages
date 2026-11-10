@@ -359,11 +359,21 @@
                                                  ;; start.  User arguments are still
                                                  ;; appended, so flags given on the
                                                  ;; command line come after the default.
+                                                 ;;
+                                                 ;; --password-store=basic is the login
+                                                 ;; persistence fix (DISPATCH #2): this
+                                                 ;; machine runs no keyring daemon, so
+                                                 ;; Chromium's auto-detection finds no
+                                                 ;; Secret Service to write the token to
+                                                 ;; and the login is lost when the app
+                                                 ;; exits.  `basic' stores the
+                                                 ;; credentials in the profile directory
+                                                 ;; on disk instead.
                                                  (call-with-output-file (string-append #$output
                                                                          "/bin/autoclaw")
                                                    (lambda (port)
                                                      (format port
-                                                      "#!~a/bin/bash~%exec ~a/lib/AutoClaw/AutoClaw2 --disable-gpu \"$@\"~%"
+                                                      "#!~a/bin/bash~%exec ~a/lib/AutoClaw/AutoClaw2 --disable-gpu --password-store=basic \"$@\"~%"
                                                       #$bash-minimal
                                                       #$output)))
                                                  (chmod (string-append #$output
