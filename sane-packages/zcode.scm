@@ -79,19 +79,24 @@
   #:export (%zcode-rpath-inputs))
 
 (define %version
-  "3.17.2")
+  "3.14.3")
 
 ;; The vendor .deb lives in its own version space: Z.ai ships desktop builds on
 ;; its CDN faster than it tags the repository -- when 3.15.3 was on the CDN the
 ;; newest tag was still v3.14.3.  Keeping one variable per delivery means
 ;; bumping the desktop app cannot drag the source package's git tag along.
+;; The source build stays at v3.14.3 for a second reason as of 3.17.2: the
+;; newer lockfile resolves vitest with a peer-suffix .pnpm directory name of
+;; 335 bytes, over the kernel's 255-byte component limit, and the manifest
+;; build cannot mkdir it.  Revisit when upstream's resolution changes or the
+;; manifest learns shortened .pnpm names.
 (define %bin-version
   "3.17.2")
 
-;;; Tag v3.17.2.  Pinned by commit rather than tag: a tag can be moved, and
+;;; Tag v3.14.3.  Pinned by commit rather than tag: a tag can be moved, and
 ;;; git-fetch has to resolve the object name anyway.
 (define %zcode-commit
-  "a9fe401eede6e6e5e01be9048679c206fe6f02d9")
+  "29628c9acdb81b703bbd4080c207a0e7ce5e276e")
 
 (define %zcode-source
   (origin
@@ -100,7 +105,7 @@
           (url "https://github.com/zai-org/ZCode")
           (commit %zcode-commit)))
     (file-name (string-append "zcode-" %version "-checkout"))
-    (sha256 (base32 "0f1iqy2bdswhqzzs95qlrw92y7dypmp969ga3v7bp36c9iah0nvj"))))
+    (sha256 (base32 "13y4k09cbxng011s805zxw0hk6kk99nvn7vgdwk1fsqzmablidp0"))))
 
 ;;;
 ;;; Libraries an Electron build needs at runtime: everything it links against

@@ -12,7 +12,6 @@ for path in \
     bin/zcode-desktop \
     lib/ZCode/zcode \
     lib/ZCode/libffmpeg.so \
-    lib/ZCode/libEGL.so \
     lib/ZCode/icudtl.dat \
     lib/ZCode/resources/app.asar \
     lib/ZCode/resources/glm/zcode.cjs \
@@ -57,7 +56,8 @@ case "$interpreter" in
   *) echo "unpatched interpreter: $interpreter" >&2; exit 1 ;;
 esac
 
-# $ORIGIN first: Electron's own helpers (libffmpeg.so, libEGL.so) live next to
+# $ORIGIN first: Electron's own helpers (libffmpeg.so and, in older debs,
+# libEGL.so) live next to
 # the binary.  Then the Guix libraries it dlopens, which is the point of
 # %zcode-rpath-inputs -- a literal store path, not $out, since the app directory
 # is reached through $ORIGIN.  Checked entry by entry rather than with one
