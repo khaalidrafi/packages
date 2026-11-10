@@ -3161,25 +3161,50 @@ build software, inspect code, and execute workflows.")
                             ;; Entry point named `qoder-desktop` (the desktop app), distinct
                             ;; from the `qoder` command owned by qoder-cli-bin.
                             (mkdir-p (string-append #$output "/bin"))
-                            ;; A script, not a symlink: this box runs no
-                            ;; keyring daemon, so Chromium finds no Secret
-                            ;; Service to write the login token to and the
-                            ;; session is lost when the app exits
-                            ;; (DISPATCH #2).  `basic' keeps the
-                            ;; credentials in the profile directory on disk.
-                            ;; A symlink could not carry the flag.  It execs
-                            ;; the wrap-program output (`lib/Qoder/qoder',
-                            ;; which sets LD_LIBRARY_PATH/XDG_DATA_DIRS/PATH
-                            ;; and then runs qoder.real) rather than
-                            ;; qoder.real itself, so the environment above
-                            ;; stays in force and is not duplicated here.
-                            ;; Launcher arguments still come last via "$@".
+                            ;; A script, not a symlink: a symlink could not
+                            ;; carry arguments.  Login persistence (DISPATCH
+                            ;; #2, reopened after the 2026-10-31 Owner UAT
+                            ;; failure): the basic_text backend -- what
+                            ;; --password-store=basic forces -- is not a
+                            ;; real Secret Service, and this ZAI-family
+                            ;; Electron stack rejects it (autoclaw's
+                            ;; main.cjs does so in plain text;
+                            ;; getSelectedStorageBackend() !== 'basic_text'
+                            ;; gates persistence), so the flag is gone and
+                            ;; the wrapper now provides a real Secret
+                            ;; Service instead: session bus if the session
+                            ;; lacks one, a blank-password login keyring
+                            ;; seeded once (it lives under the user's HOME,
+                            ;; so the session survives restarts), and the
+                            ;; secrets daemon before exec.  dbus and
+                            ;; gnome-keyring ship as package inputs.  It
+                            ;; execs the wrap-program output
+                            ;; (`lib/Qoder/qoder', which sets
+                            ;; LD_LIBRARY_PATH/XDG_DATA_DIRS/PATH and then
+                            ;; runs qoder.real) rather than qoder.real
+                            ;; itself, so the environment above stays in
+                            ;; force and is not duplicated here.  Launcher
+                            ;; arguments still come last via "$@".
                             (call-with-output-file (string-append #$output
                                                     "/bin/qoder-desktop")
                               (lambda (port)
                                 (format port
-                                 "#!~a/bin/bash~%exec ~a/lib/Qoder/qoder --password-store=basic \"$@\"~%"
+                                 "#!~a/bin/bash~%
+if [ -z \"${DBUS_SESSION_BUS_ADDRESS:-}\" ]; then
+  addr=\"$(~a/bin/dbus-daemon --session --fork --print-address 2>/dev/null)\" && export DBUS_SESSION_BUS_ADDRESS=\"$addr\"
+fi
+keyrings=\"${XDG_DATA_HOME:-$HOME/.local/share}/keyrings\"
+if [ ! -e \"$keyrings/default\" ]; then
+  mkdir -p \"$keyrings\"
+  printf '' | \"~a/bin/gnome-keyring-daemon\" --unlock --daemonize >/dev/null 2>&1 || true
+fi
+eval \"$(\"~a/bin/gnome-keyring-daemon\" --start --components=secrets 2>/dev/null)\" || true
+export GNOME_KEYRING_CONTROL SSH_AUTH_SOCK
+exec ~a/lib/Qoder/qoder \"$@\"~%"
                                  #$bash-minimal
+                                 #$dbus
+                                 #$gnome-keyring
+                                 #$gnome-keyring
                                  #$output)))
                             (chmod (string-append #$output
                                                   "/bin/qoder-desktop") #o555))
@@ -3262,6 +3287,7 @@ build software, inspect code, and execute workflows.")
                   fontconfig
                   freetype
                   glib
+                  gnome-keyring
                   gsettings-desktop-schemas
                   gtk+
                   libnotify
