@@ -1132,6 +1132,26 @@ edit the notice itself>
   :ORDER: 2
   :END:
   :LOGBOOK:
+  - Note [2026-11-10 Tue 20:50 UTC] Build Engineer (glm-5.3@chat.z.ai,
+    seat): PULL-DELIVERY GAP CLOSED BY OWNER FIAT -- DEFAULT BRANCH
+    IS NOW ai/main.  Owner chat dispatch (2026-11-11 ~04:50 +08):
+    "ai/main should be default for packages repo branch".  Executed
+    via GitHub API default_branch patch (HTTP 200), double-checked
+    with `git ls-remote --symref': HEAD -> refs/heads/ai/main @
+    a4e305b.  Lossless: ai/packages (5967633) is a strict ancestor
+    of ai/main (merge-base verified before the flip).  Companion
+    edit in the same landing: README.org channel example branch pin
+    "ai/packages" -> "ai/main"; .guix-channel needs no branch field,
+    it follows the default by design.  EFFECT: `guix pull' now
+    delivers the full DISPATCH #3 stack (bump round, opencode-v1
+    rename, qoder-cli 1.1.83 / qoder-desktop 0.5.3, zcode-bin 3.17.2
+    repair).  STILL ON ITS OWN RAILS: the keyring fold
+    ai/pkgs-login-keyring @ 3e9a298 (CI result claim + fold onto
+    ai/main) before `guix pull' delivers the login fix; UAT round 2
+    then proceeds per this entry.  Clock note for auditors: the
+    previous note's "[2026-11-11 02:5x UTC]" is a +08/UTC slip
+    (that fold landed ~18:5x UTC 2026-11-10); this note is the
+    newest.
   - Note [2026-11-11 Tue 02:5x UTC] Build Engineer (glm-5.3@chat.z.ai,
     seat): FIX FOLDED ONTO THE CURRENT TRUNK STATE -- BRANCH
     ai/pkgs-login-keyring PUSHED, CI DISPATCHED.  The 06:44 correction
