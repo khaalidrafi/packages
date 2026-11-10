@@ -79,19 +79,19 @@
   #:export (%zcode-rpath-inputs))
 
 (define %version
-  "3.14.3")
+  "3.17.2")
 
 ;; The vendor .deb lives in its own version space: Z.ai ships desktop builds on
-;; its CDN faster than it tags the repository, and 3.15.3 is on the CDN while
-;; the newest tag is still v3.14.3.  Keeping one variable per delivery means
+;; its CDN faster than it tags the repository -- when 3.15.3 was on the CDN the
+;; newest tag was still v3.14.3.  Keeping one variable per delivery means
 ;; bumping the desktop app cannot drag the source package's git tag along.
 (define %bin-version
-  "3.15.3")
+  "3.17.2")
 
-;;; Tag v3.14.3.  Pinned by commit rather than tag: a tag can be moved, and
+;;; Tag v3.17.2.  Pinned by commit rather than tag: a tag can be moved, and
 ;;; git-fetch has to resolve the object name anyway.
 (define %zcode-commit
-  "29628c9acdb81b703bbd4080c207a0e7ce5e276e")
+  "a9fe401eede6e6e5e01be9048679c206fe6f02d9")
 
 (define %zcode-source
   (origin
@@ -100,7 +100,7 @@
           (url "https://github.com/zai-org/ZCode")
           (commit %zcode-commit)))
     (file-name (string-append "zcode-" %version "-checkout"))
-    (sha256 (base32 "13y4k09cbxng011s805zxw0hk6kk99nvn7vgdwk1fsqzmablidp0"))))
+    (sha256 (base32 "0f1iqy2bdswhqzzs95qlrw92y7dypmp969ga3v7bp36c9iah0nvj"))))
 
 ;;;
 ;;; Libraries an Electron build needs at runtime: everything it links against
@@ -506,11 +506,11 @@ plugin, MCP and search tooling.")
 ;;; is not cross-compilation: binary-build systems of this kind want the
 ;;; matching .deb on the matching machine.
 (define %zcode-bin-builds
-  `(("x86_64-linux" "linux-x64" . "05b0srb6zscbh238sa073kw9dscf3s82198ckq99jf2bnv2nrcxw")
+  `(("x86_64-linux" "linux-x64" . "0xgmmzss89ipl2b8zhk7hb336z1k18q08d9iwxbawijwg4m7pv46")
     ;; Declared because upstream serves the arm64 .deb, and the URL and payload
     ;; layout are the same; no runner here can verify it, since binary packages
     ;; of this kind do not cross-compile.
-    ("aarch64-linux" "linux-arm64" . "05cxqqi13a195zdphgk7f3jj5rjgwv00dm6rdz4qsbrmxpl3j3av")))
+    ("aarch64-linux" "linux-arm64" . "06y1a7gaz5sr9b0q63k6ymhcacadgqlrigi4gq20mdws8fa3v70z")))
 
 (define (zcode-bin-source)
   (let* ((entry (or (assoc (%current-system) %zcode-bin-builds)

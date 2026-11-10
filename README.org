@@ -300,8 +300,8 @@ Two pairs collide, and only one of them is a defect:
 - =zcode= and =zcode-bin=, covered above.
 
 The remaining =*-bin= pairs share no entry point and coexist happily
-(=opencode-bin= installs =bin/opencode=, =opencode2-bin= installs
-=bin/opencode2=), which is what an entry-point table is for: telling the two
+(=opencode-bin= installs =bin/opencode-v1=, =opencode2-bin= installs
+=bin/opencode=), which is what an entry-point table is for: telling the two
 kinds of overlap apart.  The full inventory, as installed today:
 
 #+begin_example
@@ -322,8 +322,8 @@ goose-cli-bin          goose
 kilocode-bin           kilocode
 mcode-bin              mcode, mcode-tools
 oh-my-pi-bin           omp
-opencode-bin           opencode
-opencode2-bin          opencode2
+opencode-bin           opencode-v1
+opencode2-bin          opencode, opencode2, opencode-v2
 pi-acp-bin             pi-acp
 pi-coding-agent-bin    pi-coding-agent, pi
 qoder-cli-bin          qodercli, qoder
