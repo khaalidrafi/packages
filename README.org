@@ -47,7 +47,7 @@ most channel instructions:
 (cons (channel
         (name 'sane-packages)
         (url "https://github.com/khaalidrafi/packages")
-        (branch "ai/packages"))
+        (branch "ai/main"))
       %default-channels)
 #+end_example
 
