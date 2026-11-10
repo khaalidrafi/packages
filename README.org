@@ -12,6 +12,7 @@ built by CI instead of by hand on a 4 GB laptop.
 | zcode            | =(sane-packages zcode)=  | terminal agent, built from source |
 | zcode-bin        | =(sane-packages zcode)=  | vendor Electron .deb and its CLI  |
 | cline-baseline   | =(sane-packages cline)=  | Bun CLI, built for non-AVX2 CPUs  |
+| cline-bin        | =(sane-packages cline)=  | vendor Bun CLI from the npm build  |
 | autoclaw-bin     | =(sane-packages autoclaw)= | vendor Electron AppImage         |
 | konaito-terminal-browser-bin | =(sane-packages konaito)= | terminal browser over CDP, no Electron |
 | chrome-headless-shell-bin | =(sane-packages chrome-headless-shell)= | headless Chromium for Puppeteer |
@@ -308,7 +309,7 @@ bun-bin                bun
 brow6el-bin            brow6el
 autoclaw-bin           autoclaw
 casty-bin              casty
-cline-bin              cline, cline-bin
+cline-bin              cline
 cline-baseline         cline
 cloudflared            cloudflared
 codebuddy-code-bin     codebuddy, codebuddy-code, cbc, cbc-prewarm,
@@ -400,10 +401,16 @@ Cline (https://cline.bot, =https://github.com/cline/cline=) ships its CLI as a
 Bun single-file executable: =bun build --compile= embeds the Bun runtime in the
 binary.  Bun's default x86_64 runtime uses AVX2, so =@cline/cli-linux-x64=
 raises =SIGILL= on any CPU older than Intel Haswell (upstream issue #11539).
-That includes this machine's Celeron.  The channel's own =cline-bin= (in
-=custom.scm=, the repackaged vendor binary) therefore refuses to run when
-=/proc/cpuinfo= has no =avx2= --- correct for a blob we cannot rebuild, useless
-for actually running Cline here.
+That includes this machine's Celeron.  The channel's =cline-bin= --- the
+repackaged vendor binary --- used to enforce that itself: it printed an error
+and exited when =/proc/cpuinfo= had no =avx2=.  That guard belonged to an older
+copy of the package in =custom.scm=, which 71e1b61 left behind when it rewrote
+=cline-bin= in =(sane-packages cline)=, so the channel carried one package name
+twice and =guix install cline-bin= resolved ambiguously.  The stale copy is now
+removed, and the rewrite is what runs here: 3.0.73 embeds Bun 1.4.2, which was
+verified to start on this Celeron (UPDATE #1 in =agent-team/TODOS.org=).
+=cline-baseline= stays in the channel because upstream still publishes no
+baseline target, not because =cline-bin= fails here.
 
 ** Why a source build, and why baseline
 
