@@ -4,9 +4,13 @@
 ;;; Cline's published CLI (@cline/cli-linux-x64) is a single-file executable
 ;;; produced by `bun build --compile`, which embeds the Bun runtime.  Bun's
 ;;; default x86_64 build uses AVX2, so that binary raises SIGILL on any CPU
-;;; older than Intel Haswell (upstream issue #11539; the channel's own
-;;; `cline-bin' package therefore refuses to run without avx2).  This CPU is a
-;;; pre-Haswell Celeron, so `cline-bin' is useless here.
+;;; older than Intel Haswell (upstream issue #11539).  This CPU is a
+;;; pre-Haswell Celeron, so a CLI built for the AVX2 target is the wrong thing
+;;; to depend on here.  The package that used to guard against exactly that --
+;;; an older `cline-bin' in (sane-packages custom), which refused to start
+;;; without avx2 -- was superseded by the `cline-bin' defined further down, and
+;;; the stale copy has been dropped so the channel no longer carries that
+;;; package name twice.
 ;;;
 ;;; Upstream publishes no baseline build, so we make one ourselves: compile
 ;;; Cline from the cli-v<version> tag with Bun's *baseline* target,
@@ -48,10 +52,11 @@
 
 ;; The CLI is released under cli-vX.Y.Z tags; the npm wrapper and the platform
 ;; packages all carry this same version.  %cline-version itself is defined in
-;; (sane-packages custom), which this module already imports for bun-bin: it is
-;; the module that carries cline-bin, and one version for one upstream release
-;; line has to be written down once.  Importing the other way would have made
-;; the dependency between the two modules circular.
+;; (sane-packages custom), which this module already imports for bun-bin:
+;; importing the other way would have made the dependency between the two
+;; modules circular.  It drives the `cli-v<version>' tag this module builds from
+;; source; cline-bin below carries its own %cline-bin-version, so a bump has to
+;; move both numbers together.
 (define %cline-url
   "https://github.com/cline/cline")
 (define %cline-tag
@@ -759,11 +764,13 @@ import { type AddressInfo, createServer } from \"node:net\";"))
   ;; the whole FOD (bun install, the build.ts substitution chain, the smoke
   ;; phases inside it, the compile) with the #o644 output fix in place, and
   ;; the daemon's hash comparison then failed against the all-zeros
-  ;; placeholder exactly as designed, printing
+  ;; placeholder exactly as designed.  The update-all batch bumped the FOD's
+  ;; bun input 1.4.3 -> 1.4.4, which shifted the output again: CI run
+  ;; 41204642123 (branch ai/pkgs-update-all) printed
   ;;
   ;; sha256 hash mismatch for /gnu/store/...-cline-baseline-3.0.70:
-  ;; expected hash: 0000000000000000000000000000000000000000000000000000
-  ;; actual hash: 0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g
+  ;; expected hash: 0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g
+  ;; actual hash: 0sq50kgybdyw19b5vq8ck3lcdzn0lcj2b850w71kxp1vglhn1p08
   ;;
   ;; The actual value is pasted in below.  For this to converge, the next
   ;; build of the FOD must produce a byte-identical file -- same pinned
@@ -776,7 +783,7 @@ import { type AddressInfo, createServer } from \"node:net\";"))
     (method cline-baseline-build)
     (uri (list %cline-url %cline-tag))
     (file-name (string-append "cline-baseline-" %cline-version))
-    (sha256 (base32 "0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g"))))
+    (sha256 (base32 "0sq50kgybdyw19b5vq8ck3lcdzn0lcj2b850w71kxp1vglhn1p08"))))
 
 (define-public cline-baseline
   (package
