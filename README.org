@@ -16,6 +16,8 @@ built by CI instead of by hand on a 4 GB laptop.
 | autoclaw-bin     | =(sensible-packages autoclaw)= | vendor Electron AppImage         |
 | konaito-terminal-browser-bin | =(sensible-packages konaito)= | terminal browser over CDP, no Electron |
 | chrome-headless-shell-bin | =(sensible-packages chrome-headless-shell)= | headless Chromium for Puppeteer |
+| lightpanda-bin    | =(sensible-packages lightpanda)= | headless Zig browser for AI agents |
+| moli-bin          | =(sensible-packages moli)= | headless browser, on-demand rendering |
 | mcode, mcode-bin | =(sensible-packages custom)= | Minimax Code CLI (npm artifact)   |
 | dsh, qoder-*, …  | =(sensible-packages custom)= | everything predating this layout  |
 
