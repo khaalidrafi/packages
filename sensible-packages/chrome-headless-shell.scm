@@ -1,4 +1,4 @@
-;;; sane-packages --- chrome-headless-shell: the headless Chromium that
+;;; sensible-packages --- chrome-headless-shell: the headless Chromium that
 ;;; Puppeteer's `headless: "shell"' mode drives.
 ;;; Commentary:
 ;;;
@@ -30,7 +30,7 @@
 ;;;
 ;;; Code:
 
-(define-module (sane-packages chrome-headless-shell)
+(define-module (sensible-packages chrome-headless-shell)
   #:use-module (guix download)
   #:use-module (guix packages)
   #:use-module (guix base32)
@@ -52,7 +52,7 @@
 
 (define %chrome-headless-shell-version
   ;; Keep in lockstep with PUPPETEER_REVISIONS of the puppeteer-core that
-  ;; (sane-packages konaito) ships; bump both together.
+  ;; (sensible-packages konaito) ships; bump both together.
   "148.0.7778.97")
 
 (define %chrome-headless-shell-source

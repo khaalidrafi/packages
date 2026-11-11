@@ -1,4 +1,4 @@
-;;; sane-packages --- lark-cli: the official Lark/Feishu command line tool.
+;;; sensible-packages --- lark-cli: the official Lark/Feishu command line tool.
 ;;; Commentary:
 ;;;
 ;;; Upstream (https://github.com/larksuite/cli) publishes the tool not as a
@@ -24,7 +24,7 @@
 ;;;
 ;;; Code:
 
-(define-module (sane-packages lark-cli)
+(define-module (sensible-packages lark-cli)
   #:use-module (guix download)
   #:use-module (guix packages)
   #:use-module (guix base32)

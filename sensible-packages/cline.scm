@@ -1,4 +1,4 @@
-;;; sane-packages --- cline: the Cline CLI, built for CPUs without AVX2.
+;;; sensible-packages --- cline: the Cline CLI, built for CPUs without AVX2.
 ;;; Commentary:
 ;;;
 ;;; Cline's published CLI (@cline/cli-linux-x64) is a single-file executable
@@ -7,7 +7,7 @@
 ;;; older than Intel Haswell (upstream issue #11539).  This CPU is a
 ;;; pre-Haswell Celeron, so a CLI built for the AVX2 target is the wrong thing
 ;;; to depend on here.  The package that used to guard against exactly that --
-;;; an older `cline-bin' in (sane-packages custom), which refused to start
+;;; an older `cline-bin' in (sensible-packages custom), which refused to start
 ;;; without avx2 -- was superseded by the `cline-bin' defined further down, and
 ;;; the stale copy has been dropped so the channel no longer carries that
 ;;; package name twice.
@@ -28,7 +28,7 @@
 ;;; that reduces cleanly to a hash-verified tarball table), a bun-workspace
 ;;; install does not, so a fixed-output build is the honest, reviewed unit here.
 
-(define-module (sane-packages cline)
+(define-module (sensible-packages cline)
   #:use-module (guix gexp)
   #:use-module (guix monads)
   #:use-module (guix store)
@@ -47,12 +47,12 @@
   #:use-module (gnu packages nss) ;nss-certs
   #:use-module (gnu packages version-control) ;git
   #:use-module (gnu packages node) ;node -- see the inputs comment
-  #:use-module (sane-packages custom))
+  #:use-module (sensible-packages custom))
 ; bun-bin, %cline-version
 
 ;; The CLI is released under cli-vX.Y.Z tags; the npm wrapper and the platform
 ;; packages all carry this same version.  %cline-version itself is defined in
-;; (sane-packages custom), which this module already imports for bun-bin:
+;; (sensible-packages custom), which this module already imports for bun-bin:
 ;; importing the other way would have made the dependency between the two
 ;; modules circular.  It drives the `cli-v<version>' tag this module builds from
 ;; source; cline-bin below carries its own %cline-bin-version, so a bump has to

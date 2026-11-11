@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Regenerate sane-packages/konaito-modules.scm from the npm registry.
+"""Regenerate sensible-packages/konaito-modules.scm from the npm registry.
 
 Why this exists: @konaito/terminal-browser ships as an npm tarball of plain
 ESM (no bundle), so `guix build konaito-terminal-browser' has to give Node a
 node_modules tree without running npm.  Every dependency arrives as its own
 hash-verified origin instead; this script computes that table.  Run it after
-bumping %konaito-version in (sane-packages konaito):
+bumping %konaito-version in (sensible-packages konaito):
 
-    ./scripts/gen-konaito-node-tree.py > sane-packages/konaito-modules.scm
+    ./scripts/gen-konaito-node-tree.py > sensible-packages/konaito-modules.scm
 
 The graph source is the registry itself, not a lockfile: upstream's bun.lock
 is a development lock (typescript and bun-types in it) that the published
@@ -177,17 +177,17 @@ def main():
 ;;; laid out flat under node_modules/, which is npm's own layout and resolves
 ;;; every bare specifier because the tree has no version conflicts (the
 ;;; generator refuses to emit a table otherwise).  Refresh after bumping
-;;; %konaito-version in (sane-packages konaito):
+;;; %konaito-version in (sensible-packages konaito):
 ;;;
 ;;;   ./scripts/gen-konaito-node-tree.py <version> \\
-;;;       > sane-packages/konaito-modules.scm
+;;;       > sensible-packages/konaito-modules.scm
 ;;;
 ;;; The generator resolves every `dependencies' range the way npm would,
 ;;; ignores dev/peer/optional dependencies, downloads each tarball once into
 ;;; $KONAITO_DEP_CACHE to hash it, and prints nix-base32 sha256s -- what
 ;;; Guix's `base32' reader expects.
 
-(define-module (sane-packages konaito-modules)
+(define-module (sensible-packages konaito-modules)
   #:use-module (guix download)
   #:use-module (guix packages)
   #:use-module (guix base32)

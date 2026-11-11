@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate sane-packages/dsh-modules.scm from the npm registry.
+"""Regenerate sensible-packages/dsh-modules.scm from the npm registry.
 
 This automates exactly the route documented in that file's header: extract
 the @deepseek-ai/dsh tarball for the given version, run
@@ -15,7 +15,7 @@ create.  Usage:
 
     ./scripts/regen-dsh-modules.py <dsh-version> [output.scm]
 
-Output defaults to sane-packages/dsh-modules.scm.  Tarballs are cached under
+Output defaults to sensible-packages/dsh-modules.scm.  Tarballs are cached under
 $DSH_DEP_CACHE (default /tmp/dshdep) keyed by name@version, so bumping dsh
 only costs the tarballs that actually changed.
 """
@@ -45,7 +45,7 @@ HEADER = ''';;; dsh's npm dependency tree, generated at packaging time; do not e
 ;;; hash every remaining registry tarball with `guix hash -f nix-base32', and
 ;;; emit one row per package at the install path the lockfile names.
 
-(define-module (sane-packages dsh-modules)
+(define-module (sensible-packages dsh-modules)
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix base32)
@@ -270,7 +270,7 @@ def main():
     if len(sys.argv) < 2:
         die("usage: regen-dsh-modules.py <dsh-version> [output.scm]")
     version, out_path = sys.argv[1], (sys.argv[2] if len(sys.argv) > 2
-                                      else "sane-packages/dsh-modules.scm")
+                                      else "sensible-packages/dsh-modules.scm")
     with tempfile.TemporaryDirectory(prefix="dsh-regen-") as workdir:
         lock = make_lockfile(version, workdir)
         rows, links = collect(lock)

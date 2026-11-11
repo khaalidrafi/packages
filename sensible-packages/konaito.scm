@@ -1,4 +1,4 @@
-;;; sane-packages --- konaito: terminal-browser, a browser inside the
+;;; sensible-packages --- konaito: terminal-browser, a browser inside the
 ;;; terminal, TypeScript edition.
 ;;; Commentary:
 ;;;
@@ -12,7 +12,7 @@
 ;;;
 ;;; The package therefore has the mcode-bin shape (install the npm artifact,
 ;;; give it a node_modules) but a generated dependency table, because the
-;;; tree is a hundred packages rather than three: (sane-packages
+;;; tree is a hundred packages rather than three: (sensible-packages
 ;;; konaito-modules) holds one hash-verified origin per tarball, laid out
 ;;; flat, exactly as npm would install them; scripts/gen-konaito-node-tree.py
 ;;; writes it.  No npm machinery runs at build time, so nothing needs the
@@ -35,7 +35,7 @@
 ;;;
 ;;; Code:
 
-(define-module (sane-packages konaito)
+(define-module (sensible-packages konaito)
   #:use-module (guix download)
   #:use-module (guix packages)
   #:use-module (guix base32)
@@ -46,8 +46,8 @@
   #:use-module (gnu packages backup)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages node)
-  #:use-module (sane-packages chrome-headless-shell)
-  #:use-module (sane-packages konaito-modules))
+  #:use-module (sensible-packages chrome-headless-shell)
+  #:use-module (sensible-packages konaito-modules))
 
 (define %konaito-version
   "0.1.0")

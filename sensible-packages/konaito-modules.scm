@@ -6,17 +6,17 @@
 ;;; laid out flat under node_modules/, which is npm's own layout and resolves
 ;;; every bare specifier because the tree has no version conflicts (the
 ;;; generator refuses to emit a table otherwise).  Refresh after bumping
-;;; %konaito-version in (sane-packages konaito):
+;;; %konaito-version in (sensible-packages konaito):
 ;;;
 ;;;   ./scripts/gen-konaito-node-tree.py <version> \
-;;;       > sane-packages/konaito-modules.scm
+;;;       > sensible-packages/konaito-modules.scm
 ;;;
 ;;; The generator resolves every `dependencies' range the way npm would,
 ;;; ignores dev/peer/optional dependencies, downloads each tarball once into
 ;;; $KONAITO_DEP_CACHE to hash it, and prints nix-base32 sha256s -- what
 ;;; Guix's `base32' reader expects.
 
-(define-module (sane-packages konaito-modules)
+(define-module (sensible-packages konaito-modules)
   #:use-module (guix download)
   #:use-module (guix packages)
   #:use-module (guix base32)

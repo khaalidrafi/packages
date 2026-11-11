@@ -22,12 +22,12 @@
 ;;; `prepare:remote-assets' step, which fetches prebuilt runtime assets from
 ;;; Z.ai's CDN with no fixed-output derivation behind it.  The CLI's closure is
 ;;; 349 npm tarballs, which is the same order of magnitude as dsh already
-;;; carries in (sane-packages dsh-modules), and its bundle needs nothing but
+;;; carries in (sensible-packages dsh-modules), and its bundle needs nothing but
 ;;; Node.
 ;;;
 ;;; How the source build gets its dependencies: Guix cannot run `pnpm install'
 ;;; offline, and a networked install would not be reproducible, so
-;;; (sane-packages zcode-modules) -- generated from upstream's own
+;;; (sensible-packages zcode-modules) -- generated from upstream's own
 ;;; pnpm-lock.yaml by scripts/gen-zcode-node-tree.py -- hands the build one
 ;;; hash-verified origin per tarball plus the exact symlink graph pnpm would
 ;;; have created.  %zcode-build-manifest below turns those tables into the
@@ -40,7 +40,7 @@
 ;;;
 ;;; Code:
 
-(define-module (sane-packages zcode)
+(define-module (sensible-packages zcode)
   #:use-module (guix download)
   #:use-module (guix git-download)
   #:use-module (guix gexp)
@@ -71,8 +71,8 @@
   #:use-module (gnu packages xdisorg)
   #:use-module (gnu packages xml)
   #:use-module (ice-9 match)
-  #:use-module (sane-packages zcode-modules)
-  ;; Exported for qoder-desktop-bin in (sane-packages custom), which is the same
+  #:use-module (sensible-packages zcode-modules)
+  ;; Exported for qoder-desktop-bin in (sensible-packages custom), which is the same
   ;; kind of Electron binary and needs the same runtime libraries.  This is a
   ;; plain `export' rather than `define-public' because the name is data, not a
   ;; package, and tests/check-static.sh reads define-public to find packages.

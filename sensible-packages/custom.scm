@@ -1,5 +1,5 @@
-(define-module (sane-packages custom)
-  ;; The one non-package name this module exports.  (sane-packages cline)
+(define-module (sensible-packages custom)
+  ;; The one non-package name this module exports.  (sensible-packages cline)
   ;; already imports this module for bun-bin, so the cline CLI release number
   ;; is written here and read from there (see %cline-version below); it is
   ;; cline-baseline's tag today, and cline-bin's version should be folded back
@@ -50,9 +50,9 @@
   #:use-module (gnu packages bash)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages image)
-  #:use-module (sane-packages bcon-crates)
-  #:use-module (sane-packages dsh-modules)
-  #:use-module (sane-packages zcode)
+  #:use-module (sensible-packages bcon-crates)
+  #:use-module (sensible-packages dsh-modules)
+  #:use-module (sensible-packages zcode)
   #:use-module (gnu services)
   #:use-module (gnu services base)
   #:use-module (gnu services shepherd)
@@ -100,11 +100,11 @@
                           openssl
                           libseat)
                     ;; All 287 crates from bcon's Cargo.lock, looked up in the
-                    ;; (sane-packages bcon-crates) module.  #:module must name
+                    ;; (sensible-packages bcon-crates) module.  #:module must name
                     ;; the module exactly as its define-module declares it, or
                     ;; resolve-interface fails with "no code for module".
                     (cargo-inputs 'bcon
-                                  #:module '(sane-packages bcon-crates))))))
+                                  #:module '(sensible-packages bcon-crates))))))
 
 ;; Rootless bcon shepherd service.
 ;; Runs via shepherd-root-service-type (system shepherd, owns DRM/input nodes),
@@ -3037,14 +3037,14 @@ kitty, ghostty, mlterm, xterm, etc.).")
     (home-page "https://tangled.org/janantos.tngl.sh/brow6el.git")
     (license license:expat)))
 
-;; Cline's version, kept here rather than in (sane-packages cline) because that
+;; Cline's version, kept here rather than in (sensible-packages cline) because that
 ;; module already imports this one for bun-bin and importing the other way would
 ;; make the dependency between the two modules circular.  A plain `define' is
 ;; private to its module in Guile, hence the #:export at the top of this module:
 ;; without it cline.scm reads an unbound variable.
 ;;
 ;; It feeds cline-baseline's `cli-v<version>' git tag only.  cline-bin now lives
-;; in (sane-packages cline) with its own %cline-bin-version (3.0.73), so the two
+;; in (sensible-packages cline) with its own %cline-bin-version (3.0.73), so the two
 ;; deliveries of one upstream no longer share one number written down once; they
 ;; must be bumped together, or the next update-all pass folds %cline-bin-version
 ;; back into this variable.

@@ -4,7 +4,7 @@
 # repackaged vendor binaries.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-# `-L .', not `-L sane-packages': the modules are named `(sane-packages ...)'.
+# `-L .', not `-L sensible-packages': the modules are named `(sensible-packages ...)'.
 # See the note on the derivations step in tests/check-static.sh for what the
 # root on the load path costs (one harmless "error: channel: unbound variable"
 # line, because tests/channels-lock.scm is a bare channel list, not a module).
@@ -18,9 +18,9 @@ cd "$(dirname "$0")/.."
 # deriving the list from the define-public forms is what actually scopes it
 # to the channel, and it is the same convention build-all.sh already uses to
 # decide what to build.
-files=(sane-packages/*.scm)
+files=(sensible-packages/*.scm)
 if [ ! -e "${files[0]:-}" ]; then
-  echo "no modules found under sane-packages/" >&2
+  echo "no modules found under sensible-packages/" >&2
   exit 1
 fi
 all=$(grep -hoE '^\(define-public [^ )]+' "${files[@]}" | awk '{print $2}')

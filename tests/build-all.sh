@@ -22,9 +22,9 @@ if [ -n "${PACKAGES:-}" ]; then
   # Honour the caller's order; do not re-sort an explicit subset.
   names="$PACKAGES"
 else
-  files=(sane-packages/*.scm)
+  files=(sensible-packages/*.scm)
   if [ ! -e "${files[0]:-}" ]; then
-    echo "no modules found under sane-packages/" >&2
+    echo "no modules found under sensible-packages/" >&2
     exit 1
   fi
   all=$(grep -hoE '^\(define-public [^ )]+' "${files[@]}" | awk '{print $2}')
@@ -45,7 +45,7 @@ for name in $names; do
   # the log from stderr, where Guix writes them.  A package can have several
   # outputs, so the result may be more than one path.
   #
-  # `-L .', not `-L sane-packages': the modules are named `(sane-packages ...)'.
+  # `-L .', not `-L sensible-packages': the modules are named `(sensible-packages ...)'.
   # See the note on the derivations step in tests/check-static.sh for what the
   # root on the load path costs (one harmless "error: channel: unbound
   # variable" line, because tests/channels-lock.scm is a bare channel list).

@@ -26,7 +26,7 @@
 ;;;
 ;;; Code:
 
-(define-module (sane-packages autoclaw)
+(define-module (sensible-packages autoclaw)
   #:use-module (guix download)
   #:use-module (guix gexp)
   #:use-module (guix packages)

@@ -10,7 +10,7 @@
 ;;; hash every remaining registry tarball with `guix hash -f nix-base32', and
 ;;; emit one row per package at the install path the lockfile names.
 
-(define-module (sane-packages dsh-modules)
+(define-module (sensible-packages dsh-modules)
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix base32)
