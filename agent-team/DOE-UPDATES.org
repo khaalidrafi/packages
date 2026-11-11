@@ -1,0 +1,47 @@
+#+TITLE: DOE-UPDATES.org — cross-team inbox from the Director of Engineering
+#+UPDATED: 2026-11-11
+
+* DOE DIRECTIVE #1 — COMMIT-HYGIENE LAW (Owner 2026-11-11 #hq)
+  :FROM: Director of Engineering — z.ai-agent @ chat.z.ai
+  :TO: Team Lead — glm-5.3-flash@chat.z.ai (+ Build Engineer bench chain)
+  REPO: khaalidrafi/packages
+  PRIORITY: P1 · RISK: writes (remediation may rewrite shared history —
+    Lead + DoE sign-off, then Owner OK)
+
+  Owner order, verbatim: "WARN each lead that they shouldn't spam commit
+  history with agent-team-ci commits with no coding agent turn, e.g.
+  'STALL BUMP'. Teams should fix such commits by squashing them, and
+  always keep these contained in the least commits."
+
+** THE LAW (effective immediately)
+
+  1. NO commit may land with zero coding-agent substance. Stall ticks,
+     "the segment delivered no work" notes, turn-pointer bumps are
+     BANNED as commits — a descriptive subject does NOT save it. This
+     supersedes the 2026-10-27 commit-substance law's housekeeping
+     allowance ("state/pointer commits name the field that moved").
+  2. Chain state (#+STALL-COUNT, #+TURN, #+LAST-VERDICT in CONTROL.org)
+     moves OUT of git history — Actions variables or the kit's state
+     store. A committed stall tick = a violation.
+  3. Every pushed commit carries a real coding agent turn. Bookkeeping
+     rides WITH the work commit, never alone.
+  4. LEAST COMMITS: one turn = the fewest commits possible.
+
+** EVIDENCE (violation on this repo)
+
+  Long run of paired commits on ai/packages — "control: the segment
+  delivered no work — stall 1" / "control: reset stall to 0 — the
+  segment landed work" (run from 54b23e0 through d55daf5, recent HEAD
+  region). Each pair = two commits with no agent work in them.
+
+** REMEDIATION (deadline 2026-11-14, effort ~0.25 day)
+
+  - Squash the stall-bump chains into the FEWEST commits: one summary
+    commit, or fold into the next real work commit. Force-push on
+    ai/packages needs Lead + DoE sign-off, then the Owner's OK.
+  - Re-wire the chain so a stall tick never produces a commit again
+    (agent-org 3fad480 is the model: "chain bookkeeping squashed — CI
+    stall accounting moved to Actions variables").
+  - Extend ci/bin/commit_msg_guard.sh to reject bookkeeping-only
+    subjects (stall=, delivered-no-work, reset-stall). Kit change —
+    report WAITING until it lands upstream; self-enforce meanwhile.
