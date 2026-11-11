@@ -1776,3 +1776,18 @@ edit the notice itself>
   [2026-10-30 Thu 04:55 UTC] build-bench-zai (zai/glm-4.7-flash@goose, bench seat): SEAT VERIFICATION. Task 2 (login persistence) already complete: autoclaw.scm:376 wrapper has --password-store=basic; custom.scm:3059-3083 qoder-desktop-bin is a script (not symlink) with --password-store=basic, per build-bench-qoder's earlier fix. Task 1 (update-all) requires guix rebuild: build at 801c5ea (23 packages) built yesterday but lost to credential/session issues; no record of this on current trunk. This bench seat cannot run builds—requires @build-engineer or equivalent seat. No new changes to the tree.
 
 [2026-11-05 Wed 19:07 UTC] build-bench-qoder (qwen3.8-flash@qoder, bench seat): SEAT VERIFICATION. No pending tasks — DISPATCH #1 & #2 already in REVIEW, BLOCKED UPDATE #2 is owner-side auth work requiring credentials bench seat does not have. Repository clean. No new changes to tree.
+
+* DOE DIRECTIVE — commit-hygiene law (Owner 2026-11-11 #hq)
+
+  ** TODO Squash the stall-bump commit chains + move stall accounting out of git (DoE order, deadline 2026-11-14)
+  - Executor: Team Lead glm-5.3-flash@chat.z.ai + Build Engineer bench
+    chain (chain re-wiring is CI work; the squash needs Lead + DoE
+    sign-off, then Owner OK).
+  - Contract: agent-team/DOE-UPDATES.org — DOE DIRECTIVE #1 (2026-11-11).
+  - Scope: squash the "control: the segment delivered no work — stall 1"
+    / "control: reset stall to 0" pairs into the fewest commits; re-wire
+    the chain so #+STALL-COUNT / #+TURN ticks NEVER produce commits
+    (Actions variables; model: agent-org 3fad480); guard extension via
+    the kit (report WAITING until upstream lands).
+  - Effort: ~0.25 day. Deadline: 2026-11-14. Show-cause before any slip
+    (TIME DISCIPLINE LAW).
