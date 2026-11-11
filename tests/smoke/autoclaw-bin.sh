@@ -23,24 +23,36 @@ done
 
 # bin/autoclaw must reach the launcher, and since 9ce25e7 it is a script
 # the build writes, NOT a symlink: a symlink cannot add arguments, and the
-# launch fix needs --disable-gpu before "$@" (9ce25e7; eece268 added
-# --password-store=basic to the same exec line for DISPATCH #2's login
-# persistence, whose login->restart->still-logged-in check stays with the
-# Owner).  Assert the exact behaviour those commits promise: a regular
-# script that execs the store launcher with both flags.  The launcher
-# itself remains the script wrap-program wrote rather than the ELF: the
-# RPATH checked below is what makes the binary run, but XDG_DATA_DIRS and
-# PATH are what make it find icons, mime types and xdg-open.  The vendor
-# ELF itself lives next to the wrapper as .AutoClaw2-real, which is the
-# file patchelf checks apply to below.
+# launch fix needs --disable-gpu before "$@" (9ce25e7).  Login persistence
+# was reopened after the 2026-10-31 Owner UAT failure: the app rejects
+# Chromium's basic_text backend outright (main.cjs:
+# isElectronProductAccountEncryptionAvailable), so eece268's
+# --password-store=basic selected exactly the one backend the app refuses
+# and the flag is GONE -- the wrapper now provides a real Secret Service
+# instead (session bus, blank-password login keyring seeded under the
+# user's HOME, gnome-keyring-daemon secrets component).  Assert that
+# shape: --disable-gpu kept, the basic flag absent, and the keyring
+# wiring present.  The launcher itself remains the script wrap-program
+# wrote rather than the ELF: the RPATH checked below is what makes the
+# binary run, but XDG_DATA_DIRS and PATH are what make it find icons,
+# mime types and xdg-open.  The vendor ELF itself lives next to the
+# wrapper as .AutoClaw2-real, which is the file patchelf checks apply to
+# below.
 [ -f "$out/bin/autoclaw" ] && [ ! -L "$out/bin/autoclaw" ] ||
   { echo "$out/bin/autoclaw is not the launcher script (regular file expected)" >&2; exit 1; }
 grep -q 'lib/AutoClaw/AutoClaw2' "$out/bin/autoclaw" ||
   { echo "$out/bin/autoclaw does not exec the launcher" >&2; exit 1; }
 grep -q -- '--disable-gpu' "$out/bin/autoclaw" ||
   { echo "$out/bin/autoclaw lost --disable-gpu (9ce25e7)" >&2; exit 1; }
-grep -q -- '--password-store=basic' "$out/bin/autoclaw" ||
-  { echo "$out/bin/autoclaw lost --password-store=basic (eece268)" >&2; exit 1; }
+if grep -q -- '--password-store=basic' "$out/bin/autoclaw"; then
+  { echo "$out/bin/autoclaw still carries --password-store=basic (rejected by the app: basic_text)" >&2; exit 1; }
+fi
+grep -q 'DBUS_SESSION_BUS_ADDRESS' "$out/bin/autoclaw" ||
+  { echo "$out/bin/autoclaw lost the session-bus wiring" >&2; exit 1; }
+grep -q 'gnome-keyring-daemon' "$out/bin/autoclaw" ||
+  { echo "$out/bin/autoclaw lost the gnome-keyring wiring" >&2; exit 1; }
+grep -q -- '--unlock --daemonize' "$out/bin/autoclaw" ||
+  { echo "$out/bin/autoclaw lost the login-keyring seeding" >&2; exit 1; }
 grep -q 'XDG_DATA_DIRS' "$out/lib/AutoClaw/AutoClaw2" ||
   { echo "$out/lib/AutoClaw/AutoClaw2 is not a wrapper" >&2; exit 1; }
 
