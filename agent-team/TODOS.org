@@ -653,6 +653,52 @@ edit the notice itself>
     cancelled by the build-ai/pkgs-update-all concurrency group —
     NOT CLAIMED until it completes).  The closeout's "zcode-modules
     regen for the v3.17.2 source tag" is superseded by this revert.
+  - Note [2026-11-11 Wed ~07:50 UTC] Build Engineer (GLM-5.3@chat.z.ai,
+    seat): ALL TEMP BRANCHES RESOLVED, per the Owner's 2026-11-11 order
+    ("Is devin not in ai/main? Always resolve ALL temp branches").  The
+    answer: devin WAS not — ai/pkgs-devin-bin carried 7 unmerged
+    commits, and eight more branches carried unmerged work.  All
+    landed on ai/main, pushed d57e09b (ls-remote verified,
+    b79fedf..d57e09b): 1be66c2 merge ai/packages = the Owner's
+    commit-hygiene law fca6a89 (bookkeeping-only commits banned, stall
+    chains to squash); the identical commits on
+    ai/turn-packages-20261111-064534 were resolved by the same merge.
+    b824bb2 merge ai/pkgs-login-keyring = qoder login persistence via
+    a real Secret Service (blank-password login keyring seeded under
+    HOME), 2 new qoder smokes, DISPATCH #2 fold pushed; it supersedes
+    ai/pkgs-login-persistence (strict subset) and the Nov 5
+    ai/pkgs-login-fix 88db381 (flags approach: the app rejects
+    Chromium's basic_text backend, so the keyring is the real fix —
+    the autoclaw smoke now asserts the keyring wiring and the ABSENCE
+    of --password-store=basic).  484ef80 merge ai/pkgs-light-browsers
+    = lightpanda-bin + moli-bin with the libarchive import fix, news,
+    README, canonical style; supersedes ai/style-canonicalize, whose 2
+    unique commits are scratch CI diagnostics (c91d513 CI-on-scratch,
+    9ce66e5 one-off canonicalizer [skip ci]) — deliberately dropped.
+    b1f606f merge ai/pkgs-devin-bin = devin-bin, Cognition's Devin
+    CLI repackaged prebuilt from the npm platform release (static-pie
+    ELF, version-check build, no credential material); its own 2
+    informational CI diagnostic commits dropped with the merge.
+    4e30b89 merge ai/pkgs-cline-baseline-hub = hub-ready cline-baseline
+    wrapper (set-interpreter + direct exec), owner-write before
+    patchelf with 555 restored, patient loud stop leg verified by
+    process table.  Conflict resolutions, all deliberate: rename
+    sane->sensible applied to the devin/lightpanda/moli module forms,
+    README rows and news entries; custom.scm kept the bump side (bump
+    beats old style); autoclaw smoke kept the keyring side.  acd0342
+    drops the TEMPORARY base64 style-diff diagnostic (782b0fd) — style
+    has converged.  ai/turn-packages-20261031-182051 tip 9b580db
+    (blocked bench segment, cline.scm only) left unmerged
+    deliberately: superseded scratch, tip recorded here.  Gates (no
+    guix in this sandbox; the full gate is CI's): bash -n clean on all
+    25 tests/*.sh + tests/smoke/*.sh; paren balance clean on all 14
+    sensible-packages/*.scm (cline 293/293, strings-first count); zero
+    sane-packages references outside AGENTS.md law text and historical
+    records.  All 16 temp branches deleted on the remote
+    (ai/turn-packages-20261111-064534 was already gone — deleted by
+    another seat); remote now: ai/main + gh-pages only.  CI dispatched
+    on ai/main @ d57e09b: run 42981010871, in_progress at note time
+    (results NOT CLAIMED).
   - Note [2026-11-11 Wed ~03:25 UTC] Build Engineer (GLM-5.3@chat.z.ai,
     seat): TASK 1 RERUN LANDED + THE RENAME, PER THE OWNER'S 2026-11-11
     ORDERS ("Are all pkgs updated? UPDATE! PUSH!" and "Also rename it
