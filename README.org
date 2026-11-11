@@ -20,6 +20,7 @@ built by CI instead of by hand on a 4 GB laptop.
 | moli-bin          | =(sensible-packages moli)= | headless browser, on-demand rendering |
 | mcode, mcode-bin | =(sensible-packages custom)= | Minimax Code CLI (npm artifact)   |
 | dsh, qoder-*, …  | =(sensible-packages custom)= | everything predating this layout  |
+| devin-bin        | =(sensible-packages devin)=  | vendor Bun CLI (Cognition Devin)  |
 
 ** Module and package naming
 
@@ -319,6 +320,7 @@ codebuddy-code-bin     codebuddy, codebuddy-code, cbc, cbc-prewarm,
 copilot-cli-bin        copilot
 cua-driver-bin         cua-driver
 cursor-cli-bin         cursor-cli
+devin-bin              devin
 dsh                    dsh
 goose-cli-bin          goose
 kilocode-bin           kilocode
