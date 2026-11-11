@@ -460,7 +460,7 @@ upstream's default line.")
 ;;; runs, so an interpreter rewrite is the only thing that makes it startable.
 ;;; ---------------------------------------------------------------------------
 (define %opencode2-version
-  "2.2.5")
+  "2.2.7")
 
 (define opencode2-avx2-source
   (origin
@@ -468,7 +468,7 @@ upstream's default line.")
     (uri (string-append
           "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-"
           %opencode2-version ".tgz"))
-    (sha256 (base32 "1x186v2ihmbrx3x5spaf3fmrxpkq72j2p80cfv5x70560zp0wscj"))))
+    (sha256 (base32 "0ifxmgnrps1cf8iairvazzp69br3jywpr5rzcc9pkw4k9x33anfn"))))
 
 (define opencode2-baseline-source
   (origin
@@ -476,7 +476,7 @@ upstream's default line.")
     (uri (string-append
           "https://registry.npmjs.org/@opencode/cli-linux-x64-baseline/-/"
           "cli-linux-x64-baseline-" %opencode2-version ".tgz"))
-    (sha256 (base32 "023sj4x14c8a1zcbkpydwa32mj50vw9f6cv4vzc5w757pan5cf47"))))
+    (sha256 (base32 "1bmw4y5qzwwvhn3b8mpgbcxwwc5634dy24yfb4cwac2wbh62nl90"))))
 
 (define-public opencode2-bin
   (package
@@ -777,14 +777,14 @@ its library path, so no FHS emulation is needed.")
               "Proprietary Cursor license — unfree, non-redistributable."))))
 
 (define %copilot-version
-  "1.0.105")
+  "1.0.109")
 
 (define copilot-loader-source
   (origin
     (method url-fetch)
     (uri (string-append "https://registry.npmjs.org/@github/copilot/-/"
                         "copilot-" %copilot-version ".tgz"))
-    (sha256 (base32 "1197sgzpkdlf2lmxa9mvy0q9p0dfqg43ywjynn1ln3gp3lc0qf7s"))))
+    (sha256 (base32 "0c5jsfjr62rxciz0nrpc17jllg8v4g9pvz7nnjj4rhmq350fjrcm"))))
 
 (define copilot-platform-source
   (origin
@@ -792,7 +792,7 @@ its library path, so no FHS emulation is needed.")
     (uri (string-append
           "https://registry.npmjs.org/@github/copilot-linux-x64/-/"
           "copilot-linux-x64-" %copilot-version ".tgz"))
-    (sha256 (base32 "1ly29sgyg0j8cyvzxgqp7wxs2f2zvvrzw9h7xgl86sqc9inq8rda"))))
+    (sha256 (base32 "0219f16xb4zx6xkhzn4snx6cd5fza13i7iwf5vrh4ir45ghiralf"))))
 
 (define-public copilot-cli-bin
   (package
@@ -900,7 +900,7 @@ FHS emulation is needed.  Requires a GitHub account to authenticate.")
               "Proprietary GitHub/Microsoft license - unfree."))))
 
 (define %goose-version
-  "1.57.0")
+  "1.59.0")
 
 (define goose-source
   (origin
@@ -908,7 +908,7 @@ FHS emulation is needed.  Requires a GitHub account to authenticate.")
     (uri (string-append
           "https://github.com/aaif-goose/goose/releases/download/v"
           %goose-version "/goose-x86_64-unknown-linux-gnu.tar.gz"))
-    (sha256 (base32 "1qwqvzplxhx53y7r94ddi8b2ikb4mgvbxvgf70fnx6qmdb5rdsqh"))))
+    (sha256 (base32 "1wqyx38mi9xar0pmqkvycs4q7nlx5p7bxmvq1nk0c0n2wryncx57"))))
 
 (define-public goose-cli-bin
   (package
@@ -1191,7 +1191,7 @@ remote server while rendering locally.")
 ;;; FHS emulation, no patchelf.
 
 (define %pi-version
-  "1.4.0")
+  "1.5.2")
 
 (define %pi-source
   (origin
@@ -1199,7 +1199,7 @@ remote server while rendering locally.")
     (uri (string-append
           "https://github.com/earendil-works/pi/releases/download/v"
           %pi-version "/pi-linux-x64.tar.gz"))
-    (sha256 (base32 "1lhmw536brdjkn9vi2m57gvw3g9x0gaqpnqc4q1ks8h3jqrf9r7j"))))
+    (sha256 (base32 "1d8cyx77v9va48jgkxy116i3lwgvavjm4hj0nm9f5bkskqn6y741"))))
 
 (define-public pi-coding-agent-bin
   (package
@@ -1410,14 +1410,14 @@ vendored into node_modules.")
 (define-public node-ws
   (package
     (name "node-ws")
-    (version "8.22.0")
+    (version "8.22.2")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "https://registry.npmjs.org/ws/-/ws-" version
                            ".tgz"))
        (sha256
-        (base32 "1j5bwyagz7a0vk0j61ikkfq15ah10ppm0gviqvxfh771nac3g6ya"))))
+        (base32 "1wjqsyhlyhm3rrsr0svx6ymwk7c3fs113a6dm9gi3kvrs3z4hwfy"))))
     (build-system node-build-system)
     (arguments
      (list
@@ -1442,7 +1442,7 @@ vendored into node_modules.")
     (license license:expat)))
 
 (define %oh-my-pi-version
-  "18.14.1")
+  "18.18.7")
 
 (define %oh-my-pi-source
   (origin
@@ -1450,7 +1450,7 @@ vendored into node_modules.")
     (uri (string-append
           "https://github.com/can1357/oh-my-pi/releases/download/v"
           %oh-my-pi-version "/omp-linux-x64"))
-    (sha256 (base32 "1l5hrwbxg93vl9yfd0scd121rpmhg01wyl3z73x3yizfzq66mmq2"))))
+    (sha256 (base32 "1cab18dv9k7m0ck92cn6spphiimx0snhlxlilmk3f2i6xdpj2v7a"))))
 
 (define-public oh-my-pi-bin
   (package
@@ -2019,7 +2019,7 @@ offline.")
     (license license:expat)))
 
 (define %mcode-version
-  "0.7.4")
+  "0.7.6")
 
 ;;; The npm tarball IS the prebuilt artifact (bundled JS + wasm + native
 ;;; helpers); both `mcode' (node-build-system install) and `mcode-bin'
@@ -2029,7 +2029,7 @@ offline.")
     (method url-fetch)
     (uri (string-append "https://registry.npmjs.org/@minimax-ai/code"
                         "/-/code-" %mcode-version ".tgz"))
-    (sha256 (base32 "1z6wwxgxr4l0jk8np7iyh6mkg8ipzk79b4bbmhp8y5prj3c27h63"))))
+    (sha256 (base32 "19cam7c2mlqyzpkjgds50apx420vfabh6xmzdw906j03kfv4p3wv"))))
 
 (define-public mcode
   (package
@@ -2295,7 +2295,7 @@ node-esbuild-linux-x64 input.")
     (license license:expat)))
 
 (define %codebuddy-version
-  "2.179.0")
+  "2.182.0")
 
 (define-public codebuddy-code-bin
   (package
@@ -2308,7 +2308,7 @@ node-esbuild-linux-x64 input.")
              "https://registry.npmjs.org/@tencent-ai/codebuddy-code/-/codebuddy-code-"
              %codebuddy-version ".tgz"))
        (sha256
-        (base32 "00wsv2k1zdhjcpi949dbm9059wxfnsv220dpxlq97bfpfw10gff5"))))
+        (base32 "0x0c6hyybmb6x7h4mvramm73vdj90jjnyaawa7rmzgabk1alz3p2"))))
     ;; copy-build-system, like mcode-bin: the tree is already bundled JS, and
     ;; running npm over it would only add offline optionalDependencies and
     ;; install scripts that a sandbox cannot honour.
@@ -2384,7 +2384,7 @@ and the five CLI names start through wrappers around Node.js.")
 ;;; skipped since the plugin loads fine without them.
 ;;; ---------------------------------------------------------------------------
 (define %purple-discord-commit
-  "ef5993d5677978c08df845601b385f42a23132a9")
+  "33f21e5af74c1489f6c6e2db0b84b30d15783596")
 
 (define-public purple-discord
   (package
@@ -2392,7 +2392,7 @@ and the five CLI names start through wrappers around Node.js.")
     ;; Upstream declares DISCORD_PLUGIN_VERSION "1.0" in libdiscord.c at the
     ;; commit pinned below; the date suffix is that commit's date, since this
     ;; is a snapshot of a repository that tags nothing.
-    (version "1.0.2026.10.25") ;unstable-2026-10-25
+    (version "1.0.2026.11.10") ;unstable-2026-11-10
     (source
      (origin
        (method url-fetch)
@@ -2400,7 +2400,7 @@ and the five CLI names start through wrappers around Node.js.")
              "https://github.com/EionRobb/purple-discord/archive/"
              %purple-discord-commit ".tar.gz"))
        (sha256
-        (base32 "0lmfqv09in8vx3sws4b8g9nqg93pjm8qb9h79qgnsdryk1yy0fq3"))))
+        (base32 "1iwx40wjgsy1sgc4wm5b62j4334faakfxcf8jly5d6dgfvz6wjj1"))))
     (build-system gnu-build-system)
     (supported-systems '("x86_64-linux"))
     (arguments
@@ -2462,12 +2462,12 @@ from source against the store libpurple headers.")
 ;;; real script file and the data file must be installed adjacent.
 
 (define %rdircd-commit
-  "57e2307fae006142953967084852278a859bac60")
+  "f4570c66e00aaeba18e593a264067bc523a929d1")
 ;; Snapshot version of the commit above: YYYYMMDD of its author date, plus a
 ;; counter for the case where a day carries two bumps.  The previous value
 ;; read 20250913.0 for a commit dated 2026-09-13 -- the year was simply wrong.
 (define %rdircd-version
-  "20260927.0")
+  "20261110.0")
 
 (define-public rdircd
   (package
@@ -2480,7 +2480,7 @@ from source against the store libpurple headers.")
                            "reliable-discord-client-irc-daemon/archive/"
                            %rdircd-commit ".tar.gz"))
        (sha256
-        (base32 "059qp3f2wyafqz0l4ffgd773qw6r6h6n51s7kf6cyjlvf5yf2p6v"))))
+        (base32 "0yzrll9b6znhv528p6v9y878g5d3n4qa83m4658ndm9g3l22dd0n"))))
     (build-system copy-build-system)
     (supported-systems '("x86_64-linux"))
     (arguments
@@ -2599,16 +2599,14 @@ activity notifications, and inline emoji/mention resolution.")
 ;;;
 
 (define %brow6el-commit
-  ;; v0.3.5 tag -- the latest real release.  The previous recipe pinned
-  ;; unreleased `main' HEAD and mislabelled it "0.3.6", which upstream never
-  ;; published (brow6el.dev's newest tag is v0.3.5).
-  "ec0bc3fad3ef1d67e290dddfa82c54862486f84d")
+  ;; v0.3.6 tag.
+  "148b2f248eb72e883e73645afdd9ab7e98706451")
 
 (define %brow6el-version
-  "0.3.5")
+  "0.3.6")
 
 (define %brow6el-cef-version
-  "148.0.7+g5b12d32+chromium-148.0.7778.96")
+  "154.0.33+ga03e714+chromium-154.0.8037.94")
 
 (define cef-dist
   (package
@@ -2618,10 +2616,9 @@ activity notifications, and inline emoji/mention resolution.")
      (origin
        (method url-fetch)
        (uri (string-append "https://cef-builds.spotifycdn.com/cef_binary_"
-                           %brow6el-cef-version
-                           "_linux64_beta_minimal.tar.bz2"))
+                           %brow6el-cef-version "_linux64_minimal.tar.bz2"))
        (sha256
-        (base32 "10b18sji7km57z7ad627p8za2s31yvcjca7nmsm8rzyhr0nigjah"))))
+        (base32 "18h5h3ixkqllkhhgdaxhyngvd9cqzjlk8lx25ya14i2x0mkf72fd"))))
     (build-system trivial-build-system)
     (arguments
      (list
@@ -2663,7 +2660,7 @@ locales) and the cmake find modules required to compile CEF-based apps.")
              (url "https://tangled.org/janantos.tngl.sh/brow6el.git")
              (commit %brow6el-commit)))
        (sha256
-        (base32 "0fmwrw8l0yxfy35lk7qk304yannynjn2y1aarx11lbh80nlr26aw"))))
+        (base32 "1mbpvbvzv3f01if8h2nvcvqjpp4ivhlslkaccqi6s3q9pv14ylvq"))))
     (build-system cmake-build-system)
     (supported-systems '("x86_64-linux"))
     ;; patchelf for install-cef-resources: it rewrites brow6el and libcef.so in
@@ -3044,17 +3041,17 @@ kitty, ghostty, mlterm, xterm, etc.).")
 ;; without it cline.scm reads an unbound variable.
 ;;
 ;; It feeds cline-baseline's `cli-v<version>' git tag only.  cline-bin now lives
-;; in (sensible-packages cline) with its own %cline-bin-version (3.0.73), so the two
+;; in (sensible-packages cline) with its own %cline-bin-version (3.0.74), so the two
 ;; deliveries of one upstream no longer share one number written down once; they
 ;; must be bumped together, or the next update-all pass folds %cline-bin-version
 ;; back into this variable.
 (define %cline-version
-  "3.0.70")
+  "3.0.74")
 
 (define-public qoder-cli-bin
   (package
     (name "qoder-cli-bin")
-    (version "1.1.83")
+    (version "1.1.86")
     (source
      (origin
        (method url-fetch)
@@ -3062,7 +3059,7 @@ kitty, ghostty, mlterm, xterm, etc.).")
              "https://qoder-ide.oss-accelerate.aliyuncs.com/qodercli/releases/"
              version "/qodercli-linux-x64.tar.gz"))
        (sha256
-        (base32 "13kpxv56grvy3pv03v3j0jpcp1skwdzr3akg4jyzsyqz2kpbpshq"))))
+        (base32 "0m0k4jr0sip80h394sbhmwyzp57gjk6aj3gq9qkdixqsskff93gq"))))
     (build-system trivial-build-system)
     (arguments
      (list
@@ -3103,14 +3100,14 @@ build software, inspect code, and execute workflows.")
 (define-public qoder-desktop-bin
   (package
     (name "qoder-desktop-bin")
-    (version "0.5.3")
+    (version "0.5.7")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "https://download.qoder.com/qoder-app/releases/"
                            version "/Qoder-linux-amd64.deb"))
        (sha256
-        (base32 "0kfhzqchix4x2rgkz5fv7dbv6cg1cfxbwx8n9b1ia09g12chskg7"))))
+        (base32 "0894ai35gy7hi7iwbc01gp0kxnr9vwrnx8hh8arlcln80678xyyb"))))
     (build-system copy-build-system)
     (supported-systems '("x86_64-linux"))
     (arguments
@@ -3340,7 +3337,7 @@ and is not endorsed by Guix upstream.")
 (define-public dsh
   (package
     (name "dsh")
-    (version "0.2.1-rc.5")
+    (version "0.2.2-rc.1")
     (source
      (origin
        (method url-fetch)
@@ -3348,7 +3345,7 @@ and is not endorsed by Guix upstream.")
              "https://registry.npmjs.org/@deepseek-ai/dsh/-/dsh-" version
              ".tgz"))
        (sha256
-        (base32 "1qf47q8mqz39snzy0zlpyljylmlwq5jhmh0qg4gys3cyy5k7b630"))))
+        (base32 "1mlwn5srprpxnvrhgav79pnbpb0fncipll2kp0ka6dq3xn59c8dd"))))
     (build-system trivial-build-system)
     (inputs (list bash node procps))
     (native-inputs (append (list (list "tar" tar)
@@ -3479,7 +3476,7 @@ and is not endorsed by Guix upstream.")
 ;;; cua-cursor-theme helper relative to its own executable.
 
 (define %cua-driver-version
-  "0.38.0")
+  "0.47.5")
 
 (define %cua-driver-source
   (origin
@@ -3492,7 +3489,7 @@ and is not endorsed by Guix upstream.")
           "https://github.com/trycua/cua/releases/download/cua-driver-rs-v"
           %cua-driver-version "/cua-driver-rs-" %cua-driver-version
           "-linux-x86_64.tar.gz"))
-    (sha256 (base32 "18qzrgvcaig6z1661fcjifzavqv8vwrhqc6vql9n8kgr67awn1d3"))))
+    (sha256 (base32 "1myxyzy5l1xbr95w0zvlkjzzpywffg4kkaqdm55dc8my2j3vxlxw"))))
 
 (define-public cua-driver-bin
   (package
@@ -3679,7 +3676,7 @@ nothing is written at install time.")
 ;;; kernel enables.
 ;;; ---------------------------------------------------------------------------
 (define %kilocode-version
-  "7.8.18")
+  "7.8.27")
 
 (define %kilocode-url
   "https://github.com/Kilo-Org/kilocode/releases/download/v")
@@ -3689,14 +3686,14 @@ nothing is written at install time.")
     (method url-fetch)
     (uri (string-append %kilocode-url %kilocode-version
                         "/kilo-linux-x64.tar.gz"))
-    (sha256 (base32 "0an0nmv7dkqq6ygn8qc9ksf8rwccp49ajmrlf0kdx3jbikxn2dah"))))
+    (sha256 (base32 "026yha2lwkc16y4zw4691a7ppynh6h6z1c28kwr3lic7vm3al22c"))))
 
 (define kilocode-baseline-source
   (origin
     (method url-fetch)
     (uri (string-append %kilocode-url %kilocode-version
                         "/kilo-linux-x64-baseline.tar.gz"))
-    (sha256 (base32 "15i0x4fjn5dzm94ivv54lvz8yf6yywa7bw7zm3si7h2abmqzrpk5"))))
+    (sha256 (base32 "0vx7glssyyqq1gzipc66vfgp0bhj6iqai30xd3r5i5gsfp54h9xm"))))
 
 (define-public kilocode-bin
   (package

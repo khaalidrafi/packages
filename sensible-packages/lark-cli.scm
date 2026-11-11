@@ -34,7 +34,7 @@
                 #:prefix license:))
 
 (define %lark-cli-version
-  "1.0.98")
+  "1.0.100")
 
 (define %lark-cli-source
   (origin
@@ -42,7 +42,7 @@
     (uri (string-append "https://github.com/larksuite/cli/releases/download/v"
           %lark-cli-version "/lark-cli-" %lark-cli-version
           "-linux-amd64.tar.gz"))
-    (sha256 (base32 "107y713xkwrwnl93mb4s399pi0mh8p5ldl5wv235kcmal2vxq4ja"))))
+    (sha256 (base32 "0238rsh6lg5i9sl83m99samaizng49wq62frxhmxvrf967vn6wyd"))))
 
 (define-public lark-cli-bin
   (package
