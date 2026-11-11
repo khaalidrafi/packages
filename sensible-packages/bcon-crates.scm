@@ -1,7 +1,7 @@
 ;;; Crate sources for bcon, generated from its Cargo.lock via
 ;;; "guix import crate -f Cargo.lock bcon".
 
-(define-module (sane-packages bcon-crates)
+(define-module (sensible-packages bcon-crates)
   #:use-module (guix build-system cargo)
   #:export (lookup-cargo-inputs))
 

@@ -22,7 +22,7 @@ channel in the form `guix pull' or a channels.scm accepts.  It never writes to
 channels-lock.scm, and it carries the introductions verbatim so the emitted file
 is authenticated the same way CI is.
 
-Note that sane-packages is NOT in the lock -- the lock covers the channels CI
+Note that sensible-packages is NOT in the lock -- the lock covers the channels CI
 pulls, not the channel under test, which build.yml gets from the checkout with
 -L.  So the emitter adds it explicitly, pointing at the current branch by
 default, because that is what someone reproducing a CI failure is running;
@@ -105,7 +105,7 @@ def emit(channels: list, include_self: bool, branch: str) -> str:
     if include_self:
         parts.append(
             "  (channel\n"
-            "   (name 'sane-packages)\n"
+            "   (name 'sensible-packages)\n"
             '   (url "https://github.com/khaalidrafi/packages")\n'
             f'   (branch "{branch}"))')
     for ch in channels:
@@ -134,9 +134,9 @@ def main() -> int:
     ap.add_argument("-o", "--output",
                     help="write to this path instead of stdout")
     ap.add_argument("--no-self", action="store_true",
-                    help="omit the sane-packages entry (lock content only)")
+                    help="omit the sensible-packages entry (lock content only)")
     ap.add_argument("--branch",
-                    help="branch for the sane-packages entry (default: current)")
+                    help="branch for the sensible-packages entry (default: current)")
     args = ap.parse_args()
 
     lock = os.path.join(os.path.dirname(os.path.abspath(__file__)),

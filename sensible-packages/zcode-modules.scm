@@ -5,18 +5,18 @@
 ;;;   (npm-name version sha256 install-path)
 ;;; plus the symlinks, .bin entries, workspace links and lockfile patches that
 ;;; make that tree resolve the way Node and tsc expect.  Refresh after bumping
-;;; %version in (sane-packages zcode):
+;;; %version in (sensible-packages zcode):
 ;;;
 ;;;   git clone --branch v<version> https://github.com/zai-org/ZCode /tmp/ZCode
 ;;;   ./scripts/gen-zcode-node-tree.py /tmp/ZCode <version> \
-;;;       > sane-packages/zcode-modules.scm
+;;;       > sensible-packages/zcode-modules.scm
 ;;;
 ;;; That script explains the layout choice, caches tarballs in
 ;;; $ZCODE_DEP_CACHE, and prints hashes in nix-base32 -- what Guix's `base32'
 ;;; reader expects (`guix hash' prints the same; `guix hash -f base32' does
 ;;; not).
 
-(define-module (sane-packages zcode-modules)
+(define-module (sensible-packages zcode-modules)
   #:use-module (guix download)
   #:use-module (guix packages)
   #:use-module (guix base32)

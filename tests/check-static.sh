@@ -10,9 +10,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 shopt -s nullglob
 
-files=(sane-packages/*.scm)
+files=(sensible-packages/*.scm)
 if [ ${#files[@]} -eq 0 ]; then
-  echo "no modules found under sane-packages/" >&2
+  echo "no modules found under sensible-packages/" >&2
   exit 1
 fi
 
@@ -110,8 +110,8 @@ done
 # would make the CI job mostly measure Guix's start-up time.  When the batch
 # fails, re-run per package so the log says which one.
 #
-# `-L .' and not `-L sane-packages': the modules are named `(sane-packages
-# cline)' etc., so Guile has to find them at ./sane-packages/cline.scm, which
+# `-L .' and not `-L sensible-packages': the modules are named `(sensible-packages
+# cline)' etc., so Guile has to find them at ./sensible-packages/cline.scm, which
 # needs the repository root on the load path.  The cost is one harmless line
 # per invocation: with the root on the path, Guile also maps any `(...)'
 # module name onto tests/*.scm, so the bare `(list (channel ...))' in
@@ -119,7 +119,7 @@ done
 # "error: channel: unbound variable" before doing any work.  It is only noise
 # -- the exit status is unaffected, and the dry run still resolves every
 # derivation (verified by removing the file: the line disappears, the result
-# does not).  The alternative, `-L sane-packages', breaks resolution outright
+# does not).  The alternative, `-L sensible-packages', breaks resolution outright
 # with "cline-baseline: unknown package".
 echo "==> derivations: $(printf '%s ' $names)"
 if ! guix build -L . --dry-run $names; then

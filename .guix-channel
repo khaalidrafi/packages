@@ -10,7 +10,7 @@
 ;;    every user fail.  tests/check-static.sh enforces this; do not rely on
 ;;    noticing it later.
 ;; 2. (dependencies ...) is fetched automatically, so users only ever add
-;;    `sane-packages' to ~/.config/guix/channels.scm: nonguix's
+;;    `sensible-packages' to ~/.config/guix/channels.scm: nonguix's
 ;;    (nonguix licenses) resolves for zcode.scm without a second entry.
 
 (channel

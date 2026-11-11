@@ -3,7 +3,7 @@
 import re, glob, collections
 
 names = collections.defaultdict(list)
-for f in sorted(glob.glob('sane-packages/**/*.scm', recursive=True)):
+for f in sorted(glob.glob('sensible-packages/**/*.scm', recursive=True)):
     with open(f, encoding='utf-8', errors='replace') as fh:
         for i, line in enumerate(fh, 1):
             m = re.match(r'\s*\(define-public\s+([^\s()\[\]#";]+)', line)

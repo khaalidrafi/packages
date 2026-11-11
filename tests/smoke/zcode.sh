@@ -42,7 +42,7 @@ node="$(guix build node | head -1)/bin/node"
 
 # Resolve the three externals the way the running CLI does, from the bundle's
 # directory.  require.resolve walks node_modules exactly as described in
-# sane-packages/zcode-modules.scm, so this is the layout test.
+# sensible-packages/zcode-modules.scm, so this is the layout test.
 "$node" -e '
 const [dist] = process.argv.slice(1);
 for (const name of ["koffi", "playwright-core"]) {

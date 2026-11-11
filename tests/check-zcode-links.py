@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the relative link rows of sane-packages/zcode-modules.scm.
+"""Check the relative link rows of sensible-packages/zcode-modules.scm.
 
 Every row in those tables is a (link, target) pair, both given relative to the
 repository root, with target relative to the link's own directory.  A row is
@@ -40,7 +40,7 @@ import os
 import re
 import sys
 
-SCM = sys.argv[1] if len(sys.argv) > 1 else "sane-packages/zcode-modules.scm"
+SCM = sys.argv[1] if len(sys.argv) > 1 else "sensible-packages/zcode-modules.scm"
 text = open(SCM).read()
 
 

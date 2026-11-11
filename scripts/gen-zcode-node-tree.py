@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate sane-packages/zcode-modules.scm from ZCode's pnpm-lock.yaml.
+"""Regenerate sensible-packages/zcode-modules.scm from ZCode's pnpm-lock.yaml.
 
 Why this exists: `guix build zcode' has to compile ZCode's terminal CLI without
 network access, which means every npm dependency has to arrive as its own
@@ -9,7 +9,7 @@ with the new version, which is also %version in zcode.scm:
 
     git clone --branch v<version> https://github.com/zai-org/ZCode /tmp/ZCode
     ./scripts/gen-zcode-node-tree.py /tmp/ZCode <version> \
-        > sane-packages/zcode-modules.scm
+        > sensible-packages/zcode-modules.scm
 
 Tarballs are downloaded into (and reused from) $ZCODE_DEP_CACHE, so a version
 bump only costs the dependencies that actually changed.  Nothing here builds
@@ -520,18 +520,18 @@ PREAMBLE = """;;; ZCode's npm dependency tree, generated at packaging time; do n
 ;;;   (npm-name version sha256 install-path)
 ;;; plus the symlinks, .bin entries, workspace links and lockfile patches that
 ;;; make that tree resolve the way Node and tsc expect.  Refresh after bumping
-;;; %version in (sane-packages zcode):
+;;; %version in (sensible-packages zcode):
 ;;;
 ;;;   git clone --branch v<version> https://github.com/zai-org/ZCode /tmp/ZCode
 ;;;   ./scripts/gen-zcode-node-tree.py /tmp/ZCode <version> \\
-;;;       > sane-packages/zcode-modules.scm
+;;;       > sensible-packages/zcode-modules.scm
 ;;;
 ;;; That script explains the layout choice, caches tarballs in
 ;;; $ZCODE_DEP_CACHE, and prints hashes in nix-base32 -- what Guix's `base32'
 ;;; reader expects (`guix hash' prints the same; `guix hash -f base32' does
 ;;; not).
 
-(define-module (sane-packages zcode-modules)
+(define-module (sensible-packages zcode-modules)
   #:use-module (guix download)
   #:use-module (guix packages)
   #:use-module (guix base32)

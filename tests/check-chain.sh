@@ -39,13 +39,13 @@ done < <(find . -path ./.git -prune -o -name '*.scm' -print)
 #    Deliberately grep/sort/uniq only: it runs in a bare container, where
 #    the guile step below cannot.
 echo "==> names: no package defined twice"
-dups=$(grep -hoE '^\(define-public [^ )]+' sane-packages/*.scm | sort | uniq -d)
+dups=$(grep -hoE '^\(define-public [^ )]+' sensible-packages/*.scm | sort | uniq -d)
 if [ -n "$dups" ]; then
   echo "these package names have more than one define-public:" >&2
   while IFS= read -r line; do
     name=${line##* }
     echo "  $name:" >&2
-    grep -rn "^$line" sane-packages/ >&2 || true
+    grep -rn "^$line" sensible-packages/ >&2 || true
   done <<<"$dups"
   echo "keep one definition per name: the shadowed copy is never built." >&2
   exit 1

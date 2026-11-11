@@ -30,16 +30,16 @@ jobs:
           # product page for the Linux .deb, which is the %bin-version source;
           # %version is the git tag the source package builds from, and it is
           # deliberately allowed to lag (see the comment above %bin-version in
-          # sane-packages/zcode.scm).  Comparing %version against the .deb
+          # sensible-packages/zcode.scm).  Comparing %version against the .deb
           # scraper reported drift that is not drift.
           #
           # The definition is split over two lines by `guix style' (the value
           # goes on its own line), so read the line after the define and strip
           # the quotes and the closing paren.
           packaged="$(awk '/^\(define %bin-version/ { getline; gsub(/["() \t]/, ""); print; exit }' \
-                        sane-packages/zcode.scm)"
+                        sensible-packages/zcode.scm)"
           if [ -z "${packaged}" ]; then
-            echo "::error::could not read %bin-version from sane-packages/zcode.scm"
+            echo "::error::could not read %bin-version from sensible-packages/zcode.scm"
             exit 1
           fi
           upstream="$(./scripts/latest-version.sh)"
