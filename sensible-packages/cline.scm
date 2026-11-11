@@ -806,9 +806,16 @@ import { type AddressInfo, createServer } from \"node:net\";"))
           (let* ((out (assoc-ref %outputs "out"))
                  (binary (string-append out "/lib/cline/cline"))
                  (compiled (assoc-ref %build-inputs "source"))
-                 ;; Bun binaries resist patchelf -- it corrupts the large
-                 ;; embedded payload -- so exec them through the store glibc
-                 ;; loader, the way bun-bin and opencode here already do.
+                 ;; patchelf --set-interpreter alone is safe for Bun
+                 ;; payloads: only rewriting the dynamic section
+                 ;; (--set-rpath) corrupts the appended payload, proved on
+                 ;; cline-bin (dcd11c6).  The hub daemon re-executes
+                 ;; process.execPath, so the binary itself must be the
+                 ;; process image -- exec'ing it through
+                 ;; `ld-linux --library-path' makes the loader the
+                 ;; executable and `hub start' dies on an unknown
+                 ;; --cline-hub-daemon option.
+                 (patchelf (assoc-ref %build-inputs "patchelf"))
                  (loader (string-append (assoc-ref %build-inputs "glibc")
                                         "/lib/ld-linux-x86-64.so.2"))
                  (lib-path (string-append (assoc-ref %build-inputs "gcc")
@@ -818,19 +825,25 @@ import { type AddressInfo, createServer } from \"node:net\";"))
                  (bash (assoc-ref %build-inputs "bash-minimal")))
             (mkdir-p (dirname binary))
             (copy-file compiled binary)
+            ;; patchelf rewrites the file in place; the copy made from the
+            ;; read-only FOD output carries no owner-write bit, so patchelf
+            ;; died with "open: Permission denied" (CI run 41225160709).
+            ;; Grant owner-write for the rewrite, restore 555 afterwards.
+            (chmod binary #o644)
+            (invoke (string-append patchelf "/bin/patchelf")
+                    "--set-interpreter" loader binary)
             (chmod binary #o555)
             (mkdir-p (string-append out "/bin"))
             (call-with-output-file (string-append out "/bin/cline")
               (lambda (port)
                 (format port
-                        "#!~a/bin/bash
-exec ~a --library-path ~a ~a \"$@\"
+                 "#!~a/bin/bash
+export LD_LIBRARY_PATH=~a${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+exec ~a \"$@\"
 "
-                        bash
-                        loader
-                        lib-path
-                        binary)))
+                 bash lib-path binary)))
             (chmod (string-append out "/bin/cline") #o555)))))
+    (native-inputs (list patchelf))
     ;; node is NOT optional and NOT there for the CLI's own sake -- it is what
     ;; makes `bun run --filter ... build' work at all.
     ;;
