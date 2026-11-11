@@ -47,7 +47,7 @@
  other Chromium.")))
  (entry (commit "2a59bf31e2a752a09208e17bc55fe7a11280fc5f")
         (title (en "New package: lightpanda-bin"))
-        (body (en "The new @code{sane-packages lightpanda} module packages
+        (body (en "The new @code{sensible-packages lightpanda} module packages
  @code{lightpanda-bin}, a repackage of Lightpanda's own .deb: the headless
  browser written from scratch in Zig for AI agents, with its own JavaScript
  engine and a CDP endpoint Puppeteer and Playwright connect to directly.
@@ -57,7 +57,7 @@
  @code{lightpanda serve} for the CDP endpoint.")))
  (entry (commit "e37e3897f7348de9d8d0aa7167acf211145311db")
         (title (en "New package: moli-bin"))
-        (body (en "The new @code{sane-packages moli} module packages
+        (body (en "The new @code{sensible-packages moli} module packages
  @code{moli-bin}, a repackage of LexMount's GNU/Linux tarball: the headless
  browser for AI agents with real JavaScript, DOM and CSS, on-demand layout
  and paint, and one serve endpoint speaking CDP, WebDriver Classic and
