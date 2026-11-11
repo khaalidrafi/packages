@@ -653,6 +653,56 @@ edit the notice itself>
     cancelled by the build-ai/pkgs-update-all concurrency group —
     NOT CLAIMED until it completes).  The closeout's "zcode-modules
     regen for the v3.17.2 source tag" is superseded by this revert.
+  - Note [2026-11-11 Wed ~03:25 UTC] Build Engineer (GLM-5.3@chat.z.ai,
+    seat): TASK 1 RERUN LANDED + THE RENAME, PER THE OWNER'S 2026-11-11
+    ORDERS ("Are all pkgs updated? UPDATE! PUSH!" and "Also rename it
+    as sensible-packages, not sane").  Pushed to ai/main (default
+    branch, ls-remote verified): dea7052 = rename channel
+    sane-packages to sensible-packages (git mv, pure R-status moves;
+    107 references across 26 files: all module forms, README,
+    .guix-channel comment, upstream.yml, tests/*, scripts/*, news.txt,
+    dupscan.py.  Deliberately untouched: AGENTS.md law text — its
+    sane-packages prose is flagged here for the Lead to reissue — and
+    the historical records agent-team/*, STATE.org, AI-REVIEW.org,
+    .handoff, where rewriting references would falsify what those
+    records said at the time) and efb80d7 = pkgs: bump 18 stale
+    upstreams to latest.  Bump table (old -> new): opencode2-bin
+    2.2.5 -> 2.2.7; copilot-cli-bin 1.0.105 -> 1.0.109; mcode 0.7.4 ->
+    0.7.6; codebuddy 2.179.0 -> 2.182.0; dsh 0.2.1-rc.5 -> 0.2.2-rc.1
+    (dsh-modules.scm regenerated, 524 -> 655 tarballs); ws 8.22.0 ->
+    8.22.2; goose-cli-bin 1.57.0 -> 1.59.0; oh-my-pi-bin 18.14.1 ->
+    18.18.7; pi-coding-agent-bin 1.4.0 -> 1.5.2; lark-cli-bin 1.0.98
+    -> 1.0.100; kilocode-bin 7.8.18 -> 7.8.27 (v7.8.28 is a
+    prerelease, skipped); cua-driver-bin 0.38.0 -> 0.47.5;
+    qoder-cli-bin 1.1.83 -> 1.1.86; qoder-desktop-bin 0.5.3 -> 0.5.7;
+    rdircd 20260927.0 -> 20261110.0 (commit f4570c66); purple-discord
+    1.0.2026.10.25 -> 1.0.2026.11.10 (commit 33f21e5a); brow6el-bin
+    0.3.5 -> 0.3.6 (CEF 148 beta -> 154.0.33+ga03e714 stable, URL
+    drops the _beta segment); cline-baseline 3.0.70 -> 3.0.74 — the
+    FOD hash is DELIBERATELY left at the 3.0.70 value per the task
+    order, so CI's next build fails once with the actual hash to paste
+    in; this realigns baseline with cline-bin as cline.scm:770
+    anticipated.  HELD BACK (probe said stale, pins say no):
+    node-trycua-cua-driver 0.34.1 and node-ubjs-core/node 0.31.0-3 —
+    mcode 0.7.6 (the new pin) declares them exactly; @agentclientprotocol
+    /sdk 0.26.0 inside pi-acp-bin — pi-acp@0.0.34 declares ^0.26.0 =
+    0.26.x only; konaito/chrome-headless-shell lockstep — upstream did
+    not move; zcode source 3.14.3 — Owner doctrine (zcode-bin 3.17.2
+    confirmed current by page scrape).  FLAG for the Lead:
+    zenbu-labs/terminal-browser now publishes a "pixel-v*" release
+    line (latest pixel-v0.2.12, ZERO binary assets); the v-line we
+    package is unchanged at 0.15.3 — not blindly bumped.  Gates: the
+    sandbox had been recycled again (repo re-cloned, /home/z/gns
+    re-bootstrapped from the brix testing tarball with rebuilt
+    namespace wrappers — no /proc inside, so the gate's one bash
+    process substitution was fed from a pre-computed list in a patched
+    COPY of check-static.sh, semantics identical, original untouched):
+    tests/check-static.sh exit 0 (module check, .guix-channel parse,
+    zcode links, guix style on all hand-written modules — one CEF
+    string-append collapse included in efb80d7 — batch dry-run), plus
+    a --no-substitutes batch dry-run over all 43 define-publics, 5001
+    derivations, all green.  CI dispatched on ai/main @ efb80d7: run
+    42950553098, in_progress at note time (results NOT CLAIMED).
   :END:
 
   BLUF: Build Engineer appointed (Owner order 04:02Z #hq).  This
