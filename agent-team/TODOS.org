@@ -1789,5 +1789,4 @@ edit the notice itself>
     the chain so #+STALL-COUNT / #+TURN ticks NEVER produce commits
     (Actions variables; model: agent-org 3fad480); guard extension via
     the kit (report WAITING until upstream lands).
-  - Effort: ~0.25 day. Deadline: 2026-11-14. Show-cause before any slip
-    (TIME DISCIPLINE LAW).
+  - Effort: ~0.25 day. Deadline: 2026-11-14.

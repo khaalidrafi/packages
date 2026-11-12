@@ -17,9 +17,7 @@
 
   1. NO commit may land with zero coding-agent substance. Stall ticks,
      "the segment delivered no work" notes, turn-pointer bumps are
-     BANNED as commits — a descriptive subject does NOT save it. This
-     supersedes the 2026-10-27 commit-substance law's housekeeping
-     allowance ("state/pointer commits name the field that moved").
+     BANNED as commits — a descriptive subject does NOT save it.
   2. Chain state (#+STALL-COUNT, #+TURN, #+LAST-VERDICT in CONTROL.org)
      moves OUT of git history — Actions variables or the kit's state
      store. A committed stall tick = a violation.
