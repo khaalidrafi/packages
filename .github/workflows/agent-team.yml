@@ -1360,7 +1360,7 @@ jobs:
           RESULT="${{ needs.turn.outputs.seg_result }}"
           OUTCOME="${{ steps.merge.outputs.outcome }}"
           GATE="${{ steps.gate.outputs.gate }}"
-          STALL=$(grep -oP '^\#\+STALL-COUNT:\s*\K\d+' "$CTL" | head -1 || true); STALL=${STALL:-0}
+          STALL=$(curl -sf -H "Authorization: Bearer ${ github.token }" "https://api.github.com/repos/${ github.repository }/actions/variables/CHAIN_STALL" | jq -r '.value' 2>/dev/null || true); [ -n "$STALL" ] || STALL=$(grep -oP '^\#\+STALL-COUNT:\s*\K\d+' "$CTL" | head -1 || true); STALL=${STALL:-0}
           PROGRESS=no
           if [ "$OUTCOME" = "merged" ] && [ "$GATE" = "green" ]; then PROGRESS=yes; fi
           case "$RESULT" in *BLOCKED*) PROGRESS=no ;; esac
