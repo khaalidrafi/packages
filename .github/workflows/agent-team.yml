@@ -222,7 +222,7 @@ jobs:
           KILL=$(grep -oP '^\#\+KILL-SWITCH:\s*\K\w+' "$CTL" | head -1 || true)
           OBJSTATE=$(grep -oP '^\#\+OBJECTIVE-STATE:\s*\K\w+' "$CTL" | head -1 || true)
           OBJECTIVE=$(grep -oP '^\#\+OBJECTIVE:\s*\K.*' "$CTL" | head -1 || true)
-          TURN=$(grep -oP '^\#\+TURN:\s*\K.*' "$CTL" | head -1 | xargs)
+          TURN=$(curl -sf -H "Authorization: Bearer ${{ github.token }}" "https://api.github.com/repos/${{ github.repository }}/actions/variables/CHAIN_TURN" | jq -r '.value' 2>/dev/null || true); [ -n "$TURN" ] || TURN=$(grep -oP '^\#\+TURN:\s*\K.*' "$CTL" | head -1 | xargs)
           echo "kill=${KILL:-OFF} objstate=${OBJSTATE:-OPEN} turn='${TURN}'"
           # R-2-69 TASK-BRANCH LAW: every ai/task/** ref runs its OWN chain
           # off ITS OWN agent-team/CONTROL.org (thin branch: trunk tip
@@ -999,10 +999,18 @@ jobs:
               if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
                 git show "origin/${CHAIN_REF}:agent-team/CONTROL.org" > "$CTL" 2>/dev/null || true
               fi
-              sed -i "s|^\#+TURN:.*|\#+TURN: ${NEXT}|" "$CTL"
-              git add "$CTL"
-              git commit -m "control: rotate #+TURN to ${NEXT%% *} after ${LANE} segment landed" \
-                -m "result: ${TURN_RESULT:-none}" || { CPUSH=uptodate; break; }
+              # TURN rotation lives in the CHAIN_TURN variable — no commit
+              # (Owner 2026-11-13 #hq: bookkeeping commits are forbidden).
+              curl -sf -X PATCH -H "Authorization: Bearer ${{ github.token }}" \
+                -H "Content-Type: application/json" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/variables/CHAIN_TURN" \
+                -d "{\"value\":\"${NEXT}\"}" >/dev/null \
+                || curl -sf -X POST -H "Authorization: Bearer ${{ github.token }}" \
+                -H "Content-Type: application/json" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/variables" \
+                -d "{\"name\":\"CHAIN_TURN\",\"value\":\"${NEXT}\"}" >/dev/null \
+                || echo "::warning::CHAIN_TURN variable write failed"
+              CPUSH=variable
               bash ci/bin/commit_msg_guard.sh "origin/ai/packages..HEAD" || { git reset --hard origin/ai/packages; CPUSH=guard; break; }
               if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
                 if git push --force origin "$CHAIN_REF"; then CPUSH=yes; break; fi
@@ -1360,7 +1368,7 @@ jobs:
           RESULT="${{ needs.turn.outputs.seg_result }}"
           OUTCOME="${{ steps.merge.outputs.outcome }}"
           GATE="${{ steps.gate.outputs.gate }}"
-          STALL=$(curl -sf -H "Authorization: Bearer ${ github.token }" "https://api.github.com/repos/${ github.repository }/actions/variables/CHAIN_STALL" | jq -r '.value' 2>/dev/null || true); [ -n "$STALL" ] || STALL=$(grep -oP '^\#\+STALL-COUNT:\s*\K\d+' "$CTL" | head -1 || true); STALL=${STALL:-0}
+          STALL=$(curl -sf -H "Authorization: Bearer ${{ github.token }}" "https://api.github.com/repos/${{ github.repository }}/actions/variables/CHAIN_STALL" | jq -r '.value' 2>/dev/null || true); [ -n "$STALL" ] || STALL=$(grep -oP '^\#\+STALL-COUNT:\s*\K\d+' "$CTL" | head -1 || true); STALL=${STALL:-0}
           PROGRESS=no
           if [ "$OUTCOME" = "merged" ] && [ "$GATE" = "green" ]; then PROGRESS=yes; fi
           case "$RESULT" in *BLOCKED*) PROGRESS=no ;; esac
@@ -1378,20 +1386,24 @@ jobs:
             if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
               git show "origin/${CHAIN_REF}:agent-team/CONTROL.org" > "$CTL" 2>/dev/null || true
             fi
-            sed -i "s|^\#+STALL-COUNT:.*|\#+STALL-COUNT: ${NEW}|" "$CTL"
+            # Stall + rotation state live ONLY in Actions variables —
+            # no commits (Owner 2026-11-13 #hq: bookkeeping commits are
+            # forbidden; the old freeze-at-8 mitigation is obsolete).
+            set_var() {
+              curl -sf -X PATCH -H "Authorization: Bearer ${{ github.token }}" \
+                -H "Content-Type: application/json" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/variables/$1" \
+                -d "{\"value\":\"$2\"}" >/dev/null \
+                || curl -sf -X POST -H "Authorization: Bearer ${{ github.token }}" \
+                -H "Content-Type: application/json" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/variables" \
+                -d "{\"name\":\"$1\",\"value\":\"$2\"}" >/dev/null \
+                || echo "::warning::variable $1 write failed"
+            }
+            set_var CHAIN_STALL "${NEW}"
             TURN_NEXT="${{ needs.turn.outputs.turn_next }}"
-            if [ "$PROGRESS" != "yes" ] && [ -n "$TURN_NEXT" ]; then
-              sed -i "s|^\#+TURN:.*|\#+TURN: ${TURN_NEXT}|" "$CTL"
-            fi
-            git add "$CTL"
-            if [ "$PROGRESS" = "yes" ]; then
-              git commit -m "control: reset stall to 0 — ${TURN_LANE:-the} segment landed work" \
-                || echo "::notice::stall commit empty"
-            else
-              NEXTBIT=""
-              [ -n "$TURN_NEXT" ] && NEXTBIT=", next ${TURN_NEXT%% *}"
-              git commit -m "control: ${TURN_LANE:-the} segment delivered no work — stall ${NEW}${NEXTBIT}" \
-                || echo "::notice::stall commit empty"
+            if [ -n "$TURN_NEXT" ]; then
+              set_var CHAIN_TURN "${TURN_NEXT}"
             fi
             if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
               git push --force origin "${CHAIN_REF}" || echo "::warning::stall push failed"
