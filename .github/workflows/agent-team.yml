@@ -16,12 +16,14 @@ name: Agent Team Chain
 #        a. auto-merge behind the gate
 #        b. pause-after-TODO review
 #        c. Jev judgment
-#        d. stall accounting
-#        e. SELF-DISPATCH while the objective is open and KILL-SWITCH
-#           is OFF
-# The team decides how many runs the objective takes; the chain stops
-# ONLY on kill switch, objective complete, tests red, or the CHAIN-PAUSE
-# arm; a no-progress streak shifts to backoff, never to failure.
+#        d. stall accounting - the counter lives in the CHAIN_STALL
+#           Actions variable + this run's summary, NEVER a git commit
+# Owner order 2026-11-14 (stop commit-spam): SELF-DISPATCH retired. The
+# chain no longer re-dispatches itself while the objective is open; runs
+# start from the schedule (cron safety net) or a manual workflow_dispatch
+# only. The chain stops on kill switch, objective complete, tests red, or
+# the CHAIN-PAUSE arm; a no-progress streak is recorded as the CHAIN_STALL
+# counter, never as bookkeeping commits.
 # Chain laws (2026-10-22): an unknown rotation pointer REFUSES
 # (BLOCKED) instead of silently running a wrong lane; a lane exiting 0
 # with ZERO commits is not progress; PAUSE-AFTER-TODO DEFAULTS ON — a
@@ -61,8 +63,9 @@ name: Agent Team Chain
 # no Telegram communication). Arm a task: cut the branch from
 # ai/packages, fork the control file with the task keys, dispatch the
 # workflow on that branch (Actions UI branch picker or `gh workflow run
-# agent-team.yml --ref <branch>`) — the chain self-dispatches while the
-# task objective is OPEN. The ai/packages chain behaves exactly as before.
+# agent-team.yml --ref <branch>`) for EACH segment by hand - the chain
+# no longer self-dispatches (Owner order 2026-11-14). The ai/packages
+# chain behaves exactly as before.
 
 # This file is LEAD-OWNED: seats never edit it (brief law #10). Re-scaffold
 # it with M-x agent-team-setup-project (refresh = re-run, adoption is
@@ -73,8 +76,9 @@ on:
   push:
     branches: [ai/packages]
   schedule:
-    # Chain safety net — the self-dispatching finalize owns the pacing;
-    # this cron only re-kicks a chain that died infra-level.
+    # Chain pacing (Owner order 2026-11-14: self-dispatch retired - no
+    # treadmill). This 4-hourly cron starts the next link; manual
+    # workflow_dispatch remains available.
     - cron: '17 1,5,9,13,17,21 * * *'
   workflow_dispatch: {}
 
@@ -85,7 +89,7 @@ concurrency:
 permissions:
   contents: write
   packages: write
-  actions: write   # self-chain: finalize re-dispatches the next turn
+  actions: write   # CHAIN_* Actions variables (stall/turn/pause state)
   # NO `workflows: write` — GitHub rejects the KEY at workflow-creation
   # time: every run startup-FAILS with zero jobs (agent-team.el runs
   # 39455051426 / 39455277702 evidence). Seats therefore NEVER touch
@@ -192,7 +196,7 @@ jobs:
       seg_result: ${{ steps.seg.outputs.result }}
       base_sha: ${{ steps.control.outputs.base_sha }} # chain ref tip before this segment — the chat-mirror diff base
       commits: ${{ steps.push.outputs.commits }}      # post-turn commit count — EMPTY-SEGMENT law signal
-      turn_next: ${{ steps.push.outputs.next }}       # next #+TURN — folded into the finalize stall commit when no work landed
+      turn_next: ${{ steps.push.outputs.next }}       # next #+TURN - written to the CHAIN_TURN Actions variable when no work landed
       turn_lane: ${{ steps.push.outputs.lane }}       # lane that launched (spam law: subjects name the lane, never "unknown")
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -273,7 +277,10 @@ jobs:
           # pause is armed the chain halts CLEANLY after a delivered TODO —
           # no segment runs, nothing burns, the Lead reviews and clears
           # #+CHAIN-PAUSE to resume. Green, not failed.
-          PAUSE=$(grep -oP '^\#\+CHAIN-PAUSE:\s*\K\w+' "$CTL" | head -1 || true)
+          # Owner order 2026-11-14 (stop commit-spam): the pause state
+          # lives in the CHAIN_PAUSE Actions variable (the workflow writes
+          # it, never a commit); #+CHAIN-PAUSE in CONTROL.org is the fallback.
+          PAUSE=$(curl -sf -H "Authorization: Bearer ${{ github.token }}" "https://api.github.com/repos/${{ github.repository }}/actions/variables/CHAIN_PAUSE" | jq -r '.value' 2>/dev/null | head -1 || true); case "$PAUSE" in ON|OFF) : ;; *) PAUSE=$(grep -oP '^\#\+CHAIN-PAUSE:\s*\K\w+' "$CTL" | head -1 || true) ;; esac
           if [ "${PAUSE:-OFF}" = "ON" ]; then
             echo "mode=paused" >> "$GITHUB_OUTPUT"
             echo "chain PAUSED (#+CHAIN-PAUSE: ON) — Lead reviews the delivered TODO, clears the marker to resume" >> "$GITHUB_STEP_SUMMARY"
@@ -313,8 +320,11 @@ jobs:
         if: steps.control.outputs.mode == 'work' && env.CHAIN_REF != 'ai/packages'
         run: |
           set -u
-          git config user.name "agent-team-ci"
-          git config user.email "agent-team-ci@users.noreply.github.com"
+          # Owner order 2026-11-14 (stop commit-spam): the agent-team-ci seat
+          # identity is BANNED. Plumbing that must still commit (task sync,
+          # landings) uses the standard GitHub Actions bot identity.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url --push origin \
             "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
           SYNCED=no
@@ -503,8 +513,11 @@ jobs:
       - name: Prepare git identity
         if: steps.control.outputs.mode == 'work'
         run: |
-          git config user.name "agent-team-ci"
-          git config user.email "agent-team-ci@users.noreply.github.com"
+          # Owner order 2026-11-14 (stop commit-spam): the agent-team-ci seat
+          # identity is BANNED. Plumbing that must still commit (task sync,
+          # landings) uses the standard GitHub Actions bot identity.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url --push origin \
             "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
 
@@ -1026,14 +1039,17 @@ jobs:
   #      conflict). Red work never lands (merge undone, branch stays).
   #   2. Jev judgment (health-gated): weighs the stall state for the
   #      dispatch decision; gateway down -> local rules decide.
-  #   3. Advance #+STALL-COUNT: +1 on a no-progress segment (dead seat,
-  #      BLOCKED, conflict, gate red), reset to 0 when work lands.
-  #   4. DISPATCH the next run itself while the objective is open and the
-  #      kill switch is OFF. The chain stops ONLY on: KILL-SWITCH ON,
-  #      OBJECTIVE-STATE COMPLETE, no objective. A no-progress streak
-  #      (stall >= 4) does NOT kill the chain — it shifts to BACKOFF (next
-  #      dispatch delayed 5 min per cycle) so a recovering lane is picked
-  #      up automatically and the team keeps working.
+  #   3. Stall accounting: +1 on a no-progress segment (dead seat,
+  #      BLOCKED, conflict, gate red), reset to 0 when work lands - the
+  #      counter lives in the CHAIN_STALL Actions variable + run summary,
+  #      NEVER a git commit (Owner order 2026-11-14: bookkeeping commits
+  #      are banned).
+  #   4. NO SELF-DISPATCH (Owner order 2026-11-14 - stop the commit-spam
+  #      treadmill): the chain does not re-dispatch itself while the
+  #      objective is open. The next link starts from the schedule (cron)
+  #      or a manual workflow_dispatch. The chain stops ONLY on:
+  #      KILL-SWITCH ON, OBJECTIVE-STATE COMPLETE, no objective; a
+  #      no-progress streak (stall >= 4) is recorded as a backoff note.
   finalize:
     if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     needs: [test, turn]
@@ -1062,8 +1078,11 @@ jobs:
       - name: Auto-merge the turn branch (peer mail propagation)
         id: merge
         run: |
-          git config user.name "agent-team-ci"
-          git config user.email "agent-team-ci@users.noreply.github.com"
+          # Owner order 2026-11-14 (stop commit-spam): the agent-team-ci seat
+          # identity is BANNED. Plumbing that must still commit (task sync,
+          # landings) uses the standard GitHub Actions bot identity.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url --push origin \
             "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
           BRANCH="${{ needs.turn.outputs.turn_branch }}"
@@ -1167,28 +1186,28 @@ jobs:
             | grep '^+' | grep -v '^+++' | grep -c ':DELIVERED:' || true)
           PAUSE_AFTER=$(grep -oP '^\#\+PAUSE-AFTER-TODO:\s*\K\w+' "$CTL" | head -1 || true)
           if [ "${PAUSE_AFTER:-ON}" = "ON" ] && [ "${DELIV:-0}" -gt 0 ]; then
-            git config user.name "agent-team-ci"
-            git config user.email "agent-team-ci@users.noreply.github.com"
-            git remote set-url --push origin \
-              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
-            ARMED=no
-            for i in 1 2 3; do
-              git fetch origin +refs/heads/ai/packages:refs/remotes/origin/ai/packages
-              git reset --hard origin/ai/packages
-              if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
-                git show "origin/${CHAIN_REF}:agent-team/CONTROL.org" > "$CTL" 2>/dev/null || true
-              fi
-              grep -q '^#+CHAIN-PAUSE:' "$CTL" \
-                && sed -i "s|^#+CHAIN-PAUSE:.*|#+CHAIN-PAUSE: ON|" "$CTL" \
-                || printf '#+CHAIN-PAUSE: ON\n' >> "$CTL"
-              git add "$CTL"
-              git commit -m "ci-chain: pause-after-todo armed (${DELIV} delivered TODO(s) this segment)" || break
-              if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
-                git push --force origin "${CHAIN_REF}" && ARMED=yes && break
-              elif git push origin "ai/packages"; then ARMED=yes; break; fi
-            done
+            # Owner order 2026-11-14 (stop commit-spam): arming the
+            # pause writes the CHAIN_PAUSE Actions variable - the old
+            # "ci-chain: pause-after-todo armed" CONTROL.org commit is
+            # banned bookkeeping. The Lead/Owner resumes by setting
+            # CHAIN_PAUSE=OFF (repo Settings -> Secrets and variables ->
+            # Actions -> Variables) or by clearing #+CHAIN-PAUSE in
+            # agent-team/CONTROL.org.
+            set_var() {
+              curl -sf -X PATCH -H "Authorization: Bearer ${{ github.token }}" \
+                -H "Content-Type: application/json" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/variables/$1" \
+                -d "{\"value\":\"$2\"}" >/dev/null \
+                || curl -sf -X POST -H "Authorization: Bearer ${{ github.token }}" \
+                -H "Content-Type: application/json" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/variables" \
+                -d "{\"name\":\"$1\",\"value\":\"$2\"}" >/dev/null \
+                || echo "::warning::variable $1 write failed"
+            }
+            set_var CHAIN_PAUSE "ON"
+            ARMED=variable
             echo "PAUSED_TODOS=${DELIV}" >> "$GITHUB_OUTPUT"
-            echo "pause-after-todo: ${DELIV} delivered TODO(s) — chain armed to pause (push ${ARMED}); Lead clears #+CHAIN-PAUSE to resume" >> "$GITHUB_STEP_SUMMARY"
+            echo "pause-after-todo: ${DELIV} delivered TODO(s) - chain armed to pause (CHAIN_PAUSE variable, ${ARMED}); Lead sets CHAIN_PAUSE=OFF to resume" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "pause-after-todo: ${DELIV:-0} delivered TODO(s), PAUSE-AFTER-TODO=${PAUSE_AFTER:-ON} (OFF = Owner's continuous-run override) — no pause" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -1360,44 +1379,37 @@ jobs:
           RESULT="${{ needs.turn.outputs.seg_result }}"
           OUTCOME="${{ steps.merge.outputs.outcome }}"
           GATE="${{ steps.gate.outputs.gate }}"
-          STALL=$(grep -oP '^\#\+STALL-COUNT:\s*\K\d+' "$CTL" | head -1 || true); STALL=${STALL:-0}
+          # Owner order 2026-11-14 (stop commit-spam): the stall counter
+          # lives in the CHAIN_STALL Actions variable; #+STALL-COUNT in
+          # CONTROL.org is only a legacy fallback seed.
+          STALL=$(curl -sf -H "Authorization: Bearer ${{ github.token }}" "https://api.github.com/repos/${{ github.repository }}/actions/variables/CHAIN_STALL" | jq -r '.value' 2>/dev/null || true); [ -n "$STALL" ] || STALL=$(grep -oP '^\#\+STALL-COUNT:\s*\K\d+' "$CTL" | head -1 || true); STALL=${STALL:-0}
           PROGRESS=no
           if [ "$OUTCOME" = "merged" ] && [ "$GATE" = "green" ]; then PROGRESS=yes; fi
           case "$RESULT" in *BLOCKED*) PROGRESS=no ;; esac
           if [ "$PROGRESS" = "yes" ]; then NEW=0; else NEW=$((STALL+1)); fi
-          # SPAM LAW: at most ONE control commit per no-progress segment,
-          # carrying both facts (rotation + stall) in plain words, and the
-          # treadmill FREEZES at stall 8 — backoff dispatch continues, the
-          # repo stops collecting identical bookkeeping commits. A stall
-          # RESET always lands (recovery must un-freeze the chain).
-          if [ "$NEW" != "$STALL" ] && { [ "$PROGRESS" = "yes" ] || [ "${STALL:-0}" -lt 8 ]; }; then
-            # Race-proof (Lead pushes can move ai/packages mid-run — same class
-            # as the 15:57Z fetch-first rejection): reset, re-apply, commit.
-            git fetch origin +refs/heads/ai/packages:refs/remotes/origin/ai/packages
-            git reset --hard origin/ai/packages
-            if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
-              git show "origin/${CHAIN_REF}:agent-team/CONTROL.org" > "$CTL" 2>/dev/null || true
-            fi
-            sed -i "s|^\#+STALL-COUNT:.*|\#+STALL-COUNT: ${NEW}|" "$CTL"
+          # Owner order 2026-11-14 (stop commit-spam): stall + rotation
+          # state live ONLY in Actions variables and this run summary —
+          # never a git commit. The old "control: ... stall=N" CONTROL.org
+          # commits (and the freeze-at-8 mitigation they needed) are banned
+          # bookkeeping and were removed.
+          if [ "$NEW" != "$STALL" ]; then
+            set_var() {
+              curl -sf -X PATCH -H "Authorization: Bearer ${{ github.token }}" \
+                -H "Content-Type: application/json" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/variables/$1" \
+                -d "{\"value\":\"$2\"}" >/dev/null \
+                || curl -sf -X POST -H "Authorization: Bearer ${{ github.token }}" \
+                -H "Content-Type: application/json" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/variables" \
+                -d "{\"name\":\"$1\",\"value\":\"$2\"}" >/dev/null \
+                || echo "::warning::variable $1 write failed"
+            }
+            set_var CHAIN_STALL "${NEW}"
             TURN_NEXT="${{ needs.turn.outputs.turn_next }}"
-            if [ "$PROGRESS" != "yes" ] && [ -n "$TURN_NEXT" ]; then
-              sed -i "s|^\#+TURN:.*|\#+TURN: ${TURN_NEXT}|" "$CTL"
+            if [ -n "$TURN_NEXT" ]; then
+              set_var CHAIN_TURN "${TURN_NEXT}"
             fi
-            git add "$CTL"
-            if [ "$PROGRESS" = "yes" ]; then
-              git commit -m "control: reset stall to 0 — ${TURN_LANE:-the} segment landed work" \
-                || echo "::notice::stall commit empty"
-            else
-              NEXTBIT=""
-              [ -n "$TURN_NEXT" ] && NEXTBIT=", next ${TURN_NEXT%% *}"
-              git commit -m "control: ${TURN_LANE:-the} segment delivered no work — stall ${NEW}${NEXTBIT}" \
-                || echo "::notice::stall commit empty"
-            fi
-            if [ "${CHAIN_REF:-ai/packages}" != "ai/packages" ]; then
-              git push --force origin "${CHAIN_REF}" || echo "::warning::stall push failed"
-            else
-              git push origin "ai/packages" || echo "::warning::stall push failed"
-            fi
+            echo "stall accounting: ${STALL} -> ${NEW} (persisted as the CHAIN_STALL Actions variable + this summary — no commit)" >> "$GITHUB_STEP_SUMMARY"
           fi
           # Decide the next link in the chain
           KILL=$(grep -oP '^\#\+KILL-SWITCH:\s*\K\w+' "$CTL" | head -1 || true)
@@ -1411,7 +1423,9 @@ jobs:
           fi
           # Pause law: a freshly armed CHAIN-PAUSE overrides dispatch —
           # the Owner reviews the delivery first (step above armed it).
-          PAUSE=$(grep -oP '^\#\+CHAIN-PAUSE:\s*\K\w+' "$CTL" | head -1 || true)
+          # Owner order 2026-11-14 (stop commit-spam): pause state lives
+          # in the CHAIN_PAUSE Actions variable; the file marker is the fallback.
+          PAUSE=$(curl -sf -H "Authorization: Bearer ${{ github.token }}" "https://api.github.com/repos/${{ github.repository }}/actions/variables/CHAIN_PAUSE" | jq -r '.value' 2>/dev/null | head -1 || true); case "$PAUSE" in ON|OFF) : ;; *) PAUSE=$(grep -oP '^\#\+CHAIN-PAUSE:\s*\K\w+' "$CTL" | head -1 || true) ;; esac
           if [ "${PAUSE:-OFF}" = "ON" ]; then DECISION="paused-todo-review"; fi
           # EMPTY-SEGMENT law (2c): zero post-turn commits is visible in
           # the accounting, never silently counted as work.
@@ -1425,32 +1439,24 @@ jobs:
             DECISION="tests-red-halt"
           fi
           if [ "$NEW" -ge 4 ] && [ "$DECISION" = "dispatch" ]; then
-            DECISION="backoff-dispatch"   # slow-poll: transient dead lanes recover on their own
+            DECISION="backoff-note"   # informational: transient dead lanes usually recover
           fi
           # (The old Discord-mirror exports of CHAIN_DECISION/CHAIN_STALL
           # retired with the mirror — Owner 2026-10-26 #hq.)
-          DISPATCH_CODE="n/a"
-          if [ "$DECISION" = "dispatch" ] || [ "$DECISION" = "backoff-dispatch" ]; then
-            if [ "$DECISION" = "backoff-dispatch" ]; then
-              echo "backoff: lane dead ${NEW} segments straight — waiting 5 min before the next attempt"
-              sleep 300
-            else
-              sleep 20   # let the control push settle; the concurrency group serializes anyway
-            fi
-            DISPATCH_CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
-              -H "Authorization: Bearer ${{ github.token }}" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/workflows/agent-team.yml/dispatches" \
-              -d "$(jq -nc --arg r "${CHAIN_REF:-ai/packages}" '{ref:$r}')")   # R-2-69: re-dispatch THIS chain's ref
-          fi
+          # Owner order 2026-11-14 (stop commit-spam): SELF-DISPATCH
+          # RETIRED - the chain does not re-dispatch itself while the
+          # objective is open. The next link starts from the schedule
+          # (cron) or a manual workflow_dispatch only. The decision is
+          # recorded here for the run log.
+          DISPATCH_CODE="retired (self-dispatch removed - Owner order 2026-11-14)"
           SUMMARY="$GITHUB_STEP_SUMMARY"
           echo "## Chain — finalize" >> "$SUMMARY"
           echo "" >> "$SUMMARY"
           echo "- merge: ${OUTCOME} (${{ steps.merge.outputs.branch }})" >> "$SUMMARY"
           echo "- landing gate: ${GATE:-skipped}" >> "$SUMMARY"
-          echo "- stall count: ${NEW} (>=4 = 5-min backoff mode)" >> "$SUMMARY"
+          echo "- stall count: ${NEW} (CHAIN_STALL Actions variable; >=4 = backoff note)" >> "$SUMMARY"
           echo "- post-turn commits: ${COMMITS:-?} (0 = empty segment — not progress)" >> "$SUMMARY"
-          echo "- chain decision: **${DECISION}** (dispatch HTTP ${DISPATCH_CODE})" >> "$SUMMARY"
+          echo "- chain decision: **${DECISION}** (${DISPATCH_CODE})" >> "$SUMMARY"
           echo "" >> "$SUMMARY"
           echo "kill=${KILL:-OFF} state=${OBJSTATE:-OPEN}" >> "$SUMMARY"
 
