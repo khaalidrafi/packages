@@ -49,7 +49,7 @@ most channel instructions:
 #+begin_example
 (cons (channel
         (name 'sensible-packages)
-        (url "https://github.com/khaalidrafi/packages")
+        (url "https://github.com/khaalidrafi/sensible-packages")
         (branch "ai/main"))
       %default-channels)
 #+end_example
@@ -589,7 +589,7 @@ Enable GitHub Pages once, from the =gh-pages= branch (the deploy step pushes
 the branch, but Pages still has to be told to serve it):
 
 #+begin_example
-gh api -X POST repos/khaalidrafi/packages/pages \
+gh api -X POST repos/khaalidrafi/sensible-packages/pages \
   -f 'source[branch]=gh-pages' -f 'source[filepath]=/'
 #+end_example
 

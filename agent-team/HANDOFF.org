@@ -1,14 +1,19 @@
 #+TITLE: HANDOFF.org — cross-session handoff (written 2026-11-24, outgoing seat GLM-5.3 Build Engineer)
-#+DESCRIPTION: Read this FIRST in the new session. Full state as of ai/main @ 5d8d617. English only (Owner law).
+#+DESCRIPTION: Read this FIRST in the new session. Full state as of 2026-11-24 late session. English only (Owner law).
 
 * WHERE THINGS STAND (BLUF)
 
-- Repo: github.com/khaalidrafi/packages.  DEFAULT branch = =ai/main=,
-  tip =5d8d617= (verified =ls-remote --symref= 2026-11-24).  The repo is
-  PUBLIC: clone/fetch/pull work anonymously.  A =main= branch also sits at
-  5d8d617; =ai/packages= (2ffe3ff) is the OLD trunk lineage, history was
-  rewritten once (kit identity fix moved hashes) — never compare SHAs
-  across the rewrite, compare content.
+- Repo: github.com/khaalidrafi/sensible-packages.  RENAMED from
+  khaalidrafi/packages on 2026-11-24 (Owner order; API PATCH 200,
+  administration:write).  Old URLs redirect; the local origin was
+  re-pointed; README.org channel URL + scripts/emit-channels.py + the
+  Pages runbook line updated to the new name in the follow-up commit.
+  DEFAULT branch = =ai/main=, remote tip = =fb83382= (the 2026-11-24
+  handoff commit, PUSHED via the GitHub App) plus the rename follow-up
+  commit after it.  The repo is PUBLIC: clone/fetch/pull work
+  anonymously.  A =main= branch also sits at 5d8d617; =ai/packages=
+  (2ffe3ff) is the OLD trunk lineage, history was rewritten once —
+  never compare SHAs across the rewrite, compare content.
 - Channel renamed: =sensible-packages/= (was =sane-packages/=), landed
   d9cd31a/dea7052 lineage.  ~50 =define-public= packages across 10 .scm
   files (custom.scm carries 37).
@@ -19,8 +24,13 @@
   The 16 temp branches of the Nov-11 era were resolved and deleted;
   what sits on the remote now besides ai/main: =main=, =ai/packages=,
   8 read-only =ai/turn-packages-*= chain branches, =gh-pages=.
-- The one unclaimed thread: CI.  See "CI STATE — FACTS" below.
+- The one unclaimed thread: CI.  See "CI STATE — FACTS" below.  The
+  repo rename does not touch CI: workflows use ${{ github.repository }}
+  and auto-adapt; gh-pages + actions variables survive a rename.
 - Owner UAT round 2 for the login fix has NOT happened yet.
+- CREDENTIAL BLOCK SOLVED 2026-11-24: the "Khalid's Slave" GitHub App
+  (see CREDENTIALS) now carries push + admin.  The dead PAT and the
+  read-only chat plugin are no longer the only options.
 
 * WHAT LANDED SINCE THE LAST HANDOFF (2026-10-28 → 2026-11-24)
 
@@ -61,6 +71,17 @@
 5. Default branch flipped to ai/main (API PATCH 200, 2026-11-10/11,
    lossless: ai/packages was a strict ancestor; README.org channel
    example now pins branch "ai/main").
+6. Cross-session handoff committed =fb83382= ("team(handoff):
+   cross-session handoff for the next GLM-5.3 seat") and PUSHED to
+   remote ai/main 2026-11-24 via the GitHub App — remote advanced
+   5d8d617 → fb83382.  This file is that commit's cargo, updated in
+   place by the Owner's follow-up order (repo rename + app credential).
+7. Repo renamed packages → sensible-packages (2026-11-24); README.org
+   channel example, scripts/emit-channels.py generator and the Pages
+   runbook line now carry the new URL.  Historical board URLs in
+   TODOS.org/MEMBERS.org deliberately left as-is (append-only law; they
+   redirect anyway).  AGENTS.md + CHARTER.md still SAY
+   "khaalidrafi/packages" in prose — folded into open-work item 3.
 
 * CI STATE — FACTS (do not re-derive)
 
@@ -84,24 +105,29 @@
 
 * OPEN WORK (priority order for the next seat)
 
-1. CI green on ai/main @ 5d8d617 (see above; repair the gate failure —
-   check =.build-status= writer in tests/build-all.sh and the 2h
-   budget).
+1. CI green on ai/main (see CI STATE; repair the gate failure — check
+   =.build-status= writer in tests/build-all.sh and the 2h budget).
+   Dispatch NOW costs one minted ghs_ token: POST
+   /repos/khaalidrafi/sensible-packages/actions/workflows/build.yml/dispatches
+   {"ref":"ai/main"} (expect 204), then poll
+   /actions/runs/<id>/jobs JSON with the same token — the app has
+   actions:write, which the old chat plugin lacked.
 2. Owner UAT round 2 (login fix): guix pull → install autoclaw-bin +
    qoder-desktop-bin → log in → FULL quit → relaunch → the session must
    survive.  If it still fails: next hypothesis is keytar→libsecret
    (not safeStorage) — wire a real keyring service.  Owner-side only.
-3. AGENTS.md sane-packages prose → Lead reissue (rename gap, flagged).
+3. AGENTS.md + CHARTER.md prose rename gap → Lead reissue: they still
+   say "sane-packages" (channel dir rename) AND now "khaalidrafi/packages"
+   (repo rename) — both stale after 2026-11-24.
 4. Periodic update sweeps of the whole channel (~50 packages; probe
    npm registry / GitHub releases API / zcode.z.ai / qoder OSS
    endpoints; hex→nix-base32 converter exists in scripts; lockstep
    rules: konaito↔chrome-headless-shell, zcode source frozen 3.14.3,
    cline-baseline FOD hash learned by CI failing once).
-5. The multi-repo watch cron job 521554 is "Disabled by API" and its
-   PAT is DEAD (see CREDENTIALS) — the Owner decides whether to
-   re-enable with a fresh credential.  Ten-repo order and roles live in
-   that job's payload; the check script is
-   /home/z/my-project/scripts/ten-repos-check.sh.
+5. Cron job 521554 still "Disabled by API" and its PAT dead — either
+   re-enable with a minted app credential shape or retire it; Owner
+   call.  Ten-repo order and roles live in that job's payload; the
+   check script is /home/z/my-project/scripts/ten-repos-check.sh.
 
 * REPO LAWS (digest — full law in AGENTS.md + TODOS.org NOTICES)
 
@@ -123,18 +149,33 @@
   are appended (never edit older notes); Owner notices under * NOTICES
   are read every poll, never edited.
 
-* CREDENTIALS AND CHANNELS (CRITICAL — changed 2026-11-24)
+* CREDENTIALS AND CHANNELS (CRITICAL — rewritten 2026-11-24 late)
 
-- The PAT in cron job 521554's payload is DEAD: API says "Bad
-  credentials" (401), git push says "Invalid username or token".  Do
-  NOT burn retries on it.  The repo being public means fetch/pull
-  still work fine anonymously.
-- The LIVE landing channel this session was the chat-side GitHub
-  plugin, authenticated as =khaalidrafi= (the Owner account): file
-  content commits via the API (create-or-update-file style) with the
-  commit law trailers in the message body.  These commits land with
-  Owner-account authorship — disclose that shape whenever you use it;
-  it is an Owner-side commit channel, not a forged agent identity.
+- PRIMARY CHANNEL NOW: the "Khalid's Slave" GitHub App.  App slug
+  =khalid-s-slave=, App ID 5623575, owner khaalidrafi, client ID
+  =Iv23lim10rZIAMO6Pyfw= (that string is the CLIENT ID, not a token —
+  it authenticates NOTHING directly: 401 on every API endpoint, and
+  git push rejects it; a public repo's anonymous ls-remote is what
+  made it look valid once.  Do not repeat that lesson).  App private
+  keys: upload/khalid-s-slave.{2026-11-05,2026-11-23}.private-key.pem
+  (the 11-23 one is current).  Mint fresh installation tokens with
+  /home/z/my-project/scripts/mint-ghs-token.py — JWT RS256 (iss =
+  "5623575", ≤10 min) → GET /repos/khaalidrafi/sensible-packages/installation
+  (installation id 178836379) → POST access_tokens → =ghs_...= token
+  in /tmp/ghs.token, 1-hour lifetime, RE-MINT per session.
+  Permissions: contents/administration/actions/workflows/secrets/issues
+  ALL write.  Git push form:
+  https://x-access_token:GHS@github.com/khaalidrafi/sensible-packages.git.
+  API: Bearer GHS works (the repo rename PATCH proved it).  The app can
+  dispatch workflows (actions:write) and read run/job JSON — it is the
+  tool for open-work item 1.  NEVER commit a PEM or ghs_ value to any
+  repo; the sandbox upload/ dir is the key's home.
+- The PAT in cron job 521554's payload is DEAD (401 "Bad credentials").
+  Do not burn retries on it; the GitHub App supersedes it.
+- The chat-side GitHub plugin authenticates as =khaalidrafi= (the Owner
+  account) but is READ-ONLY for this repo (contents PUT + trees POST
+  both 403) — superseded by the GitHub App above; keep it for reads
+  the app does not need to mint a token for.
 - Anonymous api.github.com from the sandbox is 403-rate-limited; use
   WebFetch for HTML pages and JSON endpoints (it egresses elsewhere).
   Job LOGS need admin rights — read the workflow file instead, and
@@ -162,14 +203,17 @@
 
 * FILE MAP (what survived where)
 
-- /home/z/my-project/packages/ — the clone (branch ai/main @ 5d8d617).
+- /home/z/my-project/packages/ — the clone (branch ai/main; local tip
+  = fb83382, remote at or past it — verify with ls-remote on arrival).
 - /home/z/my-project/worklog.md — Tasks 1-19 narrative (the full
   history of this seat; read Task 18 for the GNS bootstrap).
 - /home/z/my-project/scripts/ — npm-latest.sh, bump3-results.md (old
   hash table), guix-ns.sh + guix-ns-inner.sh (namespace wrappers),
   gate-dryruns.sh (full dry-run sweep pattern, ~7 s/pkg warm),
   inventory-versions.py, ten-repos-check.sh, default-branch-*.sh,
-  probe-private-repos.sh.
+  probe-private-repos.sh, mint-ghs-token.py (GitHub App token minter).
+- /home/z/my-project/upload/ — khalid-s-slave private keys (SECRETS;
+  never commit, never print) — inputs to mint-ghs-token.py.
 - Repo-side: tests/check-static.sh (static gate), tests/smoke/*,
   news.txt, .guix-channel, .github/workflows/build.yml,
   agent-team/{TODOS.org,CONTROL.org,MEMBERS.org,CHARTER.md,CHAT.org,

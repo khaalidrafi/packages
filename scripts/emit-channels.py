@@ -106,7 +106,7 @@ def emit(channels: list, include_self: bool, branch: str) -> str:
         parts.append(
             "  (channel\n"
             "   (name 'sensible-packages)\n"
-            '   (url "https://github.com/khaalidrafi/packages")\n'
+            '   (url "https://github.com/khaalidrafi/sensible-packages")\n'
             f'   (branch "{branch}"))')
     for ch in channels:
         intro = ""
