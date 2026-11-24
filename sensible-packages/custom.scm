@@ -329,7 +329,6 @@ release binaries are used instead.")
     (home-page "https://bun.sh")
     (license license:expat)))
 
-
 ;;; ---------------------------------------------------------------------------
 ;;; OpenCode v2 (`opencode2-bin`).
 ;;;
