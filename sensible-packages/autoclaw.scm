@@ -361,7 +361,8 @@
                                                  ;; command line come after the default.
                                                  ;;
                                                  ;; Login persistence (DISPATCH #2, reopened
-                                                 ;; after the 2026-10-31 Owner UAT failure):
+                                                 ;; after the 2026-10-31 Owner UAT failure
+                                                 ;; and AGAIN after the 2026-11-24 round):
                                                  ;; the app's own credential layer reads
                                                  ;; safeStorage.getSelectedStorageBackend()
                                                  ;; and REFUSES the basic_text backend on
@@ -373,11 +374,18 @@
                                                  ;; Secret Service is provided instead.
                                                  ;; dbus and gnome-keyring ship as package
                                                  ;; inputs; the wrapper makes sure a
-                                                 ;; session bus is up, seeds a
-                                                 ;; blank-password login keyring once (it
-                                                 ;; lives under the user's HOME, so the
-                                                 ;; session survives restarts), and starts
-                                                 ;; the secrets daemon before exec.
+                                                 ;; session bus is up, then unlocks the
+                                                 ;; blank-password login keyring on EVERY
+                                                 ;; launch (the second UAT failure was the
+                                                 ;; relaunch: the keyring FILE persists
+                                                 ;; under the user's HOME but the daemon
+                                                 ;; is per-bus and the bus is per-launch,
+                                                 ;; so a first-launch-only unlock left a
+                                                 ;; relaunch with a LOCKED keyring and
+                                                 ;; Chromium's safeStorage regenerating
+                                                 ;; its key, killing the stored login),
+                                                 ;; and starts the secrets daemon before
+                                                 ;; exec.
                                                  (call-with-output-file (string-append #$output
                                                                          "/bin/autoclaw")
                                                    (lambda (port)
@@ -386,11 +394,8 @@
 if [ -z \"${DBUS_SESSION_BUS_ADDRESS:-}\" ]; then
   addr=\"$(~a/bin/dbus-daemon --session --fork --print-address 2>/dev/null)\" && export DBUS_SESSION_BUS_ADDRESS=\"$addr\"
 fi
-keyrings=\"${XDG_DATA_HOME:-$HOME/.local/share}/keyrings\"
-if [ ! -e \"$keyrings/default\" ]; then
-  mkdir -p \"$keyrings\"
-  printf '' | \"~a/bin/gnome-keyring-daemon\" --unlock --daemonize >/dev/null 2>&1 || true
-fi
+mkdir -p \"${XDG_DATA_HOME:-$HOME/.local/share}/keyrings\" 2>/dev/null || true
+printf '' | \"~a/bin/gnome-keyring-daemon\" --unlock --daemonize >/dev/null 2>&1 || true
 eval \"$(\"~a/bin/gnome-keyring-daemon\" --start --components=secrets 2>/dev/null)\" || true
 export GNOME_KEYRING_CONTROL SSH_AUTH_SOCK
 exec ~a/lib/AutoClaw/AutoClaw2 --disable-gpu \"$@\"~%"

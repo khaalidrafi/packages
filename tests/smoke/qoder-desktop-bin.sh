@@ -21,14 +21,20 @@ done
 
 # bin/qoder-desktop must be a regular script, not a symlink: a symlink
 # cannot carry arguments.  Login persistence (DISPATCH #2, reopened by the
-# 2026-10-31 Owner UAT failure): the ZAI-family Electron stack rejects
-# Chromium's basic_text backend (autoclaw's main.cjs does so in plain
-# text), so the wrapper provides a real Secret Service instead of the
-# basic flag -- session bus, blank-password login keyring seeded under the
-# user's HOME, gnome-keyring-daemon secrets component -- and execs the
-# wrapped launcher with no password-store flag (without a service
-# Chromium falls back to basic_text on its own, so absence of the flag is
-# never worse than the status quo).
+# 2026-10-31 Owner UAT failure and again by the 2026-11-24 relaunch
+# round): the ZAI-family Electron stack rejects Chromium's basic_text
+# backend (autoclaw's main.cjs does so in plain text), so the wrapper
+# provides a real Secret Service instead of the basic flag -- session
+# bus, blank-password login keyring under the user's HOME,
+# gnome-keyring-daemon secrets component -- and execs the wrapped
+# launcher with no password-store flag (without a service Chromium falls
+# back to basic_text on its own, so absence of the flag is never worse
+# than the status quo).  The 2026-11-24 lesson: the unlock must be
+# UNCONDITIONAL.  The keyring file persists across launches but the
+# daemon is per-bus and the bus is per-launch, so the old
+# first-launch-only guard (`if [ ! -e "$keyrings/default" ]') left
+# relaunches with a locked keyring and safeStorage regenerating its key
+# -- the "full quit, relaunch, logged out" UAT failure.
 [ -f "$out/bin/qoder-desktop" ] && [ ! -L "$out/bin/qoder-desktop" ] ||
   { echo "$out/bin/qoder-desktop is not the launcher script (regular file expected)" >&2; exit 1; }
 grep -q "lib/Qoder/qoder" "$out/bin/qoder-desktop" ||
@@ -42,6 +48,13 @@ grep -q 'gnome-keyring-daemon' "$out/bin/qoder-desktop" ||
   { echo "$out/bin/qoder-desktop lost the gnome-keyring wiring" >&2; exit 1; }
 grep -q -- '--unlock --daemonize' "$out/bin/qoder-desktop" ||
   { echo "$out/bin/qoder-desktop lost the login-keyring seeding" >&2; exit 1; }
+# The unlock is the load-bearing line of the relaunch fix: it must run
+# on every launch, i.e. NOT be wrapped in the first-launch-only guard.
+if grep -q 'keyrings/default' "$out/bin/qoder-desktop"; then
+  { echo "$out/bin/qoder-desktop still guards the unlock behind a first-launch check (locked-keyring relaunch bug)" >&2; exit 1; }
+fi
+grep -q -- '--start --components=secrets' "$out/bin/qoder-desktop" ||
+  { echo "$out/bin/qoder-desktop lost the secrets daemon start" >&2; exit 1; }
 
 # The wrapped launcher must still carry the environment the payload needs:
 # XDG_DATA_DIRS is what wrap-program wrote (icons, mime types), LD_LIBRARY_PATH

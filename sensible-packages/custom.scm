@@ -3161,19 +3161,36 @@ build software, inspect code, and execute workflows.")
                             ;; A script, not a symlink: a symlink could not
                             ;; carry arguments.  Login persistence (DISPATCH
                             ;; #2, reopened after the 2026-10-31 Owner UAT
-                            ;; failure): the basic_text backend -- what
+                            ;; failure and AGAIN after the 2026-11-24 round):
+                            ;; the basic_text backend -- what
                             ;; --password-store=basic forces -- is not a
                             ;; real Secret Service, and this ZAI-family
                             ;; Electron stack rejects it (autoclaw's
                             ;; main.cjs does so in plain text;
                             ;; getSelectedStorageBackend() !== 'basic_text'
                             ;; gates persistence), so the flag is gone and
-                            ;; the wrapper now provides a real Secret
-                            ;; Service instead: session bus if the session
-                            ;; lacks one, a blank-password login keyring
-                            ;; seeded once (it lives under the user's HOME,
-                            ;; so the session survives restarts), and the
-                            ;; secrets daemon before exec.  dbus and
+                            ;; the wrapper provides a real Secret Service
+                            ;; instead.  The second UAT failure was the
+                            ;; relaunch: the login keyring FILE persists
+                            ;; under ~/.local/share/keyrings, but the
+                            ;; keyring DAEMON is per-bus and the bus is
+                            ;; per-launch (fresh dbus-daemon --fork when
+                            ;; the session has none), so a relaunch used
+                            ;; to start a fresh daemon with the keyring
+                            ;; still LOCKED -- the first-launch-only
+                            ;; `if [ ! -e .../default ]' guard skipped the
+                            ;; unlock, Chromium's safeStorage could not
+                            ;; read its "Chrome Safe Storage" key,
+                            ;; regenerated one, and the stored login token
+                            ;; became undecryptable.  The unlock now runs
+                            ;; on EVERY launch: gnome-keyring-daemon
+                            ;; --unlock with the blank password creates
+                            ;; the keyring if absent, unlocks it if
+                            ;; locked, and is a no-op if already unlocked
+                            ;; (a desktop session whose PAM already
+                            ;; unlocked a real keyring just fails the
+                            ;; blank-password match harmlessly and keeps
+                            ;; its own unlocked keyring).  dbus and
                             ;; gnome-keyring ship as package inputs.  It
                             ;; execs the wrap-program output
                             ;; (`lib/Qoder/qoder', which sets
@@ -3190,11 +3207,8 @@ build software, inspect code, and execute workflows.")
 if [ -z \"${DBUS_SESSION_BUS_ADDRESS:-}\" ]; then
   addr=\"$(~a/bin/dbus-daemon --session --fork --print-address 2>/dev/null)\" && export DBUS_SESSION_BUS_ADDRESS=\"$addr\"
 fi
-keyrings=\"${XDG_DATA_HOME:-$HOME/.local/share}/keyrings\"
-if [ ! -e \"$keyrings/default\" ]; then
-  mkdir -p \"$keyrings\"
-  printf '' | \"~a/bin/gnome-keyring-daemon\" --unlock --daemonize >/dev/null 2>&1 || true
-fi
+mkdir -p \"${XDG_DATA_HOME:-$HOME/.local/share}/keyrings\" 2>/dev/null || true
+printf '' | \"~a/bin/gnome-keyring-daemon\" --unlock --daemonize >/dev/null 2>&1 || true
 eval \"$(\"~a/bin/gnome-keyring-daemon\" --start --components=secrets 2>/dev/null)\" || true
 export GNOME_KEYRING_CONTROL SSH_AUTH_SOCK
 exec ~a/lib/Qoder/qoder \"$@\"~%"

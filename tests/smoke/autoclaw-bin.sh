@@ -24,20 +24,24 @@ done
 # bin/autoclaw must reach the launcher, and since 9ce25e7 it is a script
 # the build writes, NOT a symlink: a symlink cannot add arguments, and the
 # launch fix needs --disable-gpu before "$@" (9ce25e7).  Login persistence
-# was reopened after the 2026-10-31 Owner UAT failure: the app rejects
-# Chromium's basic_text backend outright (main.cjs:
-# isElectronProductAccountEncryptionAvailable), so eece268's
-# --password-store=basic selected exactly the one backend the app refuses
-# and the flag is GONE -- the wrapper now provides a real Secret Service
-# instead (session bus, blank-password login keyring seeded under the
-# user's HOME, gnome-keyring-daemon secrets component).  Assert that
-# shape: --disable-gpu kept, the basic flag absent, and the keyring
-# wiring present.  The launcher itself remains the script wrap-program
-# wrote rather than the ELF: the RPATH checked below is what makes the
-# binary run, but XDG_DATA_DIRS and PATH are what make it find icons,
-# mime types and xdg-open.  The vendor ELF itself lives next to the
-# wrapper as .AutoClaw2-real, which is the file patchelf checks apply to
-# below.
+# was reopened after the 2026-10-31 Owner UAT failure and AGAIN after the
+# 2026-11-24 relaunch round: the app rejects Chromium's basic_text backend
+# outright (main.cjs: isElectronProductAccountEncryptionAvailable), so
+# eece268's --password-store=basic selected exactly the one backend the
+# app refuses and the flag is GONE -- the wrapper provides a real Secret
+# Service instead (session bus, blank-password login keyring under the
+# user's HOME, gnome-keyring-daemon secrets component).  The 2026-11-24
+# lesson, asserted below: the unlock must be UNCONDITIONAL -- the keyring
+# file persists but the daemon is per-bus and the bus is per-launch, so
+# the old first-launch-only guard left relaunches with a locked keyring
+# and safeStorage regenerating its key.  Assert that shape:
+# --disable-gpu kept, the basic flag absent, the keyring wiring present,
+# and no first-launch guard around the unlock.  The launcher itself
+# remains the script wrap-program wrote rather than the ELF: the RPATH
+# checked below is what makes the binary run, but XDG_DATA_DIRS and PATH
+# are what make it find icons, mime types and xdg-open.  The vendor ELF
+# itself lives next to the wrapper as .AutoClaw2-real, which is the file
+# patchelf checks apply to below.
 [ -f "$out/bin/autoclaw" ] && [ ! -L "$out/bin/autoclaw" ] ||
   { echo "$out/bin/autoclaw is not the launcher script (regular file expected)" >&2; exit 1; }
 grep -q 'lib/AutoClaw/AutoClaw2' "$out/bin/autoclaw" ||
@@ -53,6 +57,14 @@ grep -q 'gnome-keyring-daemon' "$out/bin/autoclaw" ||
   { echo "$out/bin/autoclaw lost the gnome-keyring wiring" >&2; exit 1; }
 grep -q -- '--unlock --daemonize' "$out/bin/autoclaw" ||
   { echo "$out/bin/autoclaw lost the login-keyring seeding" >&2; exit 1; }
+# The unlock must run on EVERY launch: the first-launch-only guard
+# (`if [ ! -e "$keyrings/default" ]') is the locked-keyring relaunch bug
+# that failed the 2026-11-24 UAT round.
+if grep -q 'keyrings/default' "$out/bin/autoclaw"; then
+  { echo "$out/bin/autoclaw still guards the unlock behind a first-launch check (locked-keyring relaunch bug)" >&2; exit 1; }
+fi
+grep -q -- '--start --components=secrets' "$out/bin/autoclaw" ||
+  { echo "$out/bin/autoclaw lost the secrets daemon start" >&2; exit 1; }
 grep -q 'XDG_DATA_DIRS' "$out/lib/AutoClaw/AutoClaw2" ||
   { echo "$out/lib/AutoClaw/AutoClaw2 is not a wrapper" >&2; exit 1; }
 
