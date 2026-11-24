@@ -85,7 +85,8 @@ The nodes this repo lives inside:
   `(define-public old (deprecated-package "old" new))` so
   tests/check-static.sh keeps harvesting — and dry-run checking — the old
   name, and Guix installs that predate the macro still load the module.
-  House precedent: `opencode-bin` → `opencode2-bin` (2026-11-24).
+  House precedent: `opencode-bin` → `opencode2-bin`, `cline-baseline` →
+  `cline-bin` (both 2026-11-24).
 - "Channel Authentication": once `.guix-authorizations` exists, `guix pull`
   authenticates every commit against it, anchored on a signed channel
   introduction. This repo's history is unsigned agent commits — adding
@@ -106,8 +107,10 @@ The nodes this repo lives inside:
 - Every `*-bin` installs the command name upstream uses.
 - Generated files are committed, never rebuilt at build time — a package
   must not need a network fetch to know its own dependency hashes.
-- Known-intended profile collisions (`cline-bin`/`cline-baseline`,
-  `zcode`/`zcode-bin`) are doctrine, not defects — do not "fix" them.
+- Known-intended profile collisions (`zcode`/`zcode-bin`) are doctrine, not
+  defects — do not "fix" them.  (`cline-bin`/`cline-baseline` used to be such
+  a pair; `cline-baseline` is now a deprecated alias, so it no longer installs
+  anything of its own.)
 - Deprecating a package follows the manual's Deprecation Policy: alias it
   with `deprecated-package`, add a news entry, keep the alias at least a
   year before removing the name.

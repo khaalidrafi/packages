@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
-# Smoke test for cline-baseline: the package is a Bun-compiled standalone
-# binary (the non-AVX2 baseline target) whose ELF interpreter is patched to
-# the store glibc loader with patchelf --set-interpreter (only --set-rpath
-# corrupts Bun's appended payload), and a small shell wrapper execs the
-# binary as the process image with LD_LIBRARY_PATH exported.  Routing the
-# binary through `ld-linux --library-path' instead would make the loader the
-# executable, and the hub daemon -- which re-executes process.execPath --
-# would die on `unrecognized option --cline-hub-daemon' (the cline-bin
-# lesson, dcd11c6).  So this checks statically that bin/cline execs the
-# binary directly with LD_LIBRARY_PATH set and that lib/cline/cline is the
-# ELF binary, and dynamically: the CLI prints its version, and the hub
-# starts, answers status, and stops.
+# Smoke test for cline-bin: the package is upstream's published npm payload --
+# a Bun-compiled standalone binary plus the cline-hub webview tree it serves --
+# whose ELF interpreter is patched to the store glibc loader with
+# patchelf --set-interpreter (only --set-rpath corrupts Bun's appended
+# payload, proved on this very package, dcd11c6), and a small shell wrapper
+# execs the binary as the process image with LD_LIBRARY_PATH exported.
+# Routing the binary through `ld-linux --library-path' instead would make the
+# loader the executable, and the hub daemon -- which re-executes
+# process.execPath -- would die on `unrecognized option --cline-hub-daemon'.
+# So this checks statically that bin/cline execs the binary directly with
+# LD_LIBRARY_PATH set and that lib/cline/bin/cline is the ELF binary, and
+# dynamically: the CLI prints its version, and the hub starts, answers
+# status, and stops.  (Ported from the cline-baseline smoke test when that
+# package was deprecated: same binary, different path -- the npm payload
+# keeps its own bin/ tree, so the ELF sits at lib/cline/bin/cline.)
 set -euo pipefail
 out="${1:?usage: $0 STORE-PATH}"
 
-binary="$out/lib/cline/cline"
+binary="$out/lib/cline/bin/cline"
 wrapper="$out/bin/cline"
 
 [ -x "$wrapper" ] || { echo "missing executable $wrapper" >&2; exit 1; }
@@ -94,4 +97,4 @@ if [ -z "$hub_down" ]; then
 fi
 [ -n "$hub_down" ] || { echo "hub did not stop; stop said:" >&2; cat "$stoplog" >&2; exit 1; }
 
-echo "cline-baseline smoke test passed"
+echo "cline-bin smoke test passed"

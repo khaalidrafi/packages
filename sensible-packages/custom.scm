@@ -1,13 +1,4 @@
 (define-module (sensible-packages custom)
-  ;; The one non-package name this module exports.  (sensible-packages cline)
-  ;; already imports this module for bun-bin, so the cline CLI release number
-  ;; is written here and read from there (see %cline-version below); it is
-  ;; cline-baseline's tag today, and cline-bin's version should be folded back
-  ;; into it at the next bump.  It goes through #:export rather than
-  ;; `define-public' because tests/check-static.sh harvests package names by
-  ;; grepping `define-public' forms -- a version *string* must not show up
-  ;; there.
-  #:export (%cline-version)
   #:use-module (gnu packages base)
   #:use-module (gnu packages suckless)
   #:use-module (gnu packages xorg)
@@ -2957,20 +2948,6 @@ and download management.  Requires a graphics-capable terminal (foot, wezterm,
 kitty, ghostty, mlterm, xterm, etc.).")
     (home-page "https://tangled.org/janantos.tngl.sh/brow6el.git")
     (license license:expat)))
-
-;; Cline's version, kept here rather than in (sensible-packages cline) because that
-;; module already imports this one for bun-bin and importing the other way would
-;; make the dependency between the two modules circular.  A plain `define' is
-;; private to its module in Guile, hence the #:export at the top of this module:
-;; without it cline.scm reads an unbound variable.
-;;
-;; It feeds cline-baseline's `cli-v<version>' git tag only.  cline-bin now lives
-;; in (sensible-packages cline) with its own %cline-bin-version (3.0.74), so the two
-;; deliveries of one upstream no longer share one number written down once; they
-;; must be bumped together, or the next update-all pass folds %cline-bin-version
-;; back into this variable.
-(define %cline-version
-  "3.0.74")
 
 (define-public qoder-cli-bin
   (package

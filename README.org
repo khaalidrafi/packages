@@ -11,7 +11,6 @@ built by CI instead of by hand on a 4 GB laptop.
 |------------------+--------------------------+-----------------------------------|
 | zcode            | =(sensible-packages zcode)=  | terminal agent, built from source |
 | zcode-bin        | =(sensible-packages zcode)=  | vendor Electron .deb and its CLI  |
-| cline-baseline   | =(sensible-packages cline)=  | Bun CLI, built for non-AVX2 CPUs  |
 | cline-bin        | =(sensible-packages cline)=  | vendor Bun CLI from the npm build  |
 | autoclaw-bin     | =(sensible-packages autoclaw)= | vendor Electron AppImage         |
 | konaito-terminal-browser-bin | =(sensible-packages konaito)= | terminal browser over CDP, no Electron |
@@ -281,7 +280,7 @@ guix install -p ~/.guix-extra-profiles/a/a zcode
 guix install -p ~/.guix-extra-profiles/b/b zcode-bin
 #+end_example
 
-** =*-bin= entry points, and the =cline-bin=/=cline-baseline= pair
+** =*-bin= entry points
 
 Every =*-bin= installs the command name its upstream uses, so =guix install=
 gives you the same command you would get from the vendor's own installer and
@@ -291,23 +290,16 @@ names, all of them are installed (=codebuddy-code-bin= installs =codebuddy=,
 upstream's =bin/= entries).  Where the package name cannot be the command name
 --- =qoder-cli-bin= ships the =qodercli= binary --- both are installed.
 
-Two pairs collide, and only one of them is a defect:
-
-- =cline-bin= and =cline-baseline= both provide =bin/cline=.  That is the point:
-  they are the *same* program delivered two ways, the vendor's AVX2 binary and
-  the channel's own non-AVX2 build, and which one runs depends on your CPU.
-  Exactly one belongs in a profile, and =guix package='s collision refusal is
-  the correct outcome --- the =cline-baseline= section below explains why the
-  AVX2 one cannot be the only delivery.
-
-- =zcode= and =zcode-bin=, covered above.
-
-The remaining =*-bin= packages share no entry point and coexist happily,
-which is what an entry-point table is for: telling the two kinds of overlap
-apart.  (=opencode-bin= used to be the odd one out with =bin/opencode-v1=;
-it is now a deprecated alias of =opencode2-bin= --- =guix install
-opencode-bin= warns and installs V2 --- so =bin/opencode-v1= is gone.)  The
-full inventory, as installed today:
+The one intended collision left is =zcode= and =zcode-bin=, covered above:
+the source build and the vendor .deb both install =bin/zcode=, and exactly
+one belongs in a profile.  (=cline-bin= and =cline-baseline= used to be the
+second such pair; =cline-baseline= was deprecated on 2026-11-24 and is now
+an alias of =cline-bin=, so =bin/cline= has exactly one owner.
+=opencode-bin= went the same way earlier the same day: it is a deprecated
+alias of =opencode2-bin= and =bin/opencode-v1= is gone.)  The remaining
+=*-bin= packages share no entry point and coexist happily, which is what an
+entry-point table is for: telling the two kinds of overlap apart.  The full
+inventory, as installed today:
 
 #+begin_example
 bun-bin                bun
@@ -315,7 +307,7 @@ brow6el-bin            brow6el
 autoclaw-bin           autoclaw
 casty-bin              casty
 cline-bin              cline
-cline-baseline         cline
+cline-baseline         (deprecated alias of cline-bin)
 cloudflared            cloudflared
 codebuddy-code-bin     codebuddy, codebuddy-code, cbc, cbc-prewarm,
                        codebuddy-lowmem
@@ -401,76 +393,49 @@ git ls-remote --tags https://github.com/zai-org/ZCode   # matching source tag
 =.github/workflows/upstream.yml= runs nightly and fails when the packaged
 version falls behind, which is the reminder to do this.
 
-* cline-baseline
+* cline-bin, and the retired cline-baseline
 
 Cline (https://cline.bot, =https://github.com/cline/cline=) ships its CLI as a
 Bun single-file executable: =bun build --compile= embeds the Bun runtime in the
-binary.  Bun's default x86_64 runtime uses AVX2, so =@cline/cli-linux-x64=
-raises =SIGILL= on any CPU older than Intel Haswell (upstream issue #11539).
-That includes this machine's Celeron.  The channel's =cline-bin= --- the
-repackaged vendor binary --- used to enforce that itself: it printed an error
-and exited when =/proc/cpuinfo= had no =avx2=.  That guard belonged to an older
-copy of the package in =custom.scm=, which 71e1b61 left behind when it rewrote
-=cline-bin= in =(sensible-packages cline)=, so the channel carried one package name
-twice and =guix install cline-bin= resolved ambiguously.  The stale copy is now
-removed, and the rewrite is what runs here: 3.0.73 embeds Bun 1.4.2, which was
-verified to start on this Celeron (UPDATE #1 in =agent-team/TODOS.org=).
-=cline-baseline= stays in the channel because upstream still publishes no
-baseline target, not because =cline-bin= fails here.
+binary.  Bun's default x86_64 runtime uses AVX2, so such a binary raises
+=SIGILL= on any CPU older than Intel Haswell (upstream issue #11539) --- in
+theory.  This channel's own test machine is exactly such a pre-Haswell Celeron,
+and the published binary runs on it: =--version=, =--help= and a hub
+start/status/stop round trip all pass (verified for the 3.0.73 lineage, UPDATE
+#1 in =agent-team/TODOS.org=; the smoke test keeps proving it).  So =cline-bin=
+--- the repackaged vendor binary from the =@cline/cli-linux-x64= npm package
+--- is the channel's Cline, and this machine needs no from-source build to be
+served.
 
-** Why a source build, and why baseline
+=cline-baseline= used to be that from-source build: upstream publishes no
+baseline (non-AVX2) Linux artifact, so the package compiled Cline's
+=cli-v<version>= tag with Bun's =bun-linux-x64-baseline= target --- the same
+target sst/opencode ships its own =-baseline= artifacts with --- inside one
+fixed-output derivation, the only derivation kind Guix lets touch the network.
+That made it the channel's most expensive package to keep current: the FoD's
+output hash moved with every Bun bump and could only be re-captured by a
+one-time network build on CI, all to deliver a binary the npm package already
+provides.  It was deprecated on 2026-11-24: the build is deleted, and
+=cline-baseline= remains only as a =deprecated-package= alias, so =guix install
+cline-baseline= warns and installs =cline-bin=, the =go-ipfs= -> =kubo=
+pattern.  The alias stays at least a year, per the manual's Deprecation
+Policy.
 
-Upstream publishes no baseline (non-AVX2) Linux binary, so =cline-baseline=
-makes one: it compiles Cline from the =cli-v<version>= tag with Bun's baseline
-target =bun-linux-x64-baseline=, which embeds the non-AVX2 runtime and runs on
-SSE4.2-and-up x86_64.  That target is exactly how sst/opencode produces its own
-=-baseline= artifacts (=packages/opencode/script/build.ts=); Cline's
-=apps/cli/script/build.ts= has the same shape but omits the baseline target
-(unmerged upstream PR #11412 adds it).  So the whole change is to make
-=build.ts= hand that one string to =Bun.build='s =compile.target=, done with a
-=substitute*=, and build with =--single= (host target only).
+** What the wrapper still has to get right
 
-This is a real build, not =opencode-bin= in disguise: it fetches the source and
-compiles, unlike the =*-bin= packages that only rewrap a vendor binary.
-
-** Why a fixed-output derivation
-
-A from-source Bun build needs the network: =bun install= resolves the workspace
-(~468 packages, plus per-CPU =@opentui/core= native addons) and the baseline
-compile downloads Bun's baseline runtime artifact.  Guix only permits network in
-a fixed-output derivation, so the clone, install and compile run inside ONE
-FoD --- an origin =method= (=cline-baseline-build=) that calls =gexp->derivation=
-with =#:hash= --- whose single output is the compiled ELF, pinned by content
-hash.  Unlike =zcode= (a pnpm lockfile that reduces to a hash-verified tarball
-table), a bun-workspace install does not, so the FoD is the honest, reviewed unit
-here.  TLS stays on: the builder concatenates =nss-certs=' per-root =.pem= files
-into one =SSL_CERT_FILE= bundle (the fork ships no =ca-certificates= package).
-
-The compiled binary is Bun-standalone.  =patchelf --set-interpreter= alone is
-safe for it: only rewriting the dynamic section (=--set-rpath=) corrupts the
-appended payload, proved on =cline-bin= (commit dcd11c6).  The interpreter is
-patched to the store glibc loader and =bin/cline= =exec=s the binary directly
-with =LD_LIBRARY_PATH= pinned (gcc's libdir + zlib) --- the hub daemon
-re-executes =process.execPath=, so the binary itself must be the process image.
-=supported-systems= is =x86_64-linux= only; license is =asl2.0=
-(Cline is Apache-2.0).
-
-** Filling in the hash, and the local-machine caveat
-
-The FoD output hash cannot be known until the network build has actually run, so
-=%cline-baseline-source= carries a placeholder of all zeros.  Build it once on a
-network-capable host (CI, or any machine that is not this 4 GB potato) with:
-
-#+begin_example
-guix build -L . cline-baseline        # fails on the hash, but prints the real one
-#+end_example
-
-Guix reports the computed output hash on that mismatch; paste it into
-=%cline-baseline-source= (a following commit, so the hash is genuine), then the
-package is reproducible.  Never run that build on this laptop --- =bun install=
-of ~468 deps plus a baseline compile will freeze it.  Here, only
-=guix build -L . --dry-run cline-baseline= (evaluation) is run;
-=tests/smoke/cline-baseline.sh= then drives the real binary once a build exists.
+The npm payload's binary is a Bun ELF carrying =PT_INTERP
+/lib64/ld-linux-x86-64.so.2=, a path that does not exist in Guix, so direct
+exec answers =ENOENT= on the target.  The wrapper therefore =exec=s the binary
+through the store glibc loader with =LD_LIBRARY_PATH= pinned (gcc's libdir +
+zlib).  Only =patchelf --set-interpreter= is applied, never =--set-rpath=:
+rewriting the Bun executable's dynamic section corrupts the payload appended
+to it, proved on =cline-bin= itself (commit dcd11c6).  And the hub daemon
+re-executes =process.execPath=, so the binary itself must be the process image
+--- executing it through =ld-linux --library-path= instead makes the loader
+the executable and =hub start= dies on an unknown =--cline-hub-daemon=
+option.  =supported-systems= is =x86_64-linux= only; license is =asl2.0=
+(Cline is Apache-2.0).  =tests/smoke/cline-bin.sh= drives =--version=,
+=--help= and the hub round trip against a finished build.
 
 * AutoClaw
 
@@ -557,10 +522,9 @@ the channel's packages from the mirror (see step 8).
    =*-bin= ones after; that ordering is what "prioritized" means here.  It runs
    =tests/smoke/PACKAGE.sh= when present and attempts every package so one
    broken one does not hide another.  Each built output path is appended to
-   =built-paths.txt= for step 5.  Nothing is skipped: =cline-baseline= is built
-   too, and until its fixed-output hash is real (see the cline section) the
-   failure it produces is the useful one --- Guix prints the hash it computed,
-   which is the only way to get it without a network build on a laptop.
+   =built-paths.txt= for step 5.  Nothing is skipped: deprecated aliases are
+   built too (=cline-baseline= resolves to =cline-bin='s derivation), so an
+   alias that stopped resolving fails here rather than in a user's =guix pull=.
    Narrow a run with =PACKAGES="zcode dsh" ./tests/build-all.sh=.
 5. =tests/publish-substitutes.sh= --- start a =guix publish --cache= server and
    warm it by requesting each built path's =.narinfo=: that request is what

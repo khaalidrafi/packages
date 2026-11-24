@@ -240,7 +240,13 @@ Review point: if the manifest ever needs to name a program /explicitly/ again,
 it is no longer a correctness requirement, only a size optimisation.  Prefer
 leaving it alone rather than adding rows that the sweep already covers.
 
-* TODO =cline-baseline=: the fix that is only a guess
+* DONE =cline-baseline=: the fix that is only a guess
+CLOSED: [2026-11-24 Tue]
+
+Moot since the 2026-11-24 deprecation: =cline-baseline='s whole build
+(including this =LD_LIBRARY_PATH= setenv) was deleted, and the name is now
+a =deprecated-package= alias of =cline-bin=.  The guess never needs
+diagnosing; nothing of it is left in the channel.
 
 =sane-packages/cline.scm=, the =LD_LIBRARY_PATH= setenv in
 =cline-baseline-build=.
@@ -279,7 +285,13 @@ takes, and passing one aborts /evaluation/ with "Unrecognized keyword", which
 reads like a typo rather than a rejected design.  So if you are ever tempted to
 reintroduce the keyword, check that signature first.
 
-* TODO =cline-baseline=: the source hash is still a placeholder
+* DONE =cline-baseline=: the source hash is still a placeholder
+CLOSED: [2026-11-24 Tue]
+
+Resolved twice over: CI run 45343000034 captured the 3.0.74 output hash
+(0078029), and the deprecation on 2026-11-24 then deleted the entire FoD.
+=%cline-bin-version='s npm tarball hash is the only Cline hash the channel
+carries now.
 
 =sane-packages/cline.scm=, =%cline-baseline-source=.
 
@@ -387,7 +399,14 @@ bare =/download=.  Any of them plus a pinned sha256 is a version label with no
 relationship to the artifact.  Prefer a path that contains =version=; if
 upstream publishes no such path, say so in a comment next to the hash.
 
-* TODO =cline=: the version lives in two files again
+* DONE =cline=: the version lives in two files again
+CLOSED: [2026-11-24 Tue]
+
+Resolved by the =cline-baseline= deprecation: the =cli-v<version>= source
+build is gone, so =%cline-version= and its =#:export= are deleted from
+=(sensible-packages custom)=, and =%cline-bin-version= in =cline.scm= is the
+one place a Cline release number is written.  The 2026-10-03 design's
+"one upstream, one number" now holds trivially.
 
 Re-opens the point closed by =DONE cline: the version lived in two files=
 (2026-10-03).  =cline-baseline= reads =%cline-version= --- =custom.scm:2949=,

@@ -29,10 +29,10 @@ else
   fi
   all=$(grep -hoE '^\(define-public [^ )]+' "${files[@]}" | awk '{print $2}')
   # Nothing is excluded: every define-public in the channel is built, so a
-  # placeholder hash or a broken phase cannot hide.  cline-baseline is the
-  # package that most often fails here -- its fixed-output hash can only be
-  # captured by the one-time network build that no laptop here runs, so CI is
-  # what reports the "hash mismatch ... proposed value" line to fill in.
+  # placeholder hash or a broken phase cannot hide.  Deprecated aliases are
+  # names here too -- `cline-baseline' resolves to cline-bin's derivation
+  # (guix answers a deprecation warning and builds the replacement), so an
+  # alias that stopped resolving fails in CI rather than in a user's pull.
   source_pkgs=$(printf '%s\n' $all | grep -vE -- '-bin$' || true)
   bin_pkgs=$(printf '%s\n' $all | grep -E -- '-bin$' || true)
   names="$(printf '%s\n' $source_pkgs) $(printf '%s\n' $bin_pkgs)"
