@@ -411,17 +411,25 @@ import { type AddressInfo, createServer } from \"node:net\";"))
                                         "\t\t\t\t\t\tdetached: true,\n"
                                         "\t\t\t\t\t\tstdio: \"ignore\",\n"
                                         "\t\t\t\t\t});\n"
-                                        "\t\t\t\t\tvoid hubDaemon;")))
-                                    ;; `void hubDaemon;', not
-                                    ;; `(void) hubDaemon;': Bun 1.4.3's parser
-                                    ;; rejects the parenthesized form outright
-                                    ;; ("Unexpected )"), which failed the whole
-                                    ;; build.ts before it could bundle anything
-                                    ;; -- CI run 38541038306, reproduced with the
-                                    ;; pinned bun on the patched file alone.  The
-                                    ;; two forms mean the same thing here (evaluate
-                                    ;; the binding, discard the result); the bare
-                                    ;; one parses.
+                                        "\t\t\t\t\thubDaemon.unref();")))
+                                    ;; `hubDaemon.unref();' -- replacing the
+                                    ;; earlier `void hubDaemon;' (and never
+                                    ;; `(void) hubDaemon;', which Bun 1.4.3's
+                                    ;; parser rejects outright, CI run
+                                    ;; 38541038306): the unref is load-bearing.
+                                    ;; Run 42981010871 proved Bun's runtime
+                                    ;; WAITS for spawned children even when
+                                    ;; they are detached with stdio "ignore" --
+                                    ;; build.ts printed "Build complete. 1
+                                    ;; targets built." and then never exited,
+                                    ;; and the guix daemon killed the derivation
+                                    ;; after exactly 3600 s of silence.
+                                    ;; unref() releases the daemon from the
+                                    ;; runtime's liveness accounting so build.ts
+                                    ;; exits with the daemon still tearing down;
+                                    ;; the timeout wrapper on the bun invocation
+                                    ;; below is the belt-and-braces in case the
+                                    ;; pinned Bun ignores it.
                                     
                                     ;; `hub status' is replaced by a bounded poll of the discovery file the
                                     ;; daemon writes.  It resolves to the same shape the next assertion
@@ -705,9 +713,49 @@ import { type AddressInfo, createServer } from \"node:net\";"))
                                     ;; build:apps -- which also says --production and is not
                                     ;; what build.ts invokes -- keeps upstream's text.
                                     
-                                    (invoke (string-append bun "/bin/bun")
-                                            "apps/cli/script/build.ts"
-                                            "--single")
+                                    ;; Run build.ts under coreutils `timeout'
+                                    ;; and gate on the compiled artifact, not
+                                    ;; on the exit status alone.  Run
+                                    ;; 42981010871: build.ts printed
+                                    ;; "Build complete. 1 targets built." and
+                                    ;; then never exited -- the detached hub
+                                    ;; daemon from the smoke is still its
+                                    ;; child and Bun's runtime waits for
+                                    ;; spawned children (see the unref note
+                                    ;; above) -- so the guix daemon killed the
+                                    ;; derivation after exactly 3600 s of
+                                    ;; silence, an hour after the binary was
+                                    ;; already sitting in dist/.  Statuses:
+                                    ;; 0 = clean; 124 = `timeout' itself had
+                                    ;; to kill the hang (the artifact gate
+                                    ;; then decides); anything else is a real
+                                    ;; build.ts failure (its own smoke legs
+                                    ;; exit 1) and fails the derivation as
+                                    ;; before.  2400 s is 20x the ~2 minutes
+                                    ;; the whole build takes (bun install
+                                    ;; included, measured in the same run) and
+                                    ;; stays under the daemon's silence kill.
+                                    (let ((status (system* (string-append
+                                                            coreutils
+                                                            "/bin/timeout")
+                                                   "--kill-after=60"
+                                                   "2400"
+                                                   (string-append bun
+                                                                  "/bin/bun")
+                                                   "apps/cli/script/build.ts"
+                                                   "--single")))
+                                      (unless (or (zero? status)
+                                                  (= status 124))
+                                        (error "build.ts failed; exit status:"
+                                         status))
+                                      (unless (file-exists?
+                                               "apps/cli/dist/cli-linux-x64/bin/cline")
+                                        (error
+                                         "build.ts produced no compiled binary; timeout status:"
+                                         status))
+                                      (when (= status 124)
+                                        (format (current-error-port)
+                                         "note: build.ts timed out after the build; the known hub-daemon hang (run 42981010871), continuing on the produced artifact~%")))
 
                                     ;; Emit the compiled ELF as the single fixed output.
                                     (copy-file

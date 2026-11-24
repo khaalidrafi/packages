@@ -96,12 +96,23 @@
                      ;; fontconfig and zlib.  glibc's own sonames the
                      ;; store loader resolves from its output, the way
                      ;; every -bin package in this channel leaves them.
-                     (rpath (string-join (map (lambda (p)
-                                                (string-append (assoc-ref
-                                                                inputs p)
-                                                               "/lib"))
-                                              '("gcc" "fontconfig" "zlib"))
-                                         ":")))
+                     ;;
+                     ;; The store paths are spliced in by the gexp
+                     ;; (#$...) rather than looked up by input label:
+                     ;; the pinned Guix's `fontconfig' variable IS the
+                     ;; package named fontconfig-minimal, so the input
+                     ;; lands under that label and (assoc-ref inputs
+                     ;; "fontconfig") returned #f -- run 42981010871
+                     ;; died inside this phase on exactly that
+                     ;; (string-append #f "/lib").  Referencing the
+                     ;; packages themselves is label-proof whichever
+                     ;; variant a future Guix exports.
+                     (rpath (string-join (map (lambda (lib)
+                                                (string-append lib "/lib"))
+                                              (list #$(this-package-input
+                                                       "gcc")
+                                                    #$fontconfig
+                                                    #$zlib)) ":")))
                 (invoke patchelf
                         "--set-interpreter"
                         loader

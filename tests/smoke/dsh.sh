@@ -52,14 +52,22 @@ done
 # imported, so a store move or a missing sibling would break them silently at
 # runtime.  Check the files exist; booting a real profile is left to manual
 # use because it writes a DSH_HOME.
-for file in \
-    lib/profile-boot.js \
-    lib/profile-boot-C14i-8IN.js \
-    lib/dump-config-CWs_HdOc.js \
-    lib/dump-config-CxNkSYcK.js \
-    lib/dump-config-schema-D_PxIzpe.js \
-    lib/plugin-BiveYA7h.js; do
-  [ -f "$lib/$file" ] || { echo "dynamic import is missing $lib/$file" >&2; exit 1; }
+#
+# The chunk siblings carry the bundler's content hash in their file names, and
+# upstream renames the set on every release: the 0.2.2-rc.1 bump renamed all
+# five of them (profile-boot-C14i-8IN.js -> profile-boot-e2mS45fC.js etc.,
+# verified against the rc.1 npm tarball), which is what failed CI run
+# 42981010871 -- the smoke, not the package, was stale.  The entry points
+# (bin.js, profile-boot.js) keep their exact names, so assert those exactly
+# and the hashed chunks as BASE-*.js globs: at least one per base must be
+# present, because bin.js imports that base and the bundler always emits its
+# chunk next to it (dump-config legitimately has two).
+[ -f "$lib/lib/profile-boot.js" ] ||
+  { echo "dynamic import is missing $lib/lib/profile-boot.js" >&2; exit 1; }
+for base in profile-boot dump-config dump-config-schema plugin; do
+  found="$(find "$lib/lib" -maxdepth 1 -name "$base-*.js" -print -quit 2>/dev/null)"
+  [ -n "$found" ] ||
+    { echo "no $base-*.js chunk under $lib/lib (dynamic import target)" >&2; exit 1; }
 done
 
 # The closure is generated from a lockfile, so a version bump can rename or

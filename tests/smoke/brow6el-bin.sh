@@ -25,15 +25,24 @@ share="$out/share/brow6el"
 [ -x "$wrapper" ] || fail "missing executable $wrapper"
 [ -d "$share" ] || fail "missing $share"
 
-# The layout the phase copies by hand: the executable, the three patchelf'd CEF
+# The layout the phase copies by hand: the executable, the patchelf'd CEF
 # libraries, the ICU data and the resource packs.  libcef.so is the one that
 # cannot be missing (everything links against it); the .pak files are what CEF
 # reads at startup before it opens a window.
+#
+# The SwiftShader pair is version-dependent: CEF <= 148 shipped the ANGLE
+# libraries libEGL.so/libGLESv2.so, and CEF 154 (the pin since the 0.3.6
+# bump) dropped them from the minimal distribution in favour of the Vulkan
+# pair libvk_swiftshader.so/libvulkan.so.1 -- verified against the pinned
+# tarball's Release/ listing, and the cause of CI run 42981010871's
+# "CEF resource .../libEGL.so missing".  Require what the pinned dist
+# actually ships, and keep the ANGLE pair as a conditional check below so a
+# future dist that re-adds it still has to arrive patched.
 for path in \
     brow6el \
     libcef.so \
-    libEGL.so \
-    libGLESv2.so \
+    libvk_swiftshader.so \
+    libvulkan.so.1 \
     icudtl.dat \
     resources.pak \
     chrome_100_percent.pak \
@@ -132,11 +141,17 @@ done
 #
 # What survives into the store is the rpath, so that is what is asserted:
 # libcef.so is born with RUNPATH=$ORIGIN (see the link note in the phase),
-# so an unpatched library shows up here unambiguously.  The three libs get
+# so an unpatched library shows up here unambiguously.  The patched libs get
 # the same rpath list as the executable above -- the Guix libraries CEF
 # dlopens -- so the entry rules are the same: store libs only, nss's lib/nss
-# tolerated, no $ORIGIN, and more than one entry.
-for lib in libcef.so libEGL.so libGLESv2.so; do
+# tolerated, no $ORIGIN, and more than one entry.  First the pair the pinned
+# CEF 154 actually ships (libcef.so plus the Vulkan SwiftShader pair), then
+# the ANGLE pair conditionally: CEF <= 148 shipped libEGL.so/libGLESv2.so,
+# 154 does not, and a future dist that re-adds them must still arrive
+# patched -- if present they get the same assertions, and their absence is
+# the documented CEF-154 shape, not a regression.
+check_cef_lib_rpath() {
+  lib="$1"
   head -c 4 "$share/$lib" | grep -q $'ELF' || fail "$share/$lib is not an ELF"
   libpath="$("$patchelf" --print-rpath "$share/$lib")"
   [ -n "$libpath" ] ||
@@ -157,6 +172,14 @@ for lib in libcef.so libEGL.so libGLESv2.so; do
     fail "$share/$lib rpath entries outside the store:$bad"
   [ "${#libentries[@]}" -gt 1 ] ||
     fail "$share/$lib rpath has no Guix libraries: $libpath"
+}
+
+for lib in libcef.so libvk_swiftshader.so libvulkan.so.1; do
+  check_cef_lib_rpath "$lib"
+done
+for lib in libEGL.so libGLESv2.so; do
+  [ -e "$share/$lib" ] || continue
+  check_cef_lib_rpath "$lib"
 done
 
 # Exercise the wrapper for real: no --help (brow6el has none) but a nonexistent

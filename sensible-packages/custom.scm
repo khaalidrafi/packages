@@ -2977,8 +2977,19 @@ locales) and the cmake find modules required to compile CEF-based apps.")
                               (chmod elf #o755)
                               (invoke "patchelf" "--set-rpath" rpath elf)))
                           (list (string-append share "/libcef.so")
+                                ;; CEF 154 (the pin since the 0.3.6 bump)
+                                ;; dropped the ANGLE pair libEGL.so /
+                                ;; libGLESv2.so from the minimal dist in
+                                ;; favour of the Vulkan pair below -- the
+                                ;; when-guards keep the ANGLE entries
+                                ;; harmless for a future dist that re-adds
+                                ;; them, and make the new pair patch even
+                                ;; though the tarball layout decides what
+                                ;; exists.
                                 (string-append share "/libEGL.so")
-                                (string-append share "/libGLESv2.so")))
+                                (string-append share "/libGLESv2.so")
+                                (string-append share "/libvk_swiftshader.so")
+                                (string-append share "/libvulkan.so.1")))
                 ;; Wrapper: cd into share dir then exec brow6el
                 (mkdir-p bin)
                 (call-with-output-file (string-append out "/bin/brow6el")

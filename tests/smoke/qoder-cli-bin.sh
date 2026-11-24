@@ -18,7 +18,7 @@ bin="$out/bin/qodercli"
 [ -e "$out/bin/qoder" ] || { echo "missing $out/bin/qoder symlink" >&2; exit 1; }
 
 version="$("$bin" --version 2>&1 | tail -1)"
-[ "$version" = "1.1.83" ] ||
-  { echo "qodercli --version answered '$version', expected 1.1.83" >&2; exit 1; }
+[ "$version" = "1.1.86" ] ||
+  { echo "qodercli --version answered '$version', expected 1.1.86" >&2; exit 1; }
 
 echo "qoder-cli-bin smoke test passed ($version)"
