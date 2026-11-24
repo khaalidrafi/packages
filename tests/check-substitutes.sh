@@ -32,7 +32,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-MIRROR="${MIRROR_URL:-https://khaalidrafi.github.io/packages}"
+MIRROR="${MIRROR_URL:-https://khaalidrafi.github.io/sensible-packages}"
 # The daemon of a fresh runner knows bordeaux, ci.guix.gnu.org and nonguix;
 # our URL is passed per command, exactly as README.org documents for users.
 UPSTREAMS="https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"

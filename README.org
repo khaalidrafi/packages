@@ -67,7 +67,7 @@ Channel Dependencies/; brix declares the same dependency this way.
 ** Install without building: substitutes
 
 CI publishes every package it builds as a signed substitute on a static mirror
-hosted by GitHub Pages (https://khaalidrafi.github.io/packages/), so
+hosted by GitHub Pages (https://khaalidrafi.github.io/sensible-packages/), so
 =guix install= downloads a ready store item instead of compiling it --- the
 whole point of building in CI rather than on a 4 GB laptop.  The mirror holds
 only this channel's own outputs; a package's shared dependencies (glibc, GCC,
@@ -88,7 +88,7 @@ Then point Guix at the mirror, per command:
 #+begin_example
 guix install --substitute-urls=\
 "https://ci.guix.gnu.org https://bordeaux.guix.gnu.org \
-https://khaalidrafi.github.io/packages" zcode
+https://khaalidrafi.github.io/sensible-packages" zcode
 #+end_example
 
 or, to make it permanent, add that URL to the =guix= service's
@@ -97,7 +97,7 @@ to =/etc/guix/guix.conf=) and reconfigure.  Confirm the mirror actually serves
 a package before trusting it to avoid a build:
 
 #+begin_example
-guix weather --substitute-urls="https://khaalidrafi.github.io/packages" zcode
+guix weather --substitute-urls="https://khaalidrafi.github.io/sensible-packages" zcode
 #+end_example
 
 The mirror is rebuilt and force-replaced on every =push= to this branch (see CI
