@@ -329,103 +329,6 @@ release binaries are used instead.")
     (home-page "https://bun.sh")
     (license license:expat)))
 
-(define %opencode-version
-  "1.19.5")
-(define %opencode-url
-  "https://github.com/anomalyco/opencode/releases/download/v")
-
-(define opencode-avx2-source
-  (origin
-    (method url-fetch)
-    (uri (string-append %opencode-url %opencode-version
-                        "/opencode-linux-x64.tar.gz"))
-    (sha256 (base32 "0yk4q4zfyl9ndkbg635dz8z4b7b7dyr2a0izdgrrsfzs6sii10sq"))))
-
-(define opencode-baseline-source
-  (origin
-    (method url-fetch)
-    (uri (string-append %opencode-url %opencode-version
-                        "/opencode-linux-x64-baseline.tar.gz"))
-    (sha256 (base32 "0g9kaqb4jkqlakmvbprdgcayq0vdkfgmalhmq169b2929gyh1hhp"))))
-
-(define-public opencode-bin
-  (package
-    (name "opencode-bin")
-    (version %opencode-version)
-    (source
-     #f)
-    (build-system copy-build-system)
-    (supported-systems '("x86_64-linux"))
-    (arguments
-     (list
-      #:validate-runpath? #f
-      #:strip-binaries? #f
-      #:install-plan
-      #~'(("opencode-avx2/opencode" "lib/opencode/opencode-avx2")
-          ("opencode-baseline/opencode" "lib/opencode/opencode-baseline"))
-      #:phases
-      #~(let ((unpack-variants (lambda* (#:key inputs #:allow-other-keys)
-                                 ;; Tarballs hold a single `opencode` binary at root.
-                                 (mkdir "opencode-avx2")
-                                 (mkdir "opencode-baseline")
-                                 (invoke "tar" "xzf"
-                                         #$opencode-avx2-source "-C"
-                                         "opencode-avx2")
-                                 (invoke "tar" "xzf"
-                                         #$opencode-baseline-source "-C"
-                                         "opencode-baseline"))))
-          (alist-cons-after 'install
-                            'make-wrapper
-                            (lambda* (#:key inputs outputs #:allow-other-keys)
-                              (let* ((out (assoc-ref outputs "out"))
-                                     (loader (string-append (assoc-ref inputs
-                                                                       "libc")
-                                              "/lib/ld-linux-x86-64.so.2"))
-                                     ;; Bun dlopens native modules (watcher.node) needing
-                                     ;; libgcc_s/libstdc++; pin them like cursor-cli does.
-                                     (lib-path (string-append (assoc-ref
-                                                               inputs "gcc")
-                                                              "/lib" ":"
-                                                              (assoc-ref
-                                                               inputs "zlib")
-                                                              "/lib"))
-                                     (avx2 (string-append out
-                                            "/lib/opencode/opencode-avx2"))
-                                     (baseline (string-append out
-                                                "/lib/opencode/opencode-baseline")))
-                                (mkdir-p (string-append out "/bin"))
-                                (call-with-output-file (string-append out
-                                                        "/bin/opencode-v1")
-                                  (lambda (port)
-                                    (format port
-                                     "#!~a
-if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a --library-path ~a ~a \"$@\"; else exec ~a --library-path ~a ~a \"$@\"; fi
-"
-                                     (string-append (assoc-ref inputs "bash")
-                                                    "/bin/bash")
-                                     loader
-                                     lib-path
-                                     avx2
-                                     loader
-                                     lib-path
-                                     baseline)))
-                                (chmod (string-append out "/bin/opencode-v1")
-                                       #o555)))
-                            (alist-replace 'unpack unpack-variants
-                                           %standard-phases)))))
-    (inputs (list bash-minimal tar gzip
-                  (list gcc "lib") zlib))
-    (synopsis "AI coding agent for the terminal")
-    (description
-     "OpenCode is an open-source AI coding agent built for the terminal.
-This package installs the official prebuilt binaries (both the AVX2 and
-baseline variants) and a wrapper that picks the right one for the CPU at
-runtime.  The binaries need only glibc and are exec'd via the store glibc
-loader, so no FHS emulation is required.  The command is installed as
-`opencode-v1', since the plain `opencode' name belongs to opencode2-bin,
-upstream's default line.")
-    (home-page "https://opencode.ai")
-    (license license:expat)))
 
 ;;; ---------------------------------------------------------------------------
 ;;; OpenCode v2 (`opencode2-bin`).
@@ -449,9 +352,8 @@ upstream's default line.")
 ;;;
 ;;; Both variants are needed for the same reason as in v1: this machine's CPU
 ;;; (an Intel Celeron N2815) reports no avx2 flag, so the AVX2 build dies with
-;;; SIGILL.  The runtime /proc/cpuinfo dispatch is copied from opencode-bin
-;;; above, since the two binaries are built by the same Bun pipeline and need
-;;; the same store loader invocation.
+;;; SIGILL.  The runtime /proc/cpuinfo dispatch is inherited from the retired
+;;; v1 package; both lines come from the same Bun pipeline.
 ;;;
 ;;; `readelf -d' reports only libc, ld-linux, libpthread, libdl and libm, so
 ;;; like v1 this is a plain glibc binary with no C++ runtime to satisfy.  It is
@@ -536,9 +438,9 @@ upstream's default line.")
                                                 "/lib/opencode2/opencode-baseline"))
                                      ;; `opencode' is the command upstream's own
                                      ;; installer uses, and V2 is the default line
-                                     ;; now, so this package claims it;
-                                     ;; opencode-bin no longer competes for it:
-                                     ;; it installs `opencode-v1' instead.
+                                     ;; now, so this package claims it; the
+                                     ;; deprecated opencode-bin alias points
+                                     ;; here, so nothing else competes for it.
                                      (wrapper (string-append out
                                                              "/bin/opencode")))
                                 ;; V2 re-executes ITSELF as a `serve' child
@@ -628,14 +530,11 @@ if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then exec ~a \"$@\"; else exec ~a \
                                 ;; major line it wants: `opencode2', plus the npm
                                 ;; package's own second bin name `opencode-v2'.
                                 ;; The plain `opencode' name moved here from
-                                ;; opencode-bin because V2 is what upstream ships
-                                ;; as its default CLI, and this channel's *-bin
-                                ;; rule (README: "*-bin entry points") is to
-                                ;; install the name upstream's own installer uses.
-                                ;; opencode-bin (v1) answers to `opencode-v1'
-                                ;; instead, so the two no longer collide on
-                                ;; bin/opencode and both majors can sit in one
-                                ;; profile.
+                                ;; the retired v1 package because V2 is what
+                                ;; upstream ships as its default CLI, and this
+                                ;; channel's *-bin rule (README: "*-bin entry
+                                ;; points") is to install the name upstream's
+                                ;; own installer uses.
                                 (for-each (lambda (alias)
                                             (copy-file wrapper alias)
                                             (chmod alias #o555))
@@ -659,10 +558,25 @@ variants, published as the npm packages @opencode/cli-linux-x64 and
 @opencode/cli-linux-x64-baseline) and a wrapper that picks the right one for
 the CPU at runtime.  It installs the command as `opencode' (plus the
 `opencode2' and `opencode-v2' aliases), because V2 is upstream's default
-line; V1 is packaged separately as opencode-bin and installs `opencode-v1',
-so the two can share a profile.")
+line; the V1 package is retired and `opencode-bin' remains only as a
+deprecated alias of this one, so either name installs V2.")
     (home-page "https://opencode.ai")
     (license license:expat)))
+
+;;; OpenCode v1 (`opencode-bin') is deprecated, superseded by opencode2-bin.
+;;; The Guix manual's Deprecation Policy prescribes this shape: the old name
+;;; stays a resolvable alias that warns and installs its replacement --
+;;; `guix install opencode-bin' now answers with a deprecation notice and
+;;; installs V2, the way `guix install go-ipfs' answers with kubo.  The
+;;; manual's `define-deprecated-package' macro expands to exactly this
+;;; deprecated-package call; it is spelled out as define-public so
+;;; tests/check-static.sh keeps harvesting -- and dry-run checking -- the
+;;; name, and Guix installs old enough to predate the macro still load this
+;;; module.  deprecated-package sets the 'superseded property; keep the
+;;; alias at least a year, and take its eventual removal through a news
+;;; entry.
+(define-public opencode-bin
+  (deprecated-package "opencode-bin" opencode2-bin))
 
 (define %cursor-cli-version
   "2026.10.01-e373342")
