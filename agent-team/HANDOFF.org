@@ -1,101 +1,186 @@
-#+TITLE: HANDOFF.org — cross-session handoff (written 2026-10-28 ~14:4x +06)
-#+DESCRIPTION: Read this first in the new session. Owner moved the conversation to a fresh session; this file carries the full state.
+#+TITLE: HANDOFF.org — cross-session handoff (written 2026-11-24, outgoing seat GLM-5.3 Build Engineer)
+#+DESCRIPTION: Read this FIRST in the new session. Full state as of ai/main @ 5d8d617. English only (Owner law).
 
 * WHERE THINGS STAND (BLUF)
-  - Repo: github.com/khaalidrafi/packages, branch =ai/packages=, tip
-    =806b754= (team files renamed to short names; chain turn now
-    =zai/glm-4.7-flash@goose=).
-  - The objective (DISPATCH #1) is still OPEN: verify autoclaw-bin
-    (9ce25e7), lark-cli-bin + cline-bin (71e1b61) and the cline-baseline
-    hub-wrapper fix (dcd11c6) on CI, then flip the board entry to
-    REVIEW with branch/sha + CI evidence.
-  - The autonomous chain is STALLED: =#+STALL-COUNT: 2= — the
-    qwen3.8-flash@qoder bench turn merged BLOCKED (all bench lanes
-    failed); the turn then rotated to zai/glm-4.7-flash@goose, which
-    has not completed. Next session must either revive the bench lanes
-    or run the turn itself.
-  - The cron watcher job ("autoclaw-push-ci-watch", id 479594) was
-    DELETED at handoff time by the outgoing session. CI watching is
-    now manual only.
 
-* HOW TO RESTORE THE WORKSPACE
-  #+BEGIN_EXAMPLE
-  git clone --depth 30 -b ai/packages https://github.com/khaalidrafi/packages \
-      /home/z/my-project/packages
-  #+END_EXAMPLE
-  - The sandbox container resets between sessions; anything not pushed
-    or copied out is lost. Treat origin as the only durable store.
-  - Network notes: api.github.com is 403-rate-limited from the sandbox;
-    use WebFetch for actions/releases pages. npm registry and vendor
-    endpoints are reachable. No push token is held in-session —
-    produce patches or ask the Owner to push.
+- Repo: github.com/khaalidrafi/packages.  DEFAULT branch = =ai/main=,
+  tip =5d8d617= (verified =ls-remote --symref= 2026-11-24).  The repo is
+  PUBLIC: clone/fetch/pull work anonymously.  A =main= branch also sits at
+  5d8d617; =ai/packages= (2ffe3ff) is the OLD trunk lineage, history was
+  rewritten once (kit identity fix moved hashes) — never compare SHAs
+  across the rewrite, compare content.
+- Channel renamed: =sensible-packages/= (was =sane-packages/=), landed
+  d9cd31a/dea7052 lineage.  ~50 =define-public= packages across 10 .scm
+  files (custom.scm carries 37).
+- ALL standing Owner orders through 2026-11-11 are LANDED on ai/main:
+  default-branch flip, the 18-stale-upstream bump round, the
+  sensible-packages rename, devin-bin + lightpanda-bin + moli-bin, and
+  the qoder/autoclaw login-persistence fix (real Secret Service).
+  The 16 temp branches of the Nov-11 era were resolved and deleted;
+  what sits on the remote now besides ai/main: =main=, =ai/packages=,
+  8 read-only =ai/turn-packages-*= chain branches, =gh-pages=.
+- The one unclaimed thread: CI.  See "CI STATE — FACTS" below.
+- Owner UAT round 2 for the login fix has NOT happened yet.
 
-* SOURCE OF TRUTH FILES (read in this order)
-  1. =AGENTS.md= (repo root) — machine laws: no source builds locally,
-     *-bin packages may be built/installed/run locally, CI builds
-     source packages; secret law (names only, never values); branch
-     law (=ai/packages=); signature law scoped to repo-side chats.
-  2. =agent-team/TODOS.org= — the team board, single source of truth.
-     DISPATCH #1 is the only entry, P1, from Qoder session
-     (DeepSeek-Flash@dfmodel) to the Build Engineer.
-  3. =agent-team/CONTROL.org= — chain control plane (Lead-owned; seats
-     READ, never write). KILL-SWITCH OFF, OBJECTIVE-STATE OPEN,
-     TURN = zai/glm-4.7-flash@goose, STALL-COUNT 2.
-  4. =STATE.org= (repo root) — cross-session state the Owner pastes
-     back at session start; also record the handoff there.
-  5. =agent-team/MEMBERS.org= — roster/seats. Charter is now
-     =agent-team/CHARTER.md=, chat =agent-team/CHAT.org= (2026-10-28
-     rename in 806b754 — older docs may use the long names).
+* WHAT LANDED SINCE THE LAST HANDOFF (2026-10-28 → 2026-11-24)
 
-* TEAM STATE (as of 2026-10-28)
-  - Team Lead: glm-5.3-flash@chat.z.ai (the Owner's chat.z.ai session).
-  - Build Engineer: glm-5.3@chat.z.ai.
-  - Build Engineer fallback bench (hired, CI-ready):
-    zai/glm-4.7-flash@goose, groq/qwen3.8-27b@goose, qwen3.8-flash@qoder.
-  - The Discord relay (z.ai-agent) is the Owner's relay only — no seat,
-    no hiring authority (relay law, Owner order #hq 2026-10-28 05:28Z).
-  - Push CI (all-packages build) is DISABLED by Owner order — builds
-    are on demand only (workflow_dispatch / PR). The agent-team chain
-    runs via .github/workflows/agent-team.yml; agent-team-ci is
-    installed as the ci/ submodule (chain: test/probe/turn/finalize);
-    chain gate = tests/check-chain.sh (guix-free).
-  - Secrets sealed in Actions (names only): GH_PAT, GOMODEL_MASTER_KEY,
-    TYPESAFE_API_KEY, ZAI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY,
-    QODER_PERSONAL_ACCESS_TOKEN.
+1. Login fix (DISPATCH #2): =ai/pkgs-login-keyring= merged onto ai/main
+   (2a0b283 in the current lineage).  Wrappers for autoclaw-bin and
+   qoder-desktop-bin start a session dbus-daemon when the session lacks
+   one, seed a blank-password login keyring once under HOME
+   (=printf '' | gnome-keyring-daemon ...=), and wire the secrets
+   daemon; NO =--password-store=basic= (the app rejects Chromium's
+   basic_text backend — that is the root cause read from autoclaw's
+   main.cjs: =isElectronProductAccountEncryptionAvailable()= returns
+   false on Linux under basic_text).  Supersedes and deletes the
+   UAT-rejected 88db381 flag approach and the df9a652 subset.  Two
+   new smokes: =tests/smoke/qoder-cli-bin.sh=,
+   =tests/smoke/qoder-desktop-bin.sh= (assert the keyring wiring AND
+   the ABSENCE of the basic flag).
+2. Rename: =git mv sane-packages sensible-packages=, 107 references
+   across 26 files (module forms, README.org channel example,
+   .guix-channel comment, upstream.yml, tests/*, scripts/*, news.txt,
+   dupscan.py).  DELIBERATELY untouched: AGENTS.md law text (its
+   sane-packages prose is the Lead's to reissue — still OPEN flag) and
+   historical records (agent-team/*, STATE.org, AI-REVIEW.org).
+3. Bump round: 18 stale upstreams bumped (table in the TODOS.org
+   2026-11-11 03:25 UTC note — qoder-cli 1.1.83→1.1.86, qoder-desktop
+   0.5.3→0.5.7, dsh 0.2.2-rc.1, kilocode 7.8.27, cua-driver 0.47.5,
+   rdircd 20261110.0, purple-discord 1.0.2026.11.10, brow6el 0.3.6,
+   cline-baseline 3.0.74 (FOD hash intentionally left at the 3.0.70
+   value — CI's next build fails once and pastes the actual hash in),
+   etc.).  HELD BACK on purpose: node-trycua/node-ubjs pins (mcode
+   declares them exactly), pi-acp's @agentclientprotocol 0.26.x,
+   konaito↔chrome-headless-shell lockstep (upstream unmoved),
+   zcode SOURCE frozen at 3.14.3 (Owner doctrine; zcode-bin 3.17.2 is
+   current — v3.17.2 lockfile .pnpm names exceed the 255-byte kernel
+   component limit and its .deb dropped libEGL.so).
+4. New packages: devin-bin (Cognition Devin CLI, static-pie ELF from
+   the npm platform release), lightpanda-bin + moli-bin (light
+   browsers, libarchive import fix), cline-baseline hub-ready wrapper.
+5. Default branch flipped to ai/main (API PATCH 200, 2026-11-10/11,
+   lossless: ai/packages was a strict ancestor; README.org channel
+   example now pins branch "ai/main").
 
-* TECHNICAL FINDINGS ALREADY BANKED (do not re-derive)
-  - autoclaw-bin 2.0.3 fixes landed in 9ce25e7:
-    (a) .desktop entry: =substitute*= regex =.= matches newline, so the
-    =^Exec=.*= substitution merged two lines; fix ends the replacement
-    with a newline.
-    (b) launch crash: Electron GPU process fails (error_code=1002,
-    "FATAL: GPU process isn't usable. Goodbye."); bin/autoclaw is now a
-    script passing --disable-gpu before "$@" (it was a symlink).
-  - lark-cli-bin and cline-bin landed in 71e1b61 (DeepSeek-Flash).
-  - cline hub: =cline hub start= times out after upstream's fixed 15 s
-    detached-start wait on the Celeron; hub status/stop answer fine.
-    dcd11c6 patched the interpreter so the hub can re-exec itself.
-  - cline-baseline (source build, CI-only): fixed-output hash filled in
-    (0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g); only CI can
-    prove the build. Owner decision recorded (ebb2a3f): keep
-    cline-baseline.
-  - Historical: the full 39-package channel went fully green on
-    2026-10-17 (packages + substitute-install jobs), substitutes
-    published at https://khaalidrafi.github.io/packages (25 items;
-    >95MB nar skipped due to GitHub Pages cap — those build from
-    source via the channel).
+* CI STATE — FACTS (do not re-derive)
 
-* IMMEDIATE NEXT STEPS (suggested order)
-  1. Read AGENTS.md + the board + TEAM-CONTROL.org (files above).
-  2. Resolve the chain BLOCKED state: inspect the latest agent-team.yml
-     run (WebFetch the Actions page for branch ai/packages) to see why
-     all bench lanes failed (likely provider/auth or prompt-contract
-     issues), fix, and reset =#+STALL-COUNT: 0= in TEAM-CONTROL.org.
-  3. Get DISPATCH #1 to CI (workflow_dispatch the chain or a PR), then
-     flip the board entry to REVIEW with branch/sha + CI evidence.
-  4. Update STATE.org DONE/IN-FLIGHT with this handoff's date.
+- Run #122 = 42981010871, workflow_dispatch on ai/main @ d57e09b
+  (2026-11-11 07:38→09:38 UTC, duration exactly 2h 0m 1s): FAILED.
+  Step-level facts: checkout, cache, Install Guix, channels pin, static
+  checks, =guix lint=, "Build and smoke test" AND "Publish
+  substitutes" all SUCCESS; the failure is the FINAL step "Gate CI on
+  the build result" (=.build-status= was not "ok").  "substitute
+  install" job skipped (push-only; this was a dispatch).  Suspicion to
+  verify with the NEXT run: the whole-channel build (≈50 packages now)
+  exceeded the 2-hour budget — build-all.sh's own timeout likely wrote
+  "fail" while the step still reported success.  NO CI run has ever
+  targeted the current tip 5d8d617 — first job of the next seat:
+  POST .../actions/workflows/build.yml/dispatches with {"ref":"ai/main"}
+  (expect HTTP 204), watch it, repair if red.  NEVER claim un-fetched
+  results.
+- build.yml triggers on pull_request + workflow_dispatch ONLY (Owner:
+  push CI disabled).  gh-pages mirror serves substitutes from green
+  runs.
 
-* HOUSEKEEPING DONE AT HANDOFF TIME
-  - Cron job 479594 (autoclaw-push-ci-watch, fixed_rate 2400s) deleted.
-  - This file is committed and PUSHED to origin/ai/packages (rebased
-    onto the rename commit 806b754 before pushing).
+* OPEN WORK (priority order for the next seat)
+
+1. CI green on ai/main @ 5d8d617 (see above; repair the gate failure —
+   check =.build-status= writer in tests/build-all.sh and the 2h
+   budget).
+2. Owner UAT round 2 (login fix): guix pull → install autoclaw-bin +
+   qoder-desktop-bin → log in → FULL quit → relaunch → the session must
+   survive.  If it still fails: next hypothesis is keytar→libsecret
+   (not safeStorage) — wire a real keyring service.  Owner-side only.
+3. AGENTS.md sane-packages prose → Lead reissue (rename gap, flagged).
+4. Periodic update sweeps of the whole channel (~50 packages; probe
+   npm registry / GitHub releases API / zcode.z.ai / qoder OSS
+   endpoints; hex→nix-base32 converter exists in scripts; lockstep
+   rules: konaito↔chrome-headless-shell, zcode source frozen 3.14.3,
+   cline-baseline FOD hash learned by CI failing once).
+5. The multi-repo watch cron job 521554 is "Disabled by API" and its
+   PAT is DEAD (see CREDENTIALS) — the Owner decides whether to
+   re-enable with a fresh credential.  Ten-repo order and roles live in
+   that job's payload; the check script is
+   /home/z/my-project/scripts/ten-repos-check.sh.
+
+* REPO LAWS (digest — full law in AGENTS.md + TODOS.org NOTICES)
+
+- Commit law: author =GLM-5.3 <glm-5.3@chat.z.ai>= (model identity),
+  BOTH trailers: =Co-authored-by: z.ai-agent <z.ai-agent@z.ai>= AND
+  =Co-authored-by: Khalid Rafi <khaalidrafi@gmail.com>= (canonical
+  gmail, no variants).  Subject SHORT (~50 chars, NEVER >72 — guard
+  rule 6 fails it); description goes in the BODY after a blank line.
+  Land on =ai/*= branches only, never =main= directly, one model per
+  commit, commit small and early.  NEVER force-push; on divergence
+  merge-first.  No bookkeeping-only commits (commit-hygiene law,
+  Owner 2026-11-11).  commit_msg_guard.sh fails any agent commit
+  missing model author or both trailers.
+- TIME DISCIPLINE LAW: effort + deadline on every lead-assigned TODO;
+  show-cause BEFORE a deadline slips (row flip + :LOGBOOK: cause +
+  new ETA + chat report).  Extensions are Lead-only.
+- author != reviewer on landings: GLM-5.3 never reviews its own work.
+- Board protocol: TODOS.org is the single source of truth; seat notes
+  are appended (never edit older notes); Owner notices under * NOTICES
+  are read every poll, never edited.
+
+* CREDENTIALS AND CHANNELS (CRITICAL — changed 2026-11-24)
+
+- The PAT in cron job 521554's payload is DEAD: API says "Bad
+  credentials" (401), git push says "Invalid username or token".  Do
+  NOT burn retries on it.  The repo being public means fetch/pull
+  still work fine anonymously.
+- The LIVE landing channel this session was the chat-side GitHub
+  plugin, authenticated as =khaalidrafi= (the Owner account): file
+  content commits via the API (create-or-update-file style) with the
+  commit law trailers in the message body.  These commits land with
+  Owner-account authorship — disclose that shape whenever you use it;
+  it is an Owner-side commit channel, not a forged agent identity.
+- Anonymous api.github.com from the sandbox is 403-rate-limited; use
+  WebFetch for HTML pages and JSON endpoints (it egresses elsewhere).
+  Job LOGS need admin rights — read the workflow file instead, and
+  query step conclusions via the /actions/runs/<id>/jobs JSON.
+
+* SANDBOX SURVIVAL RULES (six deaths paid for these)
+
+1. ONE tool call per message.  NEVER parallel calls — parallel calls
+   are what kills the sandbox gateway (403 Forbidden cascade).
+2. Short commands only (<30 s).  No =rg --hidden= (scans .git, hangs
+   120 s).  Use the Grep tool or plain =git grep=.
+3. The persistent shell RESETS ITS CWD between calls without warning —
+   ALWAYS anchor: =git -C /home/z/my-project/packages ...=.
+4. Pipes mask exit codes → redirect to a log file, check =$?= alone.
+5. Persist progress to disk after every step; =/home/z/gns= (the Guix
+   namespace store) gets WIPED — bootstrap recipe in worklog Task 18
+   (brix "testing" tarball ~325 MB) or fall back to the plain
+   guix-binary tarball (guix 1.4.0).  The 1.4.0 bootstrap lacks
+   symbols CI's brix guix has — the resulting dry-run eval failures
+   (bcon, brow6el-bin, cline-baseline, rdircd: unbound
+   cargo-inputs/libsixel/nss-certs/...) are a KNOWN SANDBOX ARTIFACT:
+   disclose it, never chase it, CI is the real gate.
+6. After ~5 consecutive 403 gateway failures: STOP, tell the Owner to
+   hit the restart button.  Background processes die at tool teardown.
+
+* FILE MAP (what survived where)
+
+- /home/z/my-project/packages/ — the clone (branch ai/main @ 5d8d617).
+- /home/z/my-project/worklog.md — Tasks 1-19 narrative (the full
+  history of this seat; read Task 18 for the GNS bootstrap).
+- /home/z/my-project/scripts/ — npm-latest.sh, bump3-results.md (old
+  hash table), guix-ns.sh + guix-ns-inner.sh (namespace wrappers),
+  gate-dryruns.sh (full dry-run sweep pattern, ~7 s/pkg warm),
+  inventory-versions.py, ten-repos-check.sh, default-branch-*.sh,
+  probe-private-repos.sh.
+- Repo-side: tests/check-static.sh (static gate), tests/smoke/*,
+  news.txt, .guix-channel, .github/workflows/build.yml,
+  agent-team/{TODOS.org,CONTROL.org,MEMBERS.org,CHARTER.md,CHAT.org,
+  GLM53-ROLE.org}, STATE.org, AGENTS.md.
+
+* PACKAGE PINS SNAPSHOT (ai/main @ 5d8d617, spot-checked 2026-11-24)
+
+qoder-cli-bin 1.1.86; qoder-desktop-bin 0.5.7; autoclaw-bin 2.0.3;
+zcode-bin 3.17.2 (SOURCE frozen 3.14.3 @29628c9); cline-baseline
+3.0.74 (FOD hash still at the 3.0.70 value — CI learns the real one);
+devin-bin, lightpanda-bin, moli-bin all landed 2026-11-11; konaito
+0.1.0 lockstep with chrome-headless-shell 148.0.7778.97.  Full truth:
+=sensible-packages/custom.scm= — inventory with
+scripts/inventory-versions.py.
