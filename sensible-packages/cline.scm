@@ -820,6 +820,17 @@ import { type AddressInfo, createServer } from \"node:net\";"))
   ;; expected hash: 0ynpf764v7jca55q553q4p40xyp9p3j1v5p9vfpv748j2savy03g
   ;; actual hash: 0sq50kgybdyw19b5vq8ck3lcdzn0lcj2b850w71kxp1vglhn1p08
   ;;
+  ;; The stale-upstream batch (13a7fa8) then moved %cline-version 3.0.70 ->
+  ;; 3.0.74 without rebuilding this FOD: run 42981010871, the only build of
+  ;; the 3.0.74 lineage until then, died on the 3600 s hub-daemon hang (the
+  ;; recipe bug 9644478 fixed), so the hash comparison never ran.  With the
+  ;; hang fixed, CI run 45343000034 (ai/main 97a10da) completed the FOD and
+  ;; printed the 3.0.74 output for the first time:
+  ;;
+  ;; sha256 hash mismatch for /gnu/store/...-cline-baseline-3.0.74:
+  ;; expected hash: 0sq50kgybdyw19b5vq8ck3lcdzn0lcj2b850w71kxp1vglhn1p08
+  ;; actual hash: 0jmfsgghmi5vk8x5y80m86yibyh906m9zhizx5i92xwphmadldyh
+  ;;
   ;; The actual value is pasted in below.  For this to converge, the next
   ;; build of the FOD must produce a byte-identical file -- same pinned
   ;; inputs, same bun, same substitutions -- which is what makes the
@@ -831,7 +842,7 @@ import { type AddressInfo, createServer } from \"node:net\";"))
     (method cline-baseline-build)
     (uri (list %cline-url %cline-tag))
     (file-name (string-append "cline-baseline-" %cline-version))
-    (sha256 (base32 "0sq50kgybdyw19b5vq8ck3lcdzn0lcj2b850w71kxp1vglhn1p08"))))
+    (sha256 (base32 "0jmfsgghmi5vk8x5y80m86yibyh906m9zhizx5i92xwphmadldyh"))))
 
 (define-public cline-baseline
   (package
