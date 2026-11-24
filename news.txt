@@ -94,4 +94,14 @@
  @code{opencode}, @code{opencode2} and @code{opencode-v2}.  The
  @code{opencode-v1} command is gone with the V1 package; reinstall
  with @code{guix install opencode2-bin} after @code{guix pull}.")))
+ (entry (commit "cae618e918c41a3ffd5817b14c64c6846211873d")
+        (title (en "cline-baseline deprecated; cline-bin is the Cline CLI"))
+        (body (en "The @code{cline-baseline} package --- Cline's CLI
+ compiled from source with Bun's baseline (no-AVX2) target --- is retired.
+ The published npm binary turned out to run on exactly the pre-Haswell CPUs
+ the baseline build was made for, so the expensive fixed-output build was
+ deleted rather than maintained.  @code{cline-baseline} remains a
+ deprecated alias: @command{guix install cline-baseline} now warns and
+ installs @code{cline-bin}, which provides the same @command{cline}
+ command, so no reinstall is needed beyond @command{guix pull}.")))
 )
