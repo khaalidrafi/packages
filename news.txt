@@ -75,4 +75,23 @@
  pinned version, and no credential material appears anywhere in the
  package, its build or its smoke test.  Install with @code{guix install
  devin-bin}.")))
+ (entry (commit "f2dd625ea7eaa3ea6fbe69bec08d9ad44b86b0aa")
+        (title (en "The substitute mirror moved with the repo rename"))
+        (body (en "The repository is now @code{khaalidrafi/sensible-packages},
+ so the signed substitute mirror moved with it to
+ @code{https://khaalidrafi.github.io/sensible-packages}.  Git redirects
+ old clone URLs but GitHub Pages does not: the old @code{.../packages}
+ mirror is a dead 404.  If your saved @code{--substitute-urls} still
+ names it, substitutes stopped resolving --- re-point Guix at the new
+ mirror exactly as the README shows, and authorize nothing anew (the
+ signing key is unchanged).")))
+ (entry (commit "774d789d2489f72c9db7ab7fb35b7ee12dec098e")
+        (title (en "OpenCode v1 deprecated; opencode-bin now installs v2"))
+        (body (en "Upstream's default line is OpenCode V2, so the V1
+ repackage is retired: @code{opencode-bin} is now a deprecated alias
+ of @code{opencode2-bin}, and @code{guix install opencode-bin}
+ answers with a deprecation warning and installs V2, whose commands are
+ @code{opencode}, @code{opencode2} and @code{opencode-v2}.  The
+ @code{opencode-v1} command is gone with the V1 package; reinstall
+ with @code{guix install opencode2-bin} after @code{guix pull}.")))
 )
