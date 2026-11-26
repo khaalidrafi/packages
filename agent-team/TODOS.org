@@ -94,11 +94,10 @@ edit the notice itself>
 
 ** [2026-11-05 19:07Z] SCOPE ORDER — GLM-5.3 = Senior EL Engineer brain for ALL repos; THIS board = the cron dispatch surface (Owner, #hq)
 
-- Owner 2026-11-05 19:07Z #hq: "Share prompt for GLM 5.3 which only
-  handles packages repo, to handle ALL repos under your lead with role
-  assigned to GLM 5.3, it will check TODOS.org periodically via cron
-  and you'll delegate TODOS to it in this way.  Complete ALL org pkgs
-  by delegating the parts of GLM 5.3, we should exhaust it tonight!"
+- Owner 2026-11-05 19:07Z #hq: GLM 5.3's role is widened from the
+  packages repo to ALL repos under the Lead; it polls TODOS.org via
+  cron, the Lead delegates to it by :REPO:/:BRANCH: dispatch, and the
+  org package backlog was to be exhausted that night.
 - Canonical role prompt: agent-team/GLM53-ROLE.org (committed this
   tick).  Dispatches below carry :REPO:/:BRANCH: — work lands in the
   TARGET repo on its task branch under the TARGET repo's local law.
@@ -1917,8 +1916,8 @@ edit the notice itself>
     ai/main ae63d1f (all nine P2s triaged: 5 FIXED, 1 CLOSED-STALE,
     3 DEFERRED with recorded decisions + causes; 72/72, byte 0/0).
     :RATING: 4 met-clean.
-- ALSO THIS TICK, Owner 2026-11-06 18:59Z #hq ("Comms pkgs must be
-  Android-compatible!"): telega-org CERTIFIED Android-compatible —
+- ALSO THIS TICK, Owner 2026-11-06 18:59Z #hq (comms packages must
+  be Android-compatible): telega-org CERTIFIED Android-compatible —
   fresh emacs 30.1 toolchain, ERT 38/38 (incl. touch-detect/setup/tap
   tests), byte 0/0, README already carries the Android/touch section
   (org.gnu.emacs + Termux + touch-screen detection).  lark-org v0.2
